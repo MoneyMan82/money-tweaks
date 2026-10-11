@@ -3,6 +3,9 @@
 {
   "name": "money-tweaks",
   "compatibility_date": "2025-09-01",
+  // Publish on <name>.<account>.workers.dev (otherwise the dashboard shows "No URLs enabled").
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./docs"
   }
