@@ -6,3 +6,4 @@ artifacts/
 dist/
 TestResults/
 *.secret
+.claude/

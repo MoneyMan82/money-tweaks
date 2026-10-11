@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Money Tweaks: free, reversible Windows 10/11 tweaks for gamers</title>
+<meta name="description" content="Money Tweaks is a free, open-source Windows 10/11 tweaker: 334 reversible tweaks, Potato Graphics, Game Booster, Input Delay Reducer, Ping Stabilizer and a custom crosshair. No ads, no accounts.">
+<meta name="keywords" content="windows tweaks, fps boost, debloat windows 11, gaming optimizer, input delay, ping, free, open source">
+<link rel="canonical" href="https://moneyman82.github.io/money-tweaks/">
+<meta name="theme-color" content="#080c0a">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Money Tweaks: free, reversible Windows tweaks">
+<meta property="og:description" content="334 reversible tweaks and gaming tools for Windows 10/11. Free and open source.">
+<meta property="og:url" content="https://moneyman82.github.io/money-tweaks/">
+<meta property="og:image" content="https://moneyman82.github.io/money-tweaks/assets/social-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Money Tweaks">
+<meta name="twitter:description" content="Free, reversible Windows 10/11 tweaks for gamers.">
+<meta name="twitter:image" content="https://moneyman82.github.io/money-tweaks/assets/social-card.png">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Money Tweaks","operatingSystem":"Windows 10, Windows 11","applicationCategory":"UtilitiesApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"softwareVersion":"1.0.0","license":"https://opensource.org/licenses/MIT","url":"https://moneyman82.github.io/money-tweaks/","downloadUrl":"https://github.com/MoneyMan82/money-tweaks/releases/latest"}
+</script>
+<style>
+:root{--bg:#080c0a;--surface:#0f1512;--card:#141c18;--border:#223029;--accent:#2be38b;--accent2:#14b8a6;--gold:#f5c451;--text:#e8f1ec;--muted:#8a9a92;--radius:14px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+img{max-width:100%;display:block}
+.wrap{max-width:1160px;margin:0 auto;padding-inline:20px}
+h1,h2,h3{font-family:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;line-height:1.15;margin:0 0 .5em}
+h2{font-size:clamp(28px,4vw,40px)}
+.muted{color:var(--muted)}
+.eyebrow{color:var(--accent);font-weight:700;letter-spacing:.12em;font-size:12px;text-transform:uppercase}
+/* nav */
+header{position:sticky;top:0;z-index:20;background:rgba(8,12,10,.78);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top,0px)}
+.nav{display:flex;align-items:center;gap:22px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--text);font-size:18px}
+.brand img{width:32px;height:32px}
+.nav ul{display:flex;gap:20px;list-style:none;margin:0 0 0 auto;padding:0}
+.nav ul a{color:var(--muted);font-size:14px;font-weight:600}
+.nav ul a:hover{color:var(--text);text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:12px 20px;font-weight:700;font-size:15px;border:1px solid var(--border);color:var(--text);background:var(--card);transition:transform .15s,box-shadow .2s,border-color .2s;cursor:pointer}
+.btn:hover{text-decoration:none;transform:translateY(-2px);border-color:var(--accent)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04140c;border:0;box-shadow:0 8px 30px rgba(43,227,139,.25)}
+.btn.primary:hover{box-shadow:0 12px 40px rgba(43,227,139,.4)}
+.btn.small{padding:8px 14px;font-size:13px}
+@media (max-width:860px){.nav ul{display:none}}
+/* hero */
+.hero{position:relative;padding:90px 0 60px;overflow:hidden}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 75%);opacity:.45;pointer-events:none}
+.glow{position:absolute;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,rgba(43,227,139,.22),transparent 65%);top:-220px;left:50%;transform:translateX(-50%);animation:pulse 7s ease-in-out infinite;pointer-events:none}
+@keyframes pulse{50%{opacity:.6;transform:translateX(-50%) scale(1.08)}}
+.hero-inner{position:relative;text-align:center}
+.hero h1{font-size:clamp(38px,7vw,72px);font-weight:800;letter-spacing:-.02em}
+.hero h1 .hl{background:linear-gradient(135deg,var(--accent),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:720px;margin:0 auto 30px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.facts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.fact{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--muted)}
+.fact b{color:var(--text)}
+.shot-hero{margin:56px auto 0;width:100%;max-width:1040px;height:auto;border-radius:16px;border:1px solid var(--border);overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,.6),0 0 0 1px rgba(43,227,139,.08);transform:perspective(1600px) rotateX(6deg);transition:transform .6s ease}
+.shot-hero:hover{transform:perspective(1600px) rotateX(0)}
+section{padding:80px 0}
+.section-head{max-width:720px;margin-bottom:40px}
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:border-color .2s,transform .2s}
+.card:hover{border-color:rgba(43,227,139,.55);transform:translateY(-3px)}
+.card h3{font-size:18px;margin-bottom:6px}
+.card p{margin:0;color:var(--muted);font-size:14.5px}
+.ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:rgba(43,227,139,.12);color:var(--accent);margin-bottom:14px}
+.ico svg{width:22px;height:22px}
+.count{float:right;font-size:13px;font-weight:700;color:var(--accent);background:rgba(43,227,139,.12);border-radius:999px;padding:2px 10px}
+/* tabs gallery */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tab{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit}
+.tab[aria-selected=true]{color:var(--accent);border-color:var(--accent);background:rgba(43,227,139,.1)}
+.gallery-frame{border-radius:16px;border:1px solid var(--border);overflow:hidden;background:var(--surface)}
+.gallery-frame img{width:100%;height:auto;transition:opacity .25s}
+.caption{margin-top:12px;color:var(--muted);font-size:14px}
+/* split */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.split>*{min-width:0}
+p code,li code{overflow-wrap:anywhere}
+@media (max-width:860px){.split{grid-template-columns:1fr}}
+.list{list-style:none;padding:0;margin:0}
+.list li{padding:10px 0 10px 32px;position:relative;border-bottom:1px solid var(--border);color:var(--muted)}
+.list li b{color:var(--text)}
+.list li::before{content:"";position:absolute;left:4px;top:17px;width:14px;height:8px;border-left:2.5px solid var(--accent);border-bottom:2.5px solid var(--accent);transform:rotate(-45deg)}
+.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:1px 8px;margin-right:6px}
+.badge.safe{background:rgba(43,227,139,.14);color:var(--accent)}
+.badge.caution{background:rgba(245,196,81,.14);color:var(--gold)}
+/* download */
+.download{background:linear-gradient(180deg,transparent,rgba(43,227,139,.05));border-block:1px solid var(--border)}
+.dl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:10px}
+.dl{display:flex;flex-direction:column;gap:10px}
+.dl .btn{justify-content:center;margin-top:auto}
+code,pre{font-family:"Cascadia Mono",Consolas,monospace;font-size:13.5px}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;color:var(--text);margin:10px 0 0}
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:0;display:grid;gap:14px}
+ol.steps li{counter-increment:s;position:relative;padding:16px 18px 16px 60px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted)}
+ol.steps li b{color:var(--text)}
+ol.steps li::before{content:counter(s);position:absolute;left:16px;top:14px;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04140c;font-weight:800;display:grid;place-items:center}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600;background:var(--surface)}
+details{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px}
+details summary{cursor:pointer;font-weight:700;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"+";float:right;color:var(--accent);font-size:20px;line-height:1}
+details[open] summary::after{content:"–"}
+details p{color:var(--muted);margin:10px 0 0}
+footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:14px}
+.foot{display:flex;flex-wrap:wrap;gap:30px;justify-content:space-between}
+.foot a{color:var(--muted)}
+/* reveal */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top"><img src="assets/logo-512.png" alt="" width="32" height="32">Money Tweaks</a>
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#categories">Tweaks</a></li>
+      <li><a href="#screens">Screenshots</a></li>
+      <li><a href="#safety">Safety</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <a class="btn primary small" href="#download">Download</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="grid-bg"></div><div class="glow"></div>
+    <div class="wrap hero-inner">
+      <div class="eyebrow">Free · Open source · Windows 10 &amp; 11</div>
+      <h1>Tune Windows for games.<br><span class="hl">Undo anything.</span></h1>
+      <p class="lead">Money Tweaks bundles 334 reversible tweaks and a set of gaming tools in one fast, dark app. Every change is backed up first, labelled Safe or Caution, and undone with the same switch.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/MoneyTweaks-Setup.exe">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+          Download for Windows</a>
+        <a class="btn" href="https://github.com/MoneyMan82/money-tweaks">View source on GitHub</a>
+      </div>
+      <div class="facts">
+        <span class="fact"><b>334</b> reversible tweaks</span>
+        <span class="fact"><b>9</b> categories</span>
+        <span class="fact"><b>$0</b> no tiers, ads or accounts</span>
+        <span class="fact">MIT licensed</span>
+      </div>
+      <img class="shot-hero reveal" src="assets/screenshots/dashboard.png" width="1240" height="800" alt="Money Tweaks dashboard showing live CPU, GPU, memory, disk and network tiles">
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head reveal"><div class="eyebrow">Tools</div><h2>More than a list of switches</h2><p class="muted">Alongside the tweak library, Money Tweaks ships with tools that handle the jobs gamers usually need three separate apps for.</p></div>
+      <div class="cards">
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18c2-6 6-9 12-10M16 8l-1 5M16 8l-5-1"/><circle cx="7" cy="17" r="2"/></svg></div><h3>Potato Graphics</h3><p>Lowers settings inside Fortnite, Minecraft Java and Rocket League config files (after a backup), plus a Windows-side preset for every game.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Game Booster</h3><p>One click: High/Ultimate power plan, close the background apps you pick, raise your game's priority and clear standby memory.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 6v4"/></svg></div><h3>Input Delay Reducer</h3><p>Holds a 0.5 ms kernel timer while the app is open and groups the input tweaks (mouse acceleration, sticky keys, MSI mode, timers).</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div><h3>Ping Stabilizer</h3><p>Live latency, jitter and packet-loss graph against any host, with a connection grade and the network tweaks that remove local lag spikes.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/></svg></div><h3>Custom Crosshair</h3><p>Click-through overlay with cross, dot, T and circle styles, colours, gap, outline and per-monitor placement. Toggle with Ctrl + Alt + X.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-3 3 2 4-5"/></svg></div><h3>Hardware Monitor</h3><p>CPU, GPU, RAM, disk and network usage with sparklines, your specs, and a check that flags RAM running below its rated speed.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div><h3>Backup &amp; Restore</h3><p>Restore points, a list of everything applied, and one button to undo it all.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v9l4-4"/><rect x="4" y="14" width="16" height="6" rx="2"/></svg></div><h3>Startup Apps</h3><p>Switch sign-in apps off and on with the same flags Task Manager uses. Nothing gets deleted.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="categories">
+    <div class="wrap">
+      <div class="section-head reveal"><div class="eyebrow">Tweak library</div><h2>334 tweaks in 9 categories</h2><p class="muted">Every tweak maps to a documented Windows setting: a registry value, service start type, power-plan setting, scheduled task, network option or Store app. Expand any card in the app to see exactly what it changes.</p></div>
+      <div class="cards">
+        <div class="card reveal"><span class="count">29</span><h3>General</h3><p>Visual effects, instant menus, Ultimate Performance plan, core parking, USB suspend, mouse acceleration, Game Mode, Game DVR, Explorer and taskbar.</p></div>
+        <div class="card reveal"><span class="count">61</span><h3>Debloating</h3><p>Telemetry, advertising ID, activity history, Start and lock-screen ads, Copilot, Recall, Widgets, Edge background mode and telemetry tasks.</p></div>
+        <div class="card reveal"><span class="count">17</span><h3>Networking</h3><p>Nagle's algorithm, network throttling, QoS reserve, TCP options, Cloudflare/Google/Quad9 DNS, adapter power saving, LSO, Teredo, LLMNR.</p></div>
+        <div class="card reveal"><span class="count">20</span><h3>Advanced</h3><p>Memory compression, prefetch, dynamic tick, HAGS, fullscreen optimizations, GPU MSI mode, MMCSS priorities, NTFS, Memory Integrity.</p></div>
+        <div class="card reveal"><span class="count">110</span><h3>Services</h3><p>Telemetry, Xbox, printing, remote access, sensors, Hyper-V guest and enterprise services set to Manual or Disabled.</p></div>
+        <div class="card reveal"><span class="count">3</span><h3>App Optimizer</h3><p>Below-normal priority for launchers and Discord, launcher auto-start off, idle-priority search indexer.</p></div>
+        <div class="card reveal"><span class="count">76</span><h3>App Removal</h3><p>Bing apps, Clipchamp, Solitaire, Teams, Xbox apps, Copilot, OneDrive and sponsored third-party apps like TikTok and Candy Crush.</p></div>
+        <div class="card reveal"><span class="count">15</span><h3>Game Profiles</h3><p>High CPU priority for Fortnite, VALORANT, CS2, Apex, Call of Duty, Rainbow Six, Rocket League, Overwatch 2, Minecraft and more.</p></div>
+        <div class="card reveal"><span class="count">3</span><h3>BIOS</h3><p>Step-by-step guides for Resizable BAR, XMP/EXPO memory profiles and CPU C-States, with an in-app RAM speed check.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screens">
+    <div class="wrap">
+      <div class="section-head reveal"><div class="eyebrow">Screenshots</div><h2>See it before you install</h2><p class="muted">Real screenshots of Money Tweaks 1.0.0, captured by the app on a Windows 11 PC.</p></div>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="gallery-frame reveal"><img id="shot" src="assets/screenshots/cat-general.png" width="1240" height="800" alt="Money Tweaks screenshot"></div>
+      <p class="caption" id="caption"></p>
+    </div>
+  </section>
+
+  <section id="safety">
+    <div class="wrap split">
+      <div class="reveal">
+        <div class="eyebrow">Safety</div>
+        <h2>Built to be undone</h2>
+        <p class="muted">Tweakers have a reputation for breaking things. Money Tweaks is designed so that every change is recorded and reversible.</p>
+        <p><span class="badge safe">Safe</span><span class="muted">Well understood and low risk for almost every PC.</span></p>
+        <p><span class="badge caution">Caution</span><span class="muted">Useful, but with a real trade-off. You'll see a warning and confirm before it applies.</span></p>
+      </div>
+      <ul class="list reveal">
+        <li><b>Backup before every change.</b> Original values are saved to a JSON file per tweak and never overwritten by re-applying.</li>
+        <li><b>All-or-nothing.</b> If one step of a tweak fails, the steps already done are rolled back.</li>
+        <li><b>Restore point first.</b> One is created automatically before your first change each session.</li>
+        <li><b>Admin only when needed.</b> The app runs as a normal user and asks to restart elevated for system-wide tweaks.</li>
+        <li><b>Transparent.</b> "Show what changes" lists every registry value, service or command, and everything is logged.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="download" class="download">
+    <div class="wrap">
+      <div class="section-head reveal"><div class="eyebrow">Download</div><h2>Get Money Tweaks 1.0.0</h2><p class="muted">Free forever. No sign-up. Files are hosted on GitHub Releases.</p></div>
+      <div class="dl-grid">
+        <div class="card dl reveal"><h3>Installer</h3><p>Start-menu shortcut and uninstaller. Installs for your user account by default, without needing admin.</p><a class="btn primary" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/MoneyTweaks-Setup.exe">MoneyTweaks-Setup.exe</a></div>
+        <div class="card dl reveal"><h3>Portable ZIP</h3><p>Unzip anywhere and run MoneyTweaks.exe. Nothing gets installed.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/download/v1.0.0/MoneyTweaks-1.0.0-portable-win-x64.zip">Portable ZIP</a></div>
+        <div class="card dl reveal"><h3>Checksums</h3><p>SHA-256 hashes for every file, so you can verify your download.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a></div>
+      </div>
+      <p class="muted" style="margin-top:18px;font-size:14px">Release builds aren't code-signed (certificates cost money), so Windows SmartScreen may warn the first time. Click <b>More info → Run anyway</b>, or <a href="#build">build it yourself</a>.</p>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap split">
+      <div class="reveal">
+        <div class="eyebrow">Installation</div>
+        <h2>Up and running in a minute</h2>
+        <ol class="steps">
+          <li><b>Download</b> the installer or portable ZIP above.</li>
+          <li><b>Verify (optional):</b> run <code>Get-FileHash MoneyTweaks-Setup.exe -Algorithm SHA256</code> in PowerShell and compare the result with SHA256SUMS.txt.</li>
+          <li><b>Run it.</b> If SmartScreen appears, choose More info → Run anyway.</li>
+          <li><b>Restart as admin</b> from the sidebar to unlock system-wide tweaks, then try <b>Apply all recommended</b> on the dashboard.</li>
+        </ol>
+      </div>
+      <div class="reveal">
+        <div class="eyebrow">Requirements</div>
+        <div class="table-wrap" style="margin-top:14px"><table>
+          <tr><th>Windows</th><td>Windows 10 1809 (build 17763) or newer, Windows 11</td></tr>
+          <tr><th>CPU</th><td>x64 (64-bit Intel or AMD)</td></tr>
+          <tr><th>Runtime</th><td>Bundled, no separate .NET install needed</td></tr>
+          <tr><th>Disk</th><td>About 80 MB</td></tr>
+          <tr><th>Rights</th><td>Standard user to run; admin for system-wide tweaks</td></tr>
+        </table></div>
+        <h3 id="build" style="margin-top:28px">Build from source</h3>
+        <pre>git clone https://github.com/MoneyMan82/money-tweaks.git
+cd money-tweaks
+dotnet run --project src\MoneyTweaks -c Release</pre>
+        <p class="muted" style="font-size:14px">Needs the .NET 10 SDK. <code>scripts\build-release.ps1</code> produces the installer, ZIP and checksums.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="changelog">
+    <div class="wrap">
+      <div class="section-head reveal"><div class="eyebrow">Changelog</div><h2>What's new</h2></div>
+      <div class="card reveal">
+        <h3>1.0.0 <span class="muted" style="font-size:14px;font-weight:400">· October 2026</span></h3>
+        <ul class="list">
+          <li><b>First release.</b> 334 reversible tweaks across 9 categories.</li>
+          <li><b>Tools:</b> Potato Graphics, Game Booster, Input Delay Reducer, Ping Stabilizer, Custom Crosshair, Startup Apps, Hardware Monitor.</li>
+          <li><b>Safety:</b> per-tweak backups, rollback on failure, automatic restore point, Safe/Caution labels, activity log.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap" style="max-width:860px">
+      <div class="section-head reveal"><div class="eyebrow">FAQ</div><h2>Questions</h2></div>
+      <details class="reveal"><summary>Is it really free?</summary><p>Yes. There's no paid tier, subscription, account, ads or locked feature. The full source is on GitHub under the MIT license.</p></details>
+      <details class="reveal"><summary>How much FPS will I gain?</summary><p>It depends entirely on your hardware and what was running before. We don't promise a number. The biggest wins usually come on PCs with lots of background bloat, weak CPUs, or RAM running below its rated speed (the dashboard checks that).</p></details>
+      <details class="reveal"><summary>Can a tweak break my PC?</summary><p>Every tweak backs up the original values and can be undone from the same switch. Caution tweaks have real trade-offs and ask before applying. As a last resort, roll back with the restore point Money Tweaks creates before your first change.</p></details>
+      <details class="reveal"><summary>Will it get me banned in games?</summary><p>Money Tweaks changes Windows settings, not game memory or files (except Potato Graphics, which edits the same settings file the game's own menu writes). The crosshair overlay is an ordinary topmost window. Still, check your game's rules on overlays before using one in competitive play.</p></details>
+      <details class="reveal"><summary>Why does Windows say it's an unrecognized app?</summary><p>The builds aren't code-signed. You can verify the SHA-256 hash, read the source, or build it yourself with one command.</p></details>
+      <details class="reveal"><summary>What happens when I uninstall?</summary><p>Applied tweaks stay applied. Undo them first from Backup &amp; Restore if you want Windows back to how it was. Your backups in %LOCALAPPDATA%\MoneyTweaks are kept so a reinstall can still undo them.</p></details>
+      <details class="reveal"><summary>Is Money Tweaks related to EMTweaks?</summary><p>No. Money Tweaks is an independent, open-source project with its own code, text and artwork, and isn't affiliated with EMTweaks.</p></details>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap split">
+      <div class="reveal">
+        <div class="eyebrow">Privacy &amp; security</div>
+        <h2>Nothing leaves your PC</h2>
+        <p class="muted">Money Tweaks has no telemetry, analytics, accounts or update pings. It only makes network requests when you use the Ping Stabilizer (ICMP pings to the host you choose). Settings, backups and logs stay in <code>%LOCALAPPDATA%\MoneyTweaks</code>. This website uses no cookies, trackers or third-party scripts.</p>
+      </div>
+      <div class="reveal">
+        <h3>Security</h3>
+        <p class="muted">Found a security problem? Please open a private security advisory on GitHub rather than a public issue. Some tweaks (Memory Integrity, Print Spooler, location) trade security or features for speed. They're labelled Caution and explain the trade-off.</p>
+        <h3 style="margin-top:20px">Contact</h3>
+        <p class="muted">Bugs and ideas: <a href="https://github.com/MoneyMan82/money-tweaks/issues">GitHub Issues</a><br>Source: <a href="https://github.com/MoneyMan82/money-tweaks">github.com/MoneyMan82/money-tweaks</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div><a class="brand" href="#top" style="color:var(--text)"><img src="assets/logo-512.png" alt="" width="28" height="28">Money Tweaks</a><p style="max-width:420px">Free, open-source Windows tweaks. MIT License. Not affiliated with EMTweaks, Microsoft or any game publisher. Use at your own risk.</p></div>
+    <div><b style="color:var(--text)">Project</b><br><a href="https://github.com/MoneyMan82/money-tweaks">Source</a><br><a href="https://github.com/MoneyMan82/money-tweaks/releases">Releases</a><br><a href="https://github.com/MoneyMan82/money-tweaks/blob/main/CHANGELOG.md">Changelog</a></div>
+    <div><b style="color:var(--text)">Help</b><br><a href="#install">Install guide</a><br><a href="#faq">FAQ</a><br><a href="https://github.com/MoneyMan82/money-tweaks/issues">Report an issue</a></div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var shots=[["cat-general","General","Category pages group tweaks with Safe/Caution labels, Admin and Restart badges, and a switch that undoes the tweak."],
+    ["cat-debloating","Debloating","Telemetry, ads and AI features. A gold switch means a tweak is only partially applied."],
+    ["cat-services","Services","110 services, each showing the exact start type it will set."],
+    ["cat-networking","Networking","Network stack and DNS tweaks."],
+    ["potato","Potato Graphics","Per-game low-settings presets with one-click restore."],
+    ["booster","Game Booster","Pick background apps to close and a game to prioritize."],
+    ["input","Input Delay","Timer resolution control and the input tweak bundle."],
+    ["ping","Ping Stabilizer","Live latency and jitter monitoring."],
+    ["crosshair","Crosshair","Crosshair editor with live preview."],
+    ["monitor","Monitor","Live hardware counters."],
+    ["restore","Restore","Restore points and undo-everything."]];
+  var tabs=document.getElementById('tabs'),img=document.getElementById('shot'),cap=document.getElementById('caption');
+  shots.forEach(function(s,i){var b=document.createElement('button');b.className='tab';b.type='button';b.role='tab';b.textContent=s[1];
+    b.setAttribute('aria-selected',i===0);b.onclick=function(){[].forEach.call(tabs.children,function(t){t.setAttribute('aria-selected','false')});b.setAttribute('aria-selected','true');
+      img.style.opacity=0;setTimeout(function(){img.src='assets/screenshots/'+s[0]+'.png';img.alt='Money Tweaks '+s[1]+' screen';cap.textContent=s[2];img.style.opacity=1},150)};tabs.appendChild(b)});
+  cap.textContent=shots[0][2];
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
+    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)})}else document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in')});
+})();
+</script>
+</body>
+</html>
