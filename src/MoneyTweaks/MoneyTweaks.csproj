@@ -3,11 +3,16 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>MoneyTweaks</RootNamespace>
     <AssemblyName>MoneyTweaks</AssemblyName>
     <ApplicationIcon>Assets\MoneyTweaks.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MoneyTweaks.Core\MoneyTweaks.Core.csproj" />
   </ItemGroup>
