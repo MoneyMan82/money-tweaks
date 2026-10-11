@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://money-tweaks.pages.dev/sitemap.xml
