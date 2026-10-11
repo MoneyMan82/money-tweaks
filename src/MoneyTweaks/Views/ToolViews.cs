@@ -471,6 +471,14 @@ public sealed class PotatoView : UserControl, IPageLifecycle
         else MainWindow.Current?.ShowToast("Fortnite's config folder doesn't exist yet.");
     }
 
+    /// <summary>Screenshot mode only: show a preset in the preview without changing the user's saved settings.</summary>
+    internal void PreviewPresetOnly(FnPreset? p)
+    {
+        _preview.AutoRotate = false;
+        var s = p is { } preset ? FortnitePotatoSettings.FromPreset(preset) : _s;
+        _preview.SetAfter(PreviewLook.From(s), PresetName(s.Preset));
+    }
+
     public void OnShown() { _preview.AutoRotate = true; RefreshStatus(); BuildOthers(); _ = _windows.RefreshAsync(); }
     public void OnHidden() { _preview.AutoRotate = false; App.Settings.Save(); }
 }

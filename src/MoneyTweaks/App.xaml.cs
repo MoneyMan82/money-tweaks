@@ -19,7 +19,7 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (_, a) => { Log.Error("Background task failed", a.Exception); a.SetObserved(); };
 
         Settings = AppSettings.Load();
-        Log.Info($"Money Tweaks {Version} started on {OsInfo.ProductName} (admin: {Admin.IsElevated})");
+        Log.Info($"Money Tweaks {Version} ({Environment.ProcessPath}) started on {OsInfo.ProductName} (admin: {Admin.IsElevated})");
 
         UpdateService.CleanupAfterUpdate();
         var shotIdx = Array.IndexOf(e.Args, "--screenshots");

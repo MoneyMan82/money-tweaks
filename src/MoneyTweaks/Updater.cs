@@ -5,7 +5,7 @@ using MoneyTweaks.Core.Sys;
 
 namespace MoneyTweaks;
 
-/// <summary>UI side of in-app updates: check, confirm, download with progress, install, exit.</summary>
+/// <summary>UI side of in-app updates: check, confirm, download with progress, install, verify after restart.</summary>
 public static class Updater
 {
     public static UpdateInfo? Available { get; private set; }
@@ -13,6 +13,37 @@ public static class Updater
     private static bool _busy;
 
     public static Version Current => typeof(App).Assembly.GetName().Version ?? new Version(1, 0, 0);
+
+    /// <summary>
+    /// Runs once at startup after an in-app update: confirms the running version really is the one we installed.
+    /// If not, the update failed, so say so clearly and stop auto-offering that release (no endless loop).
+    /// </summary>
+    public static void VerifyPendingUpdate()
+    {
+        var s = App.Settings;
+        if (string.IsNullOrEmpty(s.PendingUpdateVersion) || !Version.TryParse(s.PendingUpdateVersion, out var expected)) return;
+        var tag = s.PendingUpdateTag ?? "v" + expected.ToString(3);
+        s.PendingUpdateVersion = null;
+        s.PendingUpdateTag = null;
+        if (UpdateService.IsNewer(expected, Current))
+        {
+            s.SkippedUpdateTag = tag;
+            s.Save();
+            Log.Error($"Update to {tag} did not take effect: still running {Current.ToString(3)}");
+            Dialog.Show("The update didn't install",
+                $"Money Tweaks tried to update to {tag}, but this copy is still version {Current.ToString(3)}.\n\n" +
+                $"Installer log: {UpdateService.InstallerLogPath}\n\n" +
+                "Automatic update prompts for this release are paused. You can install it manually from the releases page, or use Settings & About → Check for updates to try again.",
+                DialogKind.Warning);
+        }
+        else
+        {
+            if (s.SkippedUpdateTag == tag) s.SkippedUpdateTag = null;
+            s.Save();
+            Log.Info($"Update verified: now running {Current.ToString(3)} ({tag})");
+            MainWindow.Current?.ShowToast($"Updated to Money Tweaks {Current.ToString(3)}.");
+        }
+    }
 
     public static async Task CheckAsync(bool manual)
     {
@@ -24,8 +55,14 @@ public static class Updater
             Available = await UpdateService.CheckAsync(Current);
             if (Available is null)
             {
-                StatusChanged?.Invoke($"You're up to date (v{App.Version}).");
-                if (manual) MainWindow.Current?.ShowToast($"You're on the latest version (v{App.Version}).");
+                StatusChanged?.Invoke($"You're up to date (v{Current.ToString(3)}).");
+                if (manual) MainWindow.Current?.ShowToast($"You're on the latest version (v{Current.ToString(3)}).");
+            }
+            else if (!manual && Available.Tag == App.Settings.SkippedUpdateTag)
+            {
+                // A release that previously failed or was mislabeled: don't nag on every start.
+                StatusChanged?.Invoke($"{Available.Tag} is available but couldn't be installed last time. Use Check for updates to retry.");
+                Log.Info($"Auto-update skipped {Available.Tag} (previously failed or mislabeled)");
             }
             else
             {
@@ -47,21 +84,37 @@ public static class Updater
         if (_busy || Available is not { } u) return;
         var notes = string.IsNullOrWhiteSpace(u.Notes) ? "" : "\n\nWhat's new:\n" + (u.Notes.Length > 1200 ? u.Notes[..1200] + "…" : u.Notes);
         if (!Dialog.Confirm($"Update to Money Tweaks {u.Version.ToString(3)}?",
-                $"The new version is downloaded from GitHub, its SHA-256 checksum is verified, and Money Tweaks restarts. Your applied tweaks and backups are kept.{notes}",
+                $"The new version is downloaded from GitHub, its SHA-256 checksum and version are verified, and Money Tweaks restarts. Your applied tweaks and backups are kept.{notes}",
                 "Update now")) return;
         _busy = true;
         try
         {
             var progress = new Progress<double>(p => StatusChanged?.Invoke($"Downloading update… {p:P0}"));
-            var path = await UpdateService.DownloadAsync(u, progress);
+            var path = await UpdateService.DownloadAsync(u, Current, progress);
             StatusChanged?.Invoke("Installing update…");
+            // Remember what we expect to be running after the restart, so VerifyPendingUpdate can confirm it.
+            App.Settings.PendingUpdateTag = u.Tag;
+            App.Settings.PendingUpdateVersion = u.Version.ToString(3);
             App.Settings.Save();
             UpdateService.Install(path);
             Application.Current.Shutdown();
         }
+        catch (UpdateMismatchException ex)
+        {
+            Log.Error("Update refused", ex);
+            App.Settings.SkippedUpdateTag = u.Tag;
+            App.Settings.Save();
+            Available = null;
+            MainWindow.Current?.HideUpdateBanner();
+            StatusChanged?.Invoke($"{u.Tag} was published with the wrong files and was not installed.");
+            Dialog.Show("This update can't be installed", ex.Message + "\n\nYou'll get the next correctly published version automatically.", DialogKind.Warning);
+        }
         catch (Exception ex)
         {
             Log.Error("Update failed", ex);
+            App.Settings.PendingUpdateTag = null;
+            App.Settings.PendingUpdateVersion = null;
+            App.Settings.Save();
             StatusChanged?.Invoke("Update failed. See the Activity Log.");
             if (Dialog.Confirm("Update failed", $"{ex.Message}\n\nNothing was changed. Open the download page to update manually?", "Open releases page", DialogKind.Error))
                 Process.Start(new ProcessStartInfo(u.HtmlUrl) { UseShellExecute = true });

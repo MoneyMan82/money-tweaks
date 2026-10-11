@@ -19,7 +19,10 @@ jobs:
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
       - name: Build release
         shell: pwsh
-        run: ./scripts/build-release.ps1
+        # Version comes from the tag (v1.2.3 -> 1.2.3) so the app, installer and tag can never disagree.
+        run: |
+          $v = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '' }
+          ./scripts/build-release.ps1 -ReleaseVersion $v
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:

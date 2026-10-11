@@ -74,19 +74,41 @@ public class FeatureTests(ITestOutputHelper output)
         Assert.Equal((major, minor, build), (v.Major, v.Minor, v.Build));
     }
 
+    [Theory]
+    [InlineData("1.1.0", "1.0.0", true)]     // newer
+    [InlineData("1.1.0", "1.1.0", false)]    // equal
+    [InlineData("1.0.9", "1.1.0", false)]    // older
+    [InlineData("1.2", "1.2.0.0", false)]    // equal, different formatting
+    [InlineData("1.2.1", "1.2.0.0", true)]
+    [InlineData("2.0.0", "1.99.99", true)]
+    [InlineData("1.10.0", "1.9.0", true)]    // numeric, not string, comparison
+    public void Version_comparison_older_equal_newer(string candidate, string current, bool newer) =>
+        Assert.Equal(newer, UpdateService.IsNewer(Version.Parse(candidate), Version.Parse(current)));
+
+    [Fact]
+    public void Same_version_from_tag_is_not_an_update() =>
+        Assert.False(UpdateService.IsNewer(UpdateService.ParseVersion("v1.1.0"), new Version(1, 1, 0, 0)));
+
     [Fact]
     public async Task Update_check_and_verified_download_against_real_github()
     {
         if (Environment.GetEnvironmentVariable("MT_INTEGRATION") != "1") { output.WriteLine("skipped (set MT_INTEGRATION=1)"); return; }
         // A very new version never sees an update.
         Assert.Null(await UpdateService.CheckAsync(new Version(999, 0, 0)));
-        // An old version sees the latest release, and its download passes the SHA-256 check.
+        // An old version sees the latest release, and its download passes the SHA-256 + version checks.
         var u = await UpdateService.CheckAsync(new Version(0, 0, 1));
         Assert.NotNull(u);
         output.WriteLine($"latest {u!.Tag}, setup={u.SetupUrl is not null}, portable={u.PortableName}, sums={u.SumsUrl is not null}");
-        var path = await UpdateService.DownloadAsync(u);
-        Assert.True(File.Exists(path));
-        output.WriteLine($"verified {path} ({new FileInfo(path).Length / 1048576} MB)");
+        var path = await UpdateService.DownloadAsync(u, new Version(0, 0, 1));
+        var fileVersion = UpdateService.FileVersionOf(path);
+        output.WriteLine($"verified {path} ({new FileInfo(path).Length / 1048576} MB), file version {fileVersion}");
         File.Delete(path);
+        // Regression for the endless-update loop: if the latest release's files are not newer than what we run,
+        // the download must be refused instead of "installing" the same version again.
+        if (fileVersion is not null && UpdateService.IsNewer(u.Version, fileVersion))
+        {
+            output.WriteLine($"{u.Tag} is mislabeled (files are {fileVersion}); expecting refusal when running {fileVersion}");
+            await Assert.ThrowsAsync<UpdateMismatchException>(() => UpdateService.DownloadAsync(u, fileVersion));
+        }
     }
 }

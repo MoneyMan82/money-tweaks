@@ -1,25 +1,21 @@
-## Money Tweaks 1.1.0
+## Money Tweaks 1.2.1
 
 Free, open-source Windows 10/11 performance and privacy tweaker. No accounts, ads, telemetry or paid tiers.
 
+**Fixes**
+- Fixes the endless "Update now" prompt. The previous v1.2.0 release mistakenly contained 1.1.0 files. This release is
+  correctly versioned, and the app now verifies update versions before and after installing.
+
+**New**
+- Potato Graphics: Fortnite potato studio with presets, a before/after 3D preview, and a review of every setting
+  change before applying. Low meshes (rounded low-poly) use Fortnite's own Performance-mode Meshes setting.
+
 **Downloads**
 - `MoneyTweaks-Setup.exe`: installer (per-user by default, no admin needed to install)
-- `MoneyTweaks-1.1.0-portable-win-x64.zip`: portable, unzip and run `MoneyTweaks.exe`
-- `MoneyTweaks-1.1.0-win-x64.exe`: the single-file app on its own
+- `MoneyTweaks-1.2.1-portable-win-x64.zip`: portable, unzip and run `MoneyTweaks.exe`
+- `MoneyTweaks-1.2.1-win-x64.exe`: the single-file app on its own
 - `SHA256SUMS.txt`: verify with `Get-FileHash <file> -Algorithm SHA256`
 
-**New in 1.1.0**
-- Potato Graphics levels: Low / Potato / Ultra potato, 3D resolution slider, Fortnite Performance mode (low-poly builds), uncapped FPS, optional stretched 1440×1080
-- In-app updates: Money Tweaks now tells you when a new version is out and updates itself in one click (checksum-verified). Coming from 1.0.0? Install this version once manually; future updates are automatic.
-
-**Highlights**
-- 334 reversible tweaks in 9 categories, each backed up before it changes anything
-- Potato Graphics, Game Booster, Input Delay Reducer, Ping Stabilizer, Custom Crosshair, Hardware Monitor
-- Restore point before your first change, Safe/Caution labels, full activity log
-
 **Notes**
-- The binaries are not code-signed, so Windows SmartScreen may warn on first run. Choose *More info → Run anyway*,
-  or build from source.
+- The binaries are not code-signed, so Windows SmartScreen may warn on first run. Choose *More info → Run anyway*.
 - Requires Windows 10 1809+ or Windows 11, x64. The .NET runtime is bundled.
-
-See CHANGELOG.md for the full list.

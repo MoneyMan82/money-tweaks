@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.1 – 2026-10-11
+- **Fixed: endless update prompt.** The v1.2.0 release was tagged on the same commit as 1.1.0, and the release workflow
+  took its version from Directory.Build.props instead of the tag, so "v1.2.0" shipped 1.1.0 files. Installing it changed
+  nothing and the app offered it again forever. Now:
+  - Releases are stamped with the tag's version, and the build fails if the app or installer reports a different one.
+  - Before installing, the app checks the downloaded file's real version and refuses a release that isn't newer.
+  - After an in-app update, the app confirms the running version actually changed. If not, it says so (with the
+    installer log path) and stops auto-offering that release.
+- **Potato Graphics redesign:** Fortnite potato studio with presets (Competitive / Potato / Ultra potato / Custom),
+  a before/after 3D preview, review-before-apply diff, reset/unlock, a GPU driver guide and a clear list of what is and
+  isn't possible. Low meshes are applied through Fortnite's own `[PerformanceMode] MeshQuality` setting.
+- Preview restyled toward the rounded, toy-like low-poly look: chunky trees, puffy house and builds, soft rounded
+  hills, flat colours and soft "clay" lighting, with an island, beach and ocean. Still an illustration, not game footage.
+
 ## 1.1.0 – 2026-10-11
 - **Potato Graphics levels:** Low, Potato and Ultra potato, a 3D resolution slider (25–100%), Fortnite Performance mode
   (low-poly builds), uncapped FPS, and optional stretched 1440×1080 (the settings file is locked read-only so Fortnite keeps it).

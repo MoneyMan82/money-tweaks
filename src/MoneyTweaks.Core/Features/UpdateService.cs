@@ -6,6 +6,9 @@ using MoneyTweaks.Core.Sys;
 
 namespace MoneyTweaks.Core.Features;
 
+/// <summary>The release's files are not newer than the running app (e.g. a tag pointing at old binaries).</summary>
+public sealed class UpdateMismatchException(string message) : Exception(message);
+
 public sealed record UpdateInfo(Version Version, string Tag, string Notes, string HtmlUrl,
     string? SetupUrl, string? PortableUrl, string? PortableName, string? SumsUrl);
 
@@ -49,7 +52,7 @@ public static class UpdateService
         var root = doc.RootElement;
         var tag = root.GetProperty("tag_name").GetString() ?? "";
         var latest = ParseVersion(tag);
-        if (Normalize(latest) <= Normalize(current)) return null;
+        if (!IsNewer(latest, current)) return null;
 
         string? setup = null, portable = null, portableName = null, sums = null;
         foreach (var a in root.GetProperty("assets").EnumerateArray())
@@ -66,8 +69,22 @@ public static class UpdateService
 
     private static Version Normalize(Version v) => new(v.Major, v.Minor, Math.Max(0, v.Build), Math.Max(0, v.Revision));
 
+    /// <summary>True only when <paramref name="candidate"/> is strictly newer. 1.2 == 1.2.0 == 1.2.0.0.</summary>
+    public static bool IsNewer(Version candidate, Version current) => Normalize(candidate) > Normalize(current);
+
+    /// <summary>Version stamped into an exe's file-version resource (Inno Setup and .NET both write it), or null.</summary>
+    public static Version? FileVersionOf(string path)
+    {
+        var fv = FileVersionInfo.GetVersionInfo(path).FileVersion;
+        if (string.IsNullOrWhiteSpace(fv)) return null;
+        var core = fv.Trim().Split(' ', '+', '-')[0];
+        return Version.TryParse(core, out var v) ? v : null;
+    }
+
+    public static string InstallerLogPath => Path.Combine(Path.GetTempPath(), "MoneyTweaks-update-install.log");
+
     /// <summary>Downloads the right file for this copy (installer or portable exe) and verifies its checksum.</summary>
-    public static async Task<string> DownloadAsync(UpdateInfo u, IProgress<double>? progress = null, CancellationToken ct = default)
+    public static async Task<string> DownloadAsync(UpdateInfo u, Version current, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         var (url, name) = IsInstalled ? (u.SetupUrl, "MoneyTweaks-Setup.exe") : (u.PortableUrl, u.PortableName);
         if (url is null || name is null) throw new InvalidOperationException("This release has no file for your copy of Money Tweaks. Download it manually from the releases page.");
@@ -106,7 +123,15 @@ public static class UpdateService
                 throw new InvalidOperationException($"Checksum mismatch for {name}. The download was deleted and nothing was installed.");
             }
         }
-        Log.Info($"Update {u.Tag} downloaded and verified: {path}");
+        // Root cause of the old endless-update loop: a release tag whose files were built with an older version.
+        // Installing those changes nothing, so refuse them instead of looping.
+        var fileVersion = FileVersionOf(path);
+        if (fileVersion is not null && !IsNewer(fileVersion, current))
+        {
+            File.Delete(path);
+            throw new UpdateMismatchException($"The {u.Tag} release on GitHub contains Money Tweaks {fileVersion.ToString(3)}, which is not newer than the version you have ({current.ToString(3)}). The release was published with the wrong files, so installing it would change nothing. Nothing was installed.");
+        }
+        Log.Info($"Update {u.Tag} downloaded and verified: {path} (file version {fileVersion?.ToString() ?? "unknown"})");
         return path;
     }
 
@@ -118,7 +143,7 @@ public static class UpdateService
             // Keep the same install scope as the existing copy (per-user vs all users).
             var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             var scope = AppContext.BaseDirectory.StartsWith(pf, StringComparison.OrdinalIgnoreCase) ? "/ALLUSERS" : "/CURRENTUSER";
-            Process.Start(new ProcessStartInfo(downloadedPath, $"/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS {scope}") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(downloadedPath, $"/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS {scope} /LOG=\"{InstallerLogPath}\"") { UseShellExecute = true });
             Log.Info("Update installer started");
             return;
         }

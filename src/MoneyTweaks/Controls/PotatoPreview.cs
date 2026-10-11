@@ -37,13 +37,20 @@ public static class PotatoScene
     private static readonly Color Grass = Color.FromRgb(0x5C, 0xB8, 0x46), Leaf = Color.FromRgb(0x3E, 0x9E, 0x3C), LeafDark = Color.FromRgb(0x2F, 0x86, 0x33),
         Bark = Color.FromRgb(0x7A, 0x4E, 0x2D), Rock = Color.FromRgb(0x93, 0x9A, 0xA3), Wood = Color.FromRgb(0xC8, 0x8E, 0x4E), WoodDark = Color.FromRgb(0x9C, 0x67, 0x34),
         Wall = Color.FromRgb(0xE8, 0xD9, 0xB5), Roof = Color.FromRgb(0xC9, 0x4B, 0x3A), Water = Color.FromRgb(0x3A, 0xA7, 0xE0), Mountain = Color.FromRgb(0x7E, 0x9C, 0x7A),
-        Snow = Color.FromRgb(0xF2, 0xF5, 0xF7), Gold = Color.FromRgb(0xF5, 0xC4, 0x51), ChestWood = Color.FromRgb(0x8C, 0x5A, 0x2B), Blade = Color.FromRgb(0x4F, 0xA8, 0x3A);
+        Snow = Color.FromRgb(0xF2, 0xF5, 0xF7), Gold = Color.FromRgb(0xF5, 0xC4, 0x51), ChestWood = Color.FromRgb(0x8C, 0x5A, 0x2B), Blade = Color.FromRgb(0x6C, 0xC2, 0x4A),
+        LeafLight = Color.FromRgb(0x56, 0xBE, 0x48), Sand = Color.FromRgb(0xF0, 0xD9, 0x9C), Ocean = Color.FromRgb(0x2E, 0x8F, 0xD6);
 
     private static readonly Dictionary<(Color, int, bool), Material> MatCache = [];
 
-    public static double Height(double x, double z, double detail) =>
-        0.55 * Math.Sin(x * 0.33) * Math.Cos(z * 0.29) + 0.35 * Math.Cos(x * 0.18 + z * 0.21)
-        + detail * (0.12 * Math.Sin(x * 1.7 + z * 1.3) * Math.Cos(z * 1.9 - x * 0.7));
+    /// <summary>Rolling hills that fall off into the sea, so the scene reads as a small island.</summary>
+    public static double Height(double x, double z, double detail)
+    {
+        double r = Math.Sqrt(x * x + z * z), f = Math.Clamp((12.5 - r) / 3.5, 0, 1);
+        f = f * f * (3 - 2 * f);
+        double hills = 0.55 * Math.Sin(x * 0.33) * Math.Cos(z * 0.29) + 0.35 * Math.Cos(x * 0.18 + z * 0.21)
+            + detail * (0.12 * Math.Sin(x * 1.7 + z * 1.3) * Math.Cos(z * 1.9 - x * 0.7));
+        return hills * f + (f - 1) * 1.4 + 0.15;
+    }
 
     public static (Model3DGroup model, int triangles) Build(PreviewLook L)
     {
@@ -66,28 +73,41 @@ public static class PotatoScene
         }
         else
         {
-            g.Children.Add(new AmbientLight(Color.FromRgb(150, 150, 150)));
-            g.Children.Add(new DirectionalLight(Color.FromRgb(150, 150, 150), new Vector3D(-0.6, -1, -0.45)));
+            // Simple "clay" lighting: soft key + cool fill + ambient. No shadows or reflections, but rounded shapes still
+            // read as smooth 3D forms instead of flat cut-outs: the clean, toy-like look.
+            g.Children.Add(new AmbientLight(Color.FromRgb(112, 112, 116)));
+            g.Children.Add(new DirectionalLight(Color.FromRgb(182, 178, 168), new Vector3D(-0.55, -1, -0.5)));
+            g.Children.Add(new DirectionalLight(Color.FromRgb(44, 56, 74), new Vector3D(0.6, -0.2, 0.7)));
         }
 
         Material M(Color c, double texScale = 1) => Mat(c, L.Texture, L.Lighting > 0.5 && texScale < 0);
+        bool toy = L.MeshDetail < 0.3; // Fortnite "Meshes: Low" equivalent in the illustration
+
+        // Ocean and beach ring around the island.
+        Add(Disc(new Point3D(0, -0.38, 0), 70, toy ? 24 : 64), L.Lighting > 0.3 ? Glossy(Ocean, L.Lighting, L.Texture * 0.5) : Mat(Ocean, 0, false));
+        Add(Disc(new Point3D(0, -0.22, 0), 13.1, Seg(16, 64)), M(Sand));
 
         // Terrain
-        int n = Seg(10, 48);
-        Add(Terrain(12, n, L.MeshDetail), Mat(Grass, L.Texture, false));
+        int n = Seg(12, 52);
+        Add(Terrain(14, n, L.MeshDetail), Mat(Grass, L.Texture, false));
         // Pond: glossy with reflections at high lighting, flat blue otherwise.
         var pond = Disc(new Point3D(-4.2, Height(-4.2, 3.6, L.MeshDetail) + 0.08, 3.6), 1.9, Seg(8, 40));
         Add(pond, L.Lighting > 0.3 ? Glossy(Water, L.Lighting) : Mat(Water, 0, false));
 
-        // Trees: low mesh detail = one smooth, rounded blob canopy (toy-like); high = clustered, bumpy foliage.
+        // Trees: low mesh detail = chunky trunk + smooth stacked blobs (toy-like); high = clustered, bumpy foliage.
         (double x, double z, double s)[] trees = [(-6, -4, 1.2), (-7.5, 0.5, 1.0), (5.8, -5.5, 1.3), (7.2, 3.8, 1.1), (-2.5, -7, 0.9), (1.5, 7.2, 1.0)];
         foreach (var (x, z, s) in trees)
         {
             var y = Height(x, z, L.MeshDetail);
+            if (toy)
+            {
+                // Chunky toy tree: thick stubby trunk, two smooth stacked blobs.
+                Add(Cylinder(new Point3D(x, y - 0.1, z), 0.3 * s, 1.3 * s, 9), M(Bark));
+                Add(Ellipsoid(new Point3D(x, y + 1.85 * s, z), 1.3 * s, 1.05 * s, 1.3 * s, 12, 8, 0, 0), M(Leaf));
+                Add(Ellipsoid(new Point3D(x + 0.1 * s, y + 2.7 * s, z - 0.05 * s), 0.85 * s, 0.75 * s, 0.85 * s, 11, 7, 0, 0), M(LeafLight));
+                continue;
+            }
             Add(Cylinder(new Point3D(x, y, z), 0.18 * s, 1.6 * s, Seg(5, 14)), M(Bark));
-            if (L.MeshDetail < 0.3)
-                Add(Ellipsoid(new Point3D(x, y + 2.2 * s, z), 1.15 * s, 1.35 * s, 1.15 * s, 9, 6, 0, 0), M(Leaf));
-            else
             {
                 int sl = Seg(9, 22);
                 var bump = 0.12 * L.MeshDetail;
@@ -116,9 +136,19 @@ public static class PotatoScene
 
         // House
         var hx = -1.8; var hz = -3.2; var hy = Height(hx, hz, L.MeshDetail);
-        Add(Box(new Point3D(hx, hy + 1.05, hz), 3.2, 2.1, 2.6), M(Wall));
-        Add(RoofPrism(new Point3D(hx, hy + 2.1, hz), 3.6, 1.2, 3.0), M(Roof), M(Roof));
-        Add(Box(new Point3D(hx + 0.4, hy + 0.65, hz + 1.31), 0.7, 1.3, 0.04), M(WoodDark));
+        if (toy)
+        {
+            // Puffy walls, a soft dome-like roof and a rounded door: no sharp edges, no window/chimney detail.
+            Add(Puffy(new Point3D(hx, hy + 1.0, hz), 3.2, 2.2, 2.6, 0.42, 10), M(Wall));
+            Add(Puffy(new Point3D(hx, hy + 2.35, hz), 3.9, 1.35, 3.3, 0.62, 10), M(Roof));
+            Add(Puffy(new Point3D(hx + 0.4, hy + 0.7, hz + 1.3), 0.75, 1.3, 0.18, 0.5, 7), M(WoodDark));
+        }
+        else
+        {
+            Add(Box(new Point3D(hx, hy + 1.05, hz), 3.2, 2.1, 2.6), M(Wall));
+            Add(RoofPrism(new Point3D(hx, hy + 2.1, hz), 3.6, 1.2, 3.0), M(Roof), M(Roof));
+            Add(Box(new Point3D(hx + 0.4, hy + 0.65, hz + 1.31), 0.7, 1.3, 0.04), M(WoodDark));
+        }
         if (L.MeshDetail > 0.5)
         {
             Add(Box(new Point3D(hx - 0.9, hy + 1.35, hz + 1.31), 0.6, 0.55, 0.04), Glossy(Water, 0.6));
@@ -189,14 +219,23 @@ public static class PotatoScene
             {
                 double a = i * (Math.PI * 2 / mountains) + 0.3, r = 26 + (i % 3) * 4;
                 var h = 6 + (i % 4) * 2.5;
-                Add(Cone(new Point3D(Math.Cos(a) * r, -1, Math.Sin(a) * r), 5 + (i % 3), h, Seg(6, 18)), M(Mountain));
-                if (L.ViewDistance > 0.6) Add(Cone(new Point3D(Math.Cos(a) * r, -1 + h * 0.72, Math.Sin(a) * r), (5 + (i % 3)) * 0.28, h * 0.28, Seg(6, 18)), Mat(Snow, 0, false));
+                double mx = Math.Cos(a) * r, mz = Math.Sin(a) * r, mr = 5 + (i % 3);
+                if (toy)
+                {
+                    // Distant islands become soft, rounded hills with a smooth snow cap.
+                    Add(Ellipsoid(new Point3D(mx, -0.4, mz), mr, h * 0.85, mr, 12, 7, 0, 0), M(Mountain));
+                    if (L.ViewDistance > 0.6) Add(Ellipsoid(new Point3D(mx, -0.4 + h * 0.62, mz), mr * 0.42, h * 0.3, mr * 0.42, 10, 6, 0, 0), Mat(Snow, 0, false));
+                    continue;
+                }
+                Add(Cone(new Point3D(mx, -1, mz), mr, h, Seg(6, 18)), M(Mountain));
+                if (L.ViewDistance > 0.6) Add(Cone(new Point3D(mx, -1 + h * 0.72, mz), mr * 0.28, h * 0.28, Seg(6, 18)), Mat(Snow, 0, false));
             }
             if (L.ViewDistance > 0.4)
-                for (int i = 0; i < 18; i++)
+                for (int i = 0; i < 16; i++)
                 {
-                    double a = i * 0.35, r = 16.5;
-                    Add(Ellipsoid(new Point3D(Math.Cos(a) * r, 0.9, Math.Sin(a) * r), 0.9, 1.4, 0.9, Seg(7, 12), Seg(5, 8), 0, 0), M(LeafDark));
+                    double a = i * 0.39 + 0.2, r = 10.3, tx = Math.Cos(a) * r, tz = Math.Sin(a) * r;
+                    if (Math.Abs(tx - 2.6) < 4 && Math.Abs(tz - 1.6) < 3) continue; // keep the builds visible
+                    Add(Ellipsoid(new Point3D(tx, Height(tx, tz, L.MeshDetail) + 0.8, tz), 0.75, 1.1, 0.75, Seg(9, 14), Seg(6, 10), 0.06 * L.MeshDetail, i), M(LeafDark));
                 }
         }
         g.Freeze();
@@ -505,8 +544,8 @@ public sealed class PotatoPreview : Grid
         _overlay.Children.Add(_divider);
         _overlay.Children.Add(_handle);
         Children.Add(_overlay);
-        _beforeLabel = Tag("BEFORE · high settings", HorizontalAlignment.Left);
-        _afterLabel = Tag("AFTER · your settings", HorizontalAlignment.Right);
+        _beforeLabel = CornerLabel("BEFORE · high settings", HorizontalAlignment.Left);
+        _afterLabel = CornerLabel("AFTER · your settings", HorizontalAlignment.Right);
         _hint = new TextBlock
         {
             Text = "Drag the handle to compare · drag the scene to rotate", FontSize = 11, Foreground = Brushes.White, Margin = new Thickness(0, 0, 0, 10),
@@ -528,7 +567,7 @@ public sealed class PotatoPreview : Grid
         UpdateCameras();
     }
 
-    private TextBlock Tag(string text, HorizontalAlignment h)
+    private TextBlock CornerLabel(string text, HorizontalAlignment h)
     {
         var t = new TextBlock { Text = text, FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brushes.White, Padding = new Thickness(10, 5, 10, 5), IsHitTestVisible = false };
         var b = new Border

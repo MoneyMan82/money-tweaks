@@ -61,6 +61,7 @@ public partial class MainWindow : Window
         Loaded += async (_, _) =>
         {
             await RefreshAppliedSummaryAsync();
+            if (!App.ScreenshotMode) Updater.VerifyPendingUpdate();
             if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode) await Updater.CheckAsync(manual: false);
         };
     }
@@ -148,6 +149,8 @@ public partial class MainWindow : Window
         Toast.BeginAnimation(OpacityProperty, a);
     }
 
+    public void HideUpdateBanner() => UpdateBanner.Visibility = Visibility.Collapsed;
+
     public void ShowUpdateBanner(Core.Features.UpdateInfo u)
     {
         UpdateText.Text = $"Money Tweaks {u.Version.ToString(3)} is available (you have {App.Version}).";
@@ -209,6 +212,21 @@ public partial class MainWindow : Window
                 await using var fs2 = File.Create(Path.Combine(dir, "potato-controls.png"));
                 enc2.Save(fs2);
                 sv.ScrollToVerticalOffset(0);
+                if (Host.Content is PotatoView pv)
+                {
+                    foreach (var preset in new[] { Core.Features.FnPreset.Competitive, Core.Features.FnPreset.Potato, Core.Features.FnPreset.UltraPotato })
+                    {
+                        pv.PreviewPresetOnly(preset);
+                        await Task.Delay(1200);
+                        var r = new RenderTargetBitmap((int)(ActualWidth * dpi.DpiScaleX), (int)(ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+                        r.Render(Root);
+                        var e = new PngBitmapEncoder();
+                        e.Frames.Add(BitmapFrame.Create(r));
+                        await using var f = File.Create(Path.Combine(dir, $"potato-preset-{preset.ToString().ToLowerInvariant()}.png"));
+                        e.Save(f);
+                    }
+                    pv.PreviewPresetOnly(null);
+                }
             }
         }
         Log.Info($"Screenshots saved to {dir}");

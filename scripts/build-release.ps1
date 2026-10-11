@@ -7,6 +7,8 @@
 #>
 param(
     [string]$Configuration = 'Release',
+    # Release version, e.g. 1.2.1 or v1.2.1. CI passes the git tag so binaries always match the tag.
+    [string]$ReleaseVersion = '',
     [switch]$SkipTests,
     [switch]$SkipInstaller
 )
@@ -16,6 +18,12 @@ Set-Location $root
 
 [xml]$props = Get-Content (Join-Path $root 'Directory.Build.props')
 $version = $props.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+if ($ReleaseVersion) {
+    $tagVersion = $ReleaseVersion.TrimStart('v', 'V')
+    if ($tagVersion -notmatch '^\d+\.\d+\.\d+$') { throw "Release version '$ReleaseVersion' must look like 1.2.3 or v1.2.3" }
+    if ($tagVersion -ne $version) { Write-Warning "Directory.Build.props says $version but the release is $tagVersion; building as $tagVersion." }
+    $version = $tagVersion
+}
 Write-Host "Money Tweaks $version" -ForegroundColor Green
 
 $dist = Join-Path $root 'dist'
@@ -28,12 +36,15 @@ if (-not $SkipTests) {
     if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
 }
 
-dotnet publish (Join-Path $root 'src\MoneyTweaks\MoneyTweaks.csproj') -c $Configuration -r win-x64 --self-contained true `
+dotnet publish (Join-Path $root 'src\MoneyTweaks\MoneyTweaks.csproj') -c $Configuration -r win-x64 --self-contained true -p:Version=$version `
     -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
     -p:DebugType=none -p:GenerateDocumentationFile=false -o $publish
 if ($LASTEXITCODE -ne 0) { throw 'Publish failed' }
 
 $exe = Join-Path $publish 'MoneyTweaks.exe'
+# Guard: the app must report exactly the release version, or in-app updates would loop forever.
+$built = (Get-Item $exe).VersionInfo.FileVersion
+if (-not $built.StartsWith($version)) { throw "Built MoneyTweaks.exe reports $built but the release is $version" }
 Copy-Item (Join-Path $root 'LICENSE') $publish
 Copy-Item (Join-Path $root 'README.md') $publish
 
@@ -52,6 +63,8 @@ if (-not $SkipInstaller) {
     if (-not $iscc) { throw 'Inno Setup 6 not found. Install it (winget install JRSoftware.InnoSetup) or pass -SkipInstaller.' }
     & $iscc "/DAppVersion=$version" "/DPublishDir=$publish" "/DOutputDir=$dist" (Join-Path $root 'installer\MoneyTweaks.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
+    $setupVersion = (Get-Item (Join-Path $dist 'MoneyTweaks-Setup.exe')).VersionInfo.FileVersion
+    if (-not $setupVersion.StartsWith($version)) { throw "MoneyTweaks-Setup.exe reports $setupVersion but the release is $version" }
 }
 
 # Checksums (sha256sum-compatible format)

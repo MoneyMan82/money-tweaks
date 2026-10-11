@@ -30,6 +30,11 @@ public sealed class AppSettings
     public bool ShowWelcome { get; set; } = true;
     /// <summary>Check GitHub Releases for a newer version at startup.</summary>
     public bool AutoCheckUpdates { get; set; } = true;
+    /// <summary>Set just before an in-app update installs; checked on the next start to confirm the update applied.</summary>
+    public string? PendingUpdateTag { get; set; }
+    public string? PendingUpdateVersion { get; set; }
+    /// <summary>A release that failed to install or was mislabeled; not offered automatically again.</summary>
+    public string? SkippedUpdateTag { get; set; }
     public Dictionary<string, PotatoOptions> Potato { get; set; } = [];
     public FortnitePotatoSettings FortnitePotato { get; set; } = FortnitePotatoSettings.FromPreset(FnPreset.Potato);
 
