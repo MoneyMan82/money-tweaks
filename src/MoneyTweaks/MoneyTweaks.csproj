@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>MoneyTweaks</RootNamespace>
+    <AssemblyName>MoneyTweaks</AssemblyName>
+    <ApplicationIcon>Assets\MoneyTweaks.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyTweaks.Core\MoneyTweaks.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\logo.png" />
+    <Resource Include="Assets\MoneyTweaks.ico" />
+  </ItemGroup>
+</Project>
