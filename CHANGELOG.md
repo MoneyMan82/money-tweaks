@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 – 2026-10-11
+- **Potato Graphics levels:** Low, Potato and Ultra potato, a 3D resolution slider (25–100%), Fortnite Performance mode
+  (low-poly builds), uncapped FPS, and optional stretched 1440×1080 (the settings file is locked read-only so Fortnite keeps it).
+  Only settings that already exist in the game's file are changed, and Restore always unlocks and restores the original.
+- **In-app updates:** an "Update now" banner when a new version is on GitHub, plus Check for updates in Settings & About.
+  Downloads are verified against the release's SHA256SUMS.txt before installing. Installed and portable copies both update
+  themselves. The automatic check at startup can be turned off.
+- Fixed the CI workflow (solution file is MoneyTweaks.slnx) and added Cloudflare Pages/Workers config for the website.
+
 ## 1.0.0 – 2026-10-11
 First public release.
 

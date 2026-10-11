@@ -58,7 +58,11 @@ public partial class MainWindow : Window
 
         TweakService.Changed += () => _ = RefreshAppliedSummaryAsync();
         Navigate("dashboard");
-        Loaded += async (_, _) => await RefreshAppliedSummaryAsync();
+        Loaded += async (_, _) =>
+        {
+            await RefreshAppliedSummaryAsync();
+            if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode) await Updater.CheckAsync(manual: false);
+        };
     }
 
     private RadioButton NavItem(string tag, string icon, string label, string? count)
@@ -142,6 +146,21 @@ public partial class MainWindow : Window
         a.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2800))));
         a.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(3300))));
         Toast.BeginAnimation(OpacityProperty, a);
+    }
+
+    public void ShowUpdateBanner(Core.Features.UpdateInfo u)
+    {
+        UpdateText.Text = $"Money Tweaks {u.Version.ToString(3)} is available (you have {App.Version}).";
+        UpdateBanner.Visibility = Visibility.Visible;
+    }
+
+    private async void Update_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateButton.IsEnabled = false;
+        void OnStatus(string s) => Dispatcher.Invoke(() => UpdateText.Text = s);
+        Updater.StatusChanged += OnStatus;
+        try { await Updater.InstallAsync(); }
+        finally { Updater.StatusChanged -= OnStatus; UpdateButton.IsEnabled = true; }
     }
 
     private void Elevate_Click(object sender, RoutedEventArgs e)

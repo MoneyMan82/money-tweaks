@@ -1,12 +1,16 @@
-## Money Tweaks 1.0.0
+## Money Tweaks 1.1.0
 
 Free, open-source Windows 10/11 performance and privacy tweaker. No accounts, ads, telemetry or paid tiers.
 
 **Downloads**
 - `MoneyTweaks-Setup.exe`: installer (per-user by default, no admin needed to install)
-- `MoneyTweaks-1.0.0-portable-win-x64.zip`: portable, unzip and run `MoneyTweaks.exe`
-- `MoneyTweaks-1.0.0-win-x64.exe`: the single-file app on its own
+- `MoneyTweaks-1.1.0-portable-win-x64.zip`: portable, unzip and run `MoneyTweaks.exe`
+- `MoneyTweaks-1.1.0-win-x64.exe`: the single-file app on its own
 - `SHA256SUMS.txt`: verify with `Get-FileHash <file> -Algorithm SHA256`
+
+**New in 1.1.0**
+- Potato Graphics levels: Low / Potato / Ultra potato, 3D resolution slider, Fortnite Performance mode (low-poly builds), uncapped FPS, optional stretched 1440×1080
+- In-app updates: Money Tweaks now tells you when a new version is out and updates itself in one click (checksum-verified). Coming from 1.0.0? Install this version once manually; future updates are automatic.
 
 **Highlights**
 - 334 reversible tweaks in 9 categories, each backed up before it changes anything

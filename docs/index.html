@@ -21,7 +21,7 @@
 <link rel="icon" type="image/png" href="assets/favicon-64.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Money Tweaks","operatingSystem":"Windows 10, Windows 11","applicationCategory":"UtilitiesApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"softwareVersion":"1.0.0","license":"https://opensource.org/licenses/MIT","url":"https://money-tweaks.pages.dev/","downloadUrl":"https://github.com/MoneyMan82/money-tweaks/releases/latest"}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Money Tweaks","operatingSystem":"Windows 10, Windows 11","applicationCategory":"UtilitiesApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"softwareVersion":"1.1.0","license":"https://opensource.org/licenses/MIT","url":"https://money-tweaks.pages.dev/","downloadUrl":"https://github.com/MoneyMan82/money-tweaks/releases/latest"}
 </script>
 <style>
 :root{--bg:#080c0a;--surface:#0f1512;--card:#141c18;--border:#223029;--accent:#2be38b;--accent2:#14b8a6;--gold:#f5c451;--text:#e8f1ec;--muted:#8a9a92;--radius:14px}
@@ -168,7 +168,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
     <div class="wrap">
       <div class="section-head reveal"><div class="eyebrow">Tools</div><h2>More than a list of switches</h2><p class="muted">Alongside the tweak library, Money Tweaks ships with tools that handle the jobs gamers usually need three separate apps for.</p></div>
       <div class="cards">
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18c2-6 6-9 12-10M16 8l-1 5M16 8l-5-1"/><circle cx="7" cy="17" r="2"/></svg></div><h3>Potato Graphics</h3><p>Lowers settings inside Fortnite, Minecraft Java and Rocket League config files (after a backup), plus a Windows-side preset for every game.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18c2-6 6-9 12-10M16 8l-1 5M16 8l-5-1"/><circle cx="7" cy="17" r="2"/></svg></div><h3>Potato Graphics</h3><p>Low, Potato and Ultra potato levels for Fortnite, Minecraft Java and Rocket League: Performance mode, low-poly builds, 3D resolution down to 25%, uncapped FPS and optional stretched res. One-click restore.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Game Booster</h3><p>One click: High/Ultimate power plan, close the background apps you pick, raise your game's priority and clear standby memory.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 6v4"/></svg></div><h3>Input Delay Reducer</h3><p>Holds a 0.5 ms kernel timer while the app is open and groups the input tweaks (mouse acceleration, sticky keys, MSI mode, timers).</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div><h3>Ping Stabilizer</h3><p>Live latency, jitter and packet-loss graph against any host, with a connection grade and the network tweaks that remove local lag spikes.</p></div>
@@ -227,10 +227,10 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
 
   <section id="download" class="download">
     <div class="wrap">
-      <div class="section-head reveal"><div class="eyebrow">Download</div><h2>Get Money Tweaks 1.0.0</h2><p class="muted">Free forever. No sign-up. Files are hosted on GitHub Releases.</p></div>
+      <div class="section-head reveal"><div class="eyebrow">Download</div><h2>Get Money Tweaks 1.1.0</h2><p class="muted">Free forever. No sign-up. Files are hosted on GitHub Releases.</p></div>
       <div class="dl-grid">
         <div class="card dl reveal"><h3>Installer</h3><p>Start-menu shortcut and uninstaller. Installs for your user account by default, without needing admin.</p><a class="btn primary" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/MoneyTweaks-Setup.exe">MoneyTweaks-Setup.exe</a></div>
-        <div class="card dl reveal"><h3>Portable ZIP</h3><p>Unzip anywhere and run MoneyTweaks.exe. Nothing gets installed.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/download/v1.0.0/MoneyTweaks-1.0.0-portable-win-x64.zip">Portable ZIP</a></div>
+        <div class="card dl reveal"><h3>Portable ZIP</h3><p>Unzip anywhere and run MoneyTweaks.exe. Nothing gets installed.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/download/v1.1.0/MoneyTweaks-1.1.0-portable-win-x64.zip">Portable ZIP</a></div>
         <div class="card dl reveal"><h3>Checksums</h3><p>SHA-256 hashes for every file, so you can verify your download.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a></div>
       </div>
       <p class="muted" style="margin-top:18px;font-size:14px">Release builds aren't code-signed (certificates cost money), so Windows SmartScreen may warn the first time. Click <b>More info → Run anyway</b>, or <a href="#build">build it yourself</a>.</p>
@@ -270,6 +270,13 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
   <section id="changelog">
     <div class="wrap">
       <div class="section-head reveal"><div class="eyebrow">Changelog</div><h2>What's new</h2></div>
+      <div class="card reveal" style="margin-bottom:16px">
+        <h3>1.1.0 <span class="muted" style="font-size:14px;font-weight:400">· October 2026</span></h3>
+        <ul class="list">
+          <li><b>Potato Graphics levels:</b> Low / Potato / Ultra potato, 3D resolution slider, Performance mode for low-poly builds, uncapped FPS, stretched 1440×1080.</li>
+          <li><b>In-app updates:</b> one-click, checksum-verified updates from GitHub Releases.</li>
+        </ul>
+      </div>
       <div class="card reveal">
         <h3>1.0.0 <span class="muted" style="font-size:14px;font-weight:400">· October 2026</span></h3>
         <ul class="list">
@@ -289,6 +296,7 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <details class="reveal"><summary>Can a tweak break my PC?</summary><p>Every tweak backs up the original values and can be undone from the same switch. Caution tweaks have real trade-offs and ask before applying. As a last resort, roll back with the restore point Money Tweaks creates before your first change.</p></details>
       <details class="reveal"><summary>Will it get me banned in games?</summary><p>Money Tweaks changes Windows settings, not game memory or files (except Potato Graphics, which edits the same settings file the game's own menu writes). The crosshair overlay is an ordinary topmost window. Still, check your game's rules on overlays before using one in competitive play.</p></details>
       <details class="reveal"><summary>Why does Windows say it's an unrecognized app?</summary><p>The builds aren't code-signed. You can verify the SHA-256 hash, read the source, or build it yourself with one command.</p></details>
+      <details class="reveal"><summary>How do I update?</summary><p>Money Tweaks checks GitHub for new versions when it starts and shows an <b>Update now</b> banner. The download is checksum-verified and the app restarts on the new version. You can also use Settings &amp; About → Check for updates. Version 1.0.0 had no updater, so install 1.1.0 once manually.</p></details>
       <details class="reveal"><summary>What happens when I uninstall?</summary><p>Applied tweaks stay applied. Undo them first from Backup &amp; Restore if you want Windows back to how it was. Your backups in %LOCALAPPDATA%\MoneyTweaks are kept so a reinstall can still undo them.</p></details>
       <details class="reveal"><summary>Is Money Tweaks related to EMTweaks?</summary><p>No. Money Tweaks is an independent, open-source project with its own code, text and artwork, and isn't affiliated with EMTweaks.</p></details>
     </div>
@@ -299,7 +307,7 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <div class="reveal">
         <div class="eyebrow">Privacy &amp; security</div>
         <h2>Nothing leaves your PC</h2>
-        <p class="muted">Money Tweaks has no telemetry, analytics, accounts or update pings. It only makes network requests when you use the Ping Stabilizer (ICMP pings to the host you choose). Settings, backups and logs stay in <code>%LOCALAPPDATA%\MoneyTweaks</code>. This website uses no cookies, trackers or third-party scripts.</p>
+        <p class="muted">Money Tweaks has no telemetry, analytics, accounts or update pings. It only goes online to check GitHub for new versions (you can turn that off in Settings) and when you use the Ping Stabilizer (ICMP pings to the host you choose). Settings, backups and logs stay in <code>%LOCALAPPDATA%\MoneyTweaks</code>. This website uses no cookies, trackers or third-party scripts.</p>
       </div>
       <div class="reveal">
         <h3>Security</h3>

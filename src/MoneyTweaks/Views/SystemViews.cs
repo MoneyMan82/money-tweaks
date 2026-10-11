@@ -178,6 +178,19 @@ public sealed class AboutView : UserControl, IPageLifecycle
         st.Children.Add(cc);
         body.Children.Add(Ui.Card(st));
 
+        var up = Ui.Section("Updates", $"You have Money Tweaks {App.Version}. Updates come from the official GitHub releases and are checksum-verified before installing.");
+        var status = Ui.Muted(Updater.Available is { } av ? $"Version {av.Version.ToString(3)} is available." : "", 12.5);
+        Updater.StatusChanged += t => Dispatcher.Invoke(() => status.Text = t);
+        var install = Ui.Btn("Update now", async (_, _) => await Updater.InstallAsync(), "PrimaryButton");
+        install.Visibility = Updater.Available is null ? Visibility.Collapsed : Visibility.Visible;
+        Updater.StatusChanged += _ => Dispatcher.Invoke(() => install.Visibility = Updater.Available is null ? Visibility.Collapsed : Visibility.Visible);
+        up.Children.Add(Ui.Row(Ui.Btn("Check for updates", async (_, _) => await Updater.CheckAsync(manual: true)), install));
+        up.Children.Add(status);
+        var auto = new CheckBox { Content = "Check for updates automatically when Money Tweaks starts", IsChecked = App.Settings.AutoCheckUpdates, Margin = new Thickness(0, 8, 0, 0) };
+        auto.Click += (_, _) => { App.Settings.AutoCheckUpdates = auto.IsChecked == true; App.Settings.Save(); };
+        up.Children.Add(auto);
+        body.Children.Add(Ui.Card(up));
+
         var counts = string.Join("  ·  ", Enum.GetValues<Core.Model.TweakCategory>().Select(c => $"{Core.Model.CategoryInfo.DisplayName(c)} {TweakCatalog.InCategory(c).Count()}"));
         var ab = Ui.Section("About");
         ab.Children.Add(Ui.Muted($"{TweakCatalog.All.Count} tweaks: {counts}", 12.5));

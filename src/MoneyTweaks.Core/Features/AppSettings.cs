@@ -28,6 +28,9 @@ public sealed class AppSettings
     public string PingHost { get; set; } = "1.1.1.1";
     public double TimerResolutionMs { get; set; } = 0.5;
     public bool ShowWelcome { get; set; } = true;
+    /// <summary>Check GitHub Releases for a newer version at startup.</summary>
+    public bool AutoCheckUpdates { get; set; } = true;
+    public Dictionary<string, PotatoOptions> Potato { get; set; } = [];
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

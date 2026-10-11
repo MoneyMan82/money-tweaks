@@ -70,10 +70,8 @@ public sealed class PotatoView : UserControl, IPageLifecycle
 
     public PotatoView()
     {
-        var (root, body) = Ui.Page("Potato Graphics", "Squeeze every frame out of low-end hardware. Money Tweaks lowers settings inside each game's own config file, after making a backup you can restore with one click. Close the game before applying.");
-        var gs = Ui.Section("Game presets", "Supported games are the ones with a documented, plain-text settings file. Others (like VALORANT or CS2) store settings online or in binary form; set those to Low in-game.");
-        gs.Children.Add(_games);
-        body.Children.Add(Ui.Card(gs));
+        var (root, body) = Ui.Page("Potato Graphics", "Turn games into a low-poly, ultra-smooth potato: flat textures, simple meshes, no grass, shadows or effects, and as many FPS as your PC can push. Money Tweaks edits each game's own settings file after backing it up, and Restore puts everything back. Close the game before applying.");
+        body.Children.Add(_games);
         var ws = Ui.Section("Windows potato preset", "System-side changes that help every game. Each one is a regular, reversible tweak.");
         ws.Children.Add(_windows);
         ws.Children.Add(Ui.Row(Ui.Btn("Apply Windows preset", async (_, _) => await _windows.ApplyAllAsync(), "PrimaryButton", new Thickness(0, 10, 0, 0))));
@@ -82,50 +80,126 @@ public sealed class PotatoView : UserControl, IPageLifecycle
         BuildGames();
     }
 
+    private static PotatoOptions OptionsFor(PotatoGame g)
+    {
+        if (!App.Settings.Potato.TryGetValue(g.Id, out var o))
+        {
+            o = new PotatoOptions { PerformanceMode = g.SupportsPerformanceMode };
+            App.Settings.Potato[g.Id] = o;
+        }
+        return o;
+    }
+
     private void BuildGames()
     {
         _games.Children.Clear();
-        foreach (var g in PotatoGraphics.Games)
+        foreach (var g in PotatoGraphics.Games) _games.Children.Add(GameCard(g));
+    }
+
+    private Border GameCard(PotatoGame g)
+    {
+        var o = OptionsFor(g);
+        var sp = new StackPanel();
+        var head = new DockPanel();
+        var btns = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
+        var apply = Ui.Btn("Apply potato", (_, _) => Run(g, true), "PrimaryButton");
+        apply.IsEnabled = g.Installed;
+        var restore = Ui.Btn("Restore original", (_, _) => Run(g, false), margin: new Thickness(0));
+        restore.IsEnabled = g.HasBackup;
+        btns.Children.Add(apply);
+        btns.Children.Add(restore);
+        DockPanel.SetDock(btns, Dock.Right);
+        head.Children.Add(btns);
+        var title = new WrapPanel();
+        title.Children.Add(Ui.Text(g.Name, 16, FontWeights.SemiBold));
+        title.Children.Add(new Border { Width = 8 });
+        title.Children.Add(Ui.Pill(g.Installed ? (g.HasBackup ? "Potato applied" : "Detected") : "Not found. Launch the game once", !g.Installed));
+        head.Children.Add(title);
+        sp.Children.Add(head);
+        sp.Children.Add(Ui.Muted(g.Notes, 12));
+
+        var summary = Ui.Muted("", 12);
+        summary.Foreground = Ui.Brush("Accent");
+        summary.Margin = new Thickness(0, 8, 0, 0);
+
+        Slider? scale = null;
+        var levels = new WrapPanel { Margin = new Thickness(0, 12, 0, 4) };
+        foreach (var lvl in Enum.GetValues<PotatoLevel>())
         {
-            var row = new DockPanel { Margin = new Thickness(0, 6, 0, 10) };
-            var btns = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
-            var apply = Ui.Btn("Apply potato", (_, _) => Run(g, true), "PrimaryButton");
-            apply.IsEnabled = g.Installed;
-            var restore = Ui.Btn("Restore original", (_, _) => Run(g, false), margin: new Thickness(0));
-            restore.IsEnabled = g.HasBackup;
-            btns.Children.Add(apply); btns.Children.Add(restore);
-            DockPanel.SetDock(btns, Dock.Right);
-            row.Children.Add(btns);
-            var info = new StackPanel { Margin = new Thickness(0, 0, 16, 0) };
-            var title = new WrapPanel();
-            title.Children.Add(Ui.Text(g.Name, 14, FontWeights.SemiBold));
-            title.Children.Add(new Border { Width = 8 });
-            title.Children.Add(Ui.Pill(g.Installed ? (g.HasBackup ? "Potato applied" : "Detected") : "Not found", !g.Installed));
-            info.Children.Add(title);
-            info.Children.Add(Ui.Muted(g.Notes, 12));
-            info.Children.Add(Ui.Muted(g.ConfigPath, 11));
-            row.Children.Add(info);
-            _games.Children.Add(row);
+            var label = lvl switch { PotatoLevel.Low => "Low", PotatoLevel.Potato => "Potato", _ => "Ultra potato" };
+            var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = "lvl-" + g.Id, IsChecked = o.Level == lvl, Margin = new Thickness(0, 0, 6, 6) };
+            rb.Checked += (_, _) =>
+            {
+                o.Level = lvl;
+                o.RenderScale = PotatoOptions.DefaultScale(lvl);
+                if (scale is not null) scale.Value = o.RenderScale;
+                Update();
+            };
+            levels.Children.Add(rb);
+        }
+        sp.Children.Add(levels);
+
+        if (g.SupportsRenderScale)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+            var name = Ui.Muted("3D resolution", 12.5);
+            name.Width = 110;
+            var val = Ui.Text($"{o.RenderScale}%", 12.5);
+            val.Width = 50;
+            scale = new Slider { Minimum = 25, Maximum = 100, Value = o.RenderScale, TickFrequency = 5, IsSnapToTickEnabled = true, VerticalAlignment = VerticalAlignment.Center, Width = 360 };
+            scale.ValueChanged += (_, e) => { o.RenderScale = (int)e.NewValue; val.Text = $"{o.RenderScale}%"; Update(); };
+            DockPanel.SetDock(name, Dock.Left);
+            DockPanel.SetDock(val, Dock.Right);
+            row.Children.Add(name);
+            row.Children.Add(val);
+            row.Children.Add(scale);
+            sp.Children.Add(row);
+        }
+
+        var opts = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        void Opt(string text, bool value, Action<bool> set, string tip)
+        {
+            var cb = new CheckBox { Content = text, IsChecked = value, Margin = new Thickness(0, 4, 18, 4), ToolTip = tip };
+            cb.Click += (_, _) => { set(cb.IsChecked == true); Update(); };
+            opts.Children.Add(cb);
+        }
+        if (g.SupportsPerformanceMode) Opt("Performance mode (low-poly builds)", o.PerformanceMode, v => o.PerformanceMode = v, "DirectX 11 Performance rendering: simplified meshes and flat shading. Gives the biggest FPS jump.");
+        if (g.SupportsFpsCap) Opt("Uncap FPS (smoothest)", o.UncapFps, v => o.UncapFps = v, "Removes the in-game frame-rate limit.");
+        if (g.SupportsStretched) Opt($"Stretched {o.StretchWidth}x{o.StretchHeight}", o.Stretched, v => o.Stretched = v, "Classic 4:3 stretched look. The settings file is set read-only so Fortnite keeps it. Set GPU scaling to Full-screen in your driver.");
+        sp.Children.Add(opts);
+        sp.Children.Add(summary);
+        if (g.Installed) sp.Children.Add(Ui.Muted(g.ConfigPath, 11));
+        Update();
+        return Ui.Card(sp);
+
+        void Update()
+        {
+            var parts = new List<string>
+            {
+                o.Level switch { PotatoLevel.Low => "Everything Low", PotatoLevel.Potato => "Potato: everything Low, short view distance", _ => "Ultra potato: absolute minimum" }
+            };
+            if (g.SupportsRenderScale) parts.Add($"{o.RenderScale}% 3D resolution{(o.RenderScale <= 50 ? " (blurry, smooth)" : "")}");
+            if (g.SupportsPerformanceMode && o.PerformanceMode) parts.Add("Performance mode");
+            if (g.SupportsFpsCap && o.UncapFps) parts.Add("uncapped FPS");
+            if (g.SupportsStretched && o.Stretched) parts.Add($"stretched {o.StretchWidth}x{o.StretchHeight}");
+            summary.Text = "Will apply: " + string.Join(" · ", parts);
         }
     }
 
     private void Run(PotatoGame g, bool apply)
     {
-        if (apply && Process.GetProcesses().Any(p => g.Id switch
-            {
-                "fortnite" => p.ProcessName.StartsWith("FortniteClient", StringComparison.OrdinalIgnoreCase),
-                "minecraft" => p.ProcessName.Equals("javaw", StringComparison.OrdinalIgnoreCase),
-                "rocketleague" => p.ProcessName.Equals("RocketLeague", StringComparison.OrdinalIgnoreCase),
-                _ => false
-            }))
+        if (apply && PotatoGraphics.IsRunning(g))
         {
             Dialog.Show("Close the game first", $"{g.Name} is running and would overwrite its settings file when it exits.", DialogKind.Warning);
             return;
         }
         try
         {
-            var msg = apply ? PotatoGraphics.Apply(g) : PotatoGraphics.Restore(g);
-            MainWindow.Current?.ShowToast($"{g.Name}: {msg}");
+            var msg = apply ? PotatoGraphics.Apply(g, OptionsFor(g)) : PotatoGraphics.Restore(g);
+            App.Settings.Save();
+            if (apply && g.Id == "fortnite")
+                msg += "\n\nIn Fortnite, open Settings > Video and check that Rendering Mode is Performance and Mesh Quality is Low. That's what makes builds low-poly.";
+            Dialog.Show(apply ? $"{g.Name} is now a potato" : $"{g.Name} restored", msg);
         }
         catch (Exception ex)
         {
@@ -136,7 +210,7 @@ public sealed class PotatoView : UserControl, IPageLifecycle
     }
 
     public void OnShown() { _ = _windows.RefreshAsync(); BuildGames(); }
-    public void OnHidden() { }
+    public void OnHidden() => App.Settings.Save();
 }
 
 public sealed class BoosterView : UserControl, IPageLifecycle

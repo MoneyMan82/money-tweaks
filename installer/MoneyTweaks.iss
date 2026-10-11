@@ -33,7 +33,9 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequiredOverridesAllowed=dialog commandline
+CloseApplications=yes
+RestartApplications=no
 VersionInfoVersion={#AppVersion}
 VersionInfoProductName=Money Tweaks
 VersionInfoDescription=Money Tweaks installer
@@ -54,6 +56,8 @@ Name: "{autodesktop}\Money Tweaks"; Filename: "{app}\MoneyTweaks.exe"; Tasks: de
 
 [Run]
 Filename: "{app}\MoneyTweaks.exe"; Description: "{cm:LaunchProgram,Money Tweaks}"; Flags: nowait postinstall skipifsilent
+; In-app updates run the installer silently; start the new version afterwards.
+Filename: "{app}\MoneyTweaks.exe"; Flags: nowait; Check: WizardSilent
 
 [UninstallDelete]
 ; Tweaks stay applied after uninstall; backups in %LOCALAPPDATA%\MoneyTweaks are kept on purpose so you can

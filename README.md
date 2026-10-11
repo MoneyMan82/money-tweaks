@@ -24,7 +24,7 @@ No accounts, no ads, no telemetry, no paid tiers.
 | Game Profiles | 15 | High CPU priority profiles for popular games (Image File Execution Options) |
 | BIOS | 3 | Step-by-step guides: Resizable BAR, XMP/EXPO, C-States |
 
-**Tools:** Potato Graphics · Game Booster · Input Delay Reducer · Ping Stabilizer · Custom Crosshair overlay ·
+**Tools:** Potato Graphics (Low / Potato / Ultra potato levels) · In-app updates · Game Booster · Input Delay Reducer · Ping Stabilizer · Custom Crosshair overlay ·
 Startup Apps · Hardware Monitor · Backup & Restore · Activity Log.
 
 ### Safety model

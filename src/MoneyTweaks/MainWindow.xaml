@@ -65,7 +65,15 @@
                 </StackPanel>
                 <TextBlock x:Name="CrumbText" Text="Dashboard" Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center" Margin="24,0,0,0"/>
             </DockPanel>
-            <Border x:Name="AdminBanner" Grid.Row="1" Margin="24,0,24,8" Padding="14,10" CornerRadius="10" Background="{StaticResource GoldSoft}" BorderBrush="#66F5C451" BorderThickness="1">
+            <StackPanel Grid.Row="1">
+            <Border x:Name="UpdateBanner" Margin="24,0,24,8" Padding="14,10" CornerRadius="10" Background="{StaticResource AccentSoft}" BorderBrush="#662BE38B" BorderThickness="1" Visibility="Collapsed">
+                <DockPanel>
+                    <Button x:Name="UpdateButton" DockPanel.Dock="Right" Content="Update now" Style="{StaticResource PrimaryButton}" Padding="12,5" Click="Update_Click"/>
+                    <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" Foreground="{StaticResource Accent}" Margin="0,0,10,0"/>
+                    <TextBlock x:Name="UpdateText" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12.5"/>
+                </DockPanel>
+            </Border>
+            <Border x:Name="AdminBanner" Margin="24,0,24,8" Padding="14,10" CornerRadius="10" Background="{StaticResource GoldSoft}" BorderBrush="#66F5C451" BorderThickness="1">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="Restart as admin" Style="{StaticResource GoldButton}" Padding="12,5" Click="Elevate_Click"/>
                     <TextBlock Style="{StaticResource Icon}" Text="&#xE7BA;" Foreground="{StaticResource Gold}" Margin="0,0,10,0"/>
@@ -73,6 +81,7 @@
                                Text="Running without administrator rights. You can browse everything and change per-user tweaks; system-wide tweaks will ask you to restart as admin."/>
                 </DockPanel>
             </Border>
+            </StackPanel>
             <ContentControl x:Name="Host" Grid.Row="2" Focusable="False"/>
             <Border x:Name="Toast" Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,22" Padding="16,10"
                     CornerRadius="10" Background="{StaticResource Surface}" BorderBrush="{StaticResource Accent}" BorderThickness="1" Opacity="0" IsHitTestVisible="False">

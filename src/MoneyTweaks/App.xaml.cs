@@ -8,6 +8,7 @@ namespace MoneyTweaks;
 public partial class App : Application
 {
     public static AppSettings Settings { get; private set; } = new();
+    public static bool ScreenshotMode { get; private set; }
     public static string Version => typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
     protected override void OnStartup(StartupEventArgs e)
@@ -20,7 +21,9 @@ public partial class App : Application
         Settings = AppSettings.Load();
         Log.Info($"Money Tweaks {Version} started on {OsInfo.ProductName} (admin: {Admin.IsElevated})");
 
+        UpdateService.CleanupAfterUpdate();
         var shotIdx = Array.IndexOf(e.Args, "--screenshots");
+        ScreenshotMode = shotIdx >= 0;
         var win = new MainWindow();
         MainWindow = win;
         win.Show();
