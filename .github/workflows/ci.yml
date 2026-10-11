@@ -11,5 +11,5 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-      - run: dotnet build MoneyTweaks.sln -c Release
+      - run: dotnet build MoneyTweaks.slnx -c Release
       - run: dotnet test tests/MoneyTweaks.Tests -c Release --no-build

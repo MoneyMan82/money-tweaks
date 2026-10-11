@@ -64,7 +64,7 @@ Requirements: [.NET SDK 10](https://dotnet.microsoft.com/download/dotnet/10.0) a
 ```powershell
 git clone https://github.com/MoneyMan82/money-tweaks.git
 cd money-tweaks
-dotnet build MoneyTweaks.sln -c Release
+dotnet build MoneyTweaks.slnx -c Release
 dotnet test tests\MoneyTweaks.Tests
 dotnet run --project src\MoneyTweaks -c Release
 ```

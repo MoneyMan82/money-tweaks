@@ -1,0 +1,9 @@
+// Cloudflare static site config: serves the docs/ folder. Used by `npx wrangler deploy`
+// (Workers & Pages Git integration) and ignored by classic Pages projects.
+{
+  "name": "money-tweaks",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./docs"
+  }
+}
