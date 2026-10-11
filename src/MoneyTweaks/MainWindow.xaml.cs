@@ -197,6 +197,19 @@ public partial class MainWindow : Window
             enc.Frames.Add(BitmapFrame.Create(rtb));
             await using var fs = File.Create(Path.Combine(dir, tag.Replace("cat:", "cat-").ToLowerInvariant() + ".png"));
             enc.Save(fs);
+            if (tag == "potato" && Host.Content is UserControl { Content: ScrollViewer sv })
+            {
+                // Second shot of the controls below the preview.
+                sv.ScrollToVerticalOffset(640);
+                await Task.Delay(1200);
+                var rtb2 = new RenderTargetBitmap((int)(ActualWidth * dpi.DpiScaleX), (int)(ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+                rtb2.Render(Root);
+                var enc2 = new PngBitmapEncoder();
+                enc2.Frames.Add(BitmapFrame.Create(rtb2));
+                await using var fs2 = File.Create(Path.Combine(dir, "potato-controls.png"));
+                enc2.Save(fs2);
+                sv.ScrollToVerticalOffset(0);
+            }
         }
         Log.Info($"Screenshots saved to {dir}");
         Application.Current.Shutdown();

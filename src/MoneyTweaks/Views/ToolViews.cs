@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -65,152 +67,412 @@ public sealed class TweakBundle : StackPanel
 
 public sealed class PotatoView : UserControl, IPageLifecycle
 {
-    private readonly StackPanel _games = new();
+    private readonly FortnitePotatoSettings _s = App.Settings.FortnitePotato;
+    private readonly PotatoPreview _preview = new() { Height = 400 };
+    private readonly DispatcherTimer _debounce = new() { Interval = TimeSpan.FromMilliseconds(140) };
+    private readonly WrapPanel _presets = new() { Margin = new Thickness(0, 10, 0, 12) };
+    private readonly WrapPanel _status = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _tris = Ui.Muted("", 12);
+    private readonly StackPanel _left = new(), _right = new();
+    private readonly Button _reset, _unlock;
+    private readonly StackPanel _others = new();
+    private readonly StackPanel _driver = new();
     private readonly TweakBundle _windows = new(["gen.visualfx-performance", "gen.transparency", "gen.background-recording", "adv.fso", "adv.system-responsiveness", "adv.games-task", "gen.ultimate-plan"]);
+    private bool _building;
 
     public PotatoView()
     {
-        var (root, body) = Ui.Page("Potato Graphics", "Turn games into a low-poly, ultra-smooth potato: flat textures, simple meshes, no grass, shadows or effects, and as many FPS as your PC can push. Money Tweaks edits each game's own settings file after backing it up, and Restore puts everything back. Close the game before applying.");
-        body.Children.Add(_games);
+        var (root, body) = Ui.Page("Potato Graphics", "Get Fortnite's smooth, rounded, low-poly \"potato\" look and the FPS that comes with it. Pick a preset, compare it in the preview, review every change, then apply. Money Tweaks only changes Fortnite's own video settings, backs up the file first, and can put everything back in one click.");
+
+        // ---- Fortnite studio -----------------------------------------------------------------------------------
+        var studio = new StackPanel();
+        var head = new DockPanel();
+        DockPanel.SetDock(_status, Dock.Right);
+        head.Children.Add(_status);
+        var title = new StackPanel { Orientation = Orientation.Horizontal };
+        title.Children.Add(new TextBlock { Text = "", Style = Ui.Res<Style>("Icon"), Foreground = Ui.Brush("Accent"), FontSize = 20, Margin = new Thickness(0, 0, 10, 0) });
+        title.Children.Add(Ui.Text("Fortnite potato studio", 18, FontWeights.SemiBold));
+        head.Children.Add(title);
+        studio.Children.Add(head);
+        studio.Children.Add(_presets);
+
+        var frame = new Border { CornerRadius = new CornerRadius(12), ClipToBounds = true, Child = _preview, BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1) };
+        frame.Clip = null;
+        studio.Children.Add(new Border { CornerRadius = new CornerRadius(12), Child = frame });
+        var under = new DockPanel { Margin = new Thickness(0, 8, 0, 0) };
+        var rotate = new CheckBox { Content = "Auto-rotate", IsChecked = true };
+        rotate.Click += (_, _) => _preview.AutoRotate = rotate.IsChecked == true;
+        DockPanel.SetDock(rotate, Dock.Right);
+        under.Children.Add(rotate);
+        under.Children.Add(_tris);
+        studio.Children.Add(under);
+        studio.Children.Add(Ui.Muted("Illustration only: an original Money Tweaks scene, not Fortnite footage. It shows what each setting removes or simplifies; exact in-game results depend on Fortnite's renderer and your GPU.", 11.5));
+
+        var cols = new Grid { Margin = new Thickness(0, 16, 0, 0) };
+        cols.ColumnDefinitions.Add(new ColumnDefinition());
+        cols.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        cols.ColumnDefinitions.Add(new ColumnDefinition());
+        Grid.SetColumn(_right, 2);
+        cols.Children.Add(_left);
+        cols.Children.Add(_right);
+        studio.Children.Add(cols);
+
+        _reset = Ui.Btn("Reset to original", (_, _) => Reset());
+        _unlock = Ui.Btn("Unlock settings file", (_, _) => { try { FortnitePotato.Unlock(); MainWindow.Current?.ShowToast("Unlocked. Fortnite can save in-game changes again."); } catch (Exception ex) { Dialog.Show("Couldn't unlock", ex.Message, DialogKind.Error); } RefreshStatus(); });
+        var actions = Ui.Row(
+            Ui.Btn("Review & apply", (_, _) => ReviewAndApply(), "PrimaryButton"),
+            _reset, _unlock,
+            Ui.Btn("Open settings folder", (_, _) => OpenFolder()));
+        actions.Margin = new Thickness(0, 18, 0, 0);
+        studio.Children.Add(actions);
+        body.Children.Add(Ui.Card(studio));
+
+        body.Children.Add(Ui.Card(Honesty()));
+        var drv = Ui.Section("Graphics driver tweaks (optional, manual)", "These settings live in your GPU driver, which Money Tweaks doesn't change for you. They don't change models; they trim texture-filtering cost and input latency.");
+        drv.Children.Add(_driver);
+        body.Children.Add(Ui.Card(drv));
+
+        var og = Ui.Section("Other games", "Same idea, applied to each game's own settings file.");
+        og.Children.Add(_others);
+        body.Children.Add(Ui.Card(og));
+
         var ws = Ui.Section("Windows potato preset", "System-side changes that help every game. Each one is a regular, reversible tweak.");
         ws.Children.Add(_windows);
         ws.Children.Add(Ui.Row(Ui.Btn("Apply Windows preset", async (_, _) => await _windows.ApplyAllAsync(), "PrimaryButton", new Thickness(0, 10, 0, 0))));
         body.Children.Add(Ui.Card(ws));
         Content = root;
-        BuildGames();
+
+        _debounce.Tick += (_, _) => { _debounce.Stop(); _preview.SetAfter(PreviewLook.From(_s), PresetName(_s.Preset)); };
+        _preview.TrianglesChanged += UpdateTris;
+        BuildPresets();
+        BuildControls();
+        _preview.SetAfter(PreviewLook.From(_s), PresetName(_s.Preset));
+        BuildOthers();
+        _ = LoadDriverGuideAsync();
+        RefreshStatus();
+    }
+
+    private static string PresetName(FnPreset p) => p switch
+    {
+        FnPreset.Competitive => "Competitive", FnPreset.Potato => "Potato", FnPreset.UltraPotato => "Ultra potato", _ => "Custom",
+    };
+
+    private void UpdateTris()
+    {
+        var b = _preview.BeforeTriangles; var a = _preview.AfterTriangles;
+        _tris.Text = $"Preview scene geometry: {b:N0} → {a:N0} triangles ({(b == 0 ? 0 : 100.0 * (b - a) / b):0}% fewer)";
+    }
+
+    // ---- presets & controls ------------------------------------------------------------------------------------
+    private void BuildPresets()
+    {
+        _presets.Children.Clear();
+        (FnPreset p, string label, string tip)[] items =
+        [
+            (FnPreset.Competitive, "Competitive", "Performance mode with normal meshes and a longer view distance: max FPS while keeping the world detailed."),
+            (FnPreset.Potato, "Potato", "Performance mode + Low meshes: rounded low-poly builds and terrain, flat textures, no grass or clutter."),
+            (FnPreset.UltraPotato, "Ultra potato", "Everything at the absolute minimum, nearest view distance and cosmetics preloaded: the most toy-like look."),
+            (FnPreset.Custom, "Custom", "Your own mix. Changing any control switches to Custom."),
+        ];
+        foreach (var (p, label, tip) in items)
+        {
+            var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = "fnpreset", IsChecked = _s.Preset == p, ToolTip = tip, Margin = new Thickness(0, 0, 8, 6) };
+            rb.Checked += (_, _) =>
+            {
+                if (_building || p == FnPreset.Custom) { _s.Preset = p; return; }
+                var fresh = FortnitePotatoSettings.FromPreset(p);
+                CopyInto(fresh, _s);
+                BuildControls();
+                Changed(keepPreset: true);
+            };
+            _presets.Children.Add(rb);
+        }
+    }
+
+    private static void CopyInto(FortnitePotatoSettings from, FortnitePotatoSettings to)
+    {
+        foreach (var prop in typeof(FortnitePotatoSettings).GetProperties().Where(p => p.CanWrite))
+            if (prop.Name is not nameof(FortnitePotatoSettings.Stretched) and not nameof(FortnitePotatoSettings.StretchWidth) and not nameof(FortnitePotatoSettings.StretchHeight))
+                prop.SetValue(to, prop.GetValue(from));
+    }
+
+    private void Changed(bool keepPreset = false)
+    {
+        if (_building) return;
+        if (!keepPreset && _s.Preset != FnPreset.Custom)
+        {
+            _s.Preset = FnPreset.Custom;
+            _building = true;
+            foreach (var rb in _presets.Children.OfType<RadioButton>()) rb.IsChecked = (string)rb.Content == "Custom";
+            _building = false;
+        }
+        App.Settings.Save();
+        _debounce.Stop();
+        _debounce.Start();
+    }
+
+    private void BuildControls()
+    {
+        _building = true;
+        _left.Children.Clear();
+        _right.Children.Clear();
+        _left.Children.Add(Ui.Section("Look & geometry"));
+        _left.Children.Add(SwitchRow("Performance mode", "Fortnite's DirectX 11 low-end renderer. The biggest FPS gain, and it unlocks the Meshes option.", _s.PerformanceMode, v => { _s.PerformanceMode = v; BuildControls(); }));
+        _left.Children.Add(SwitchRow("Low meshes: rounded low-poly", "Fortnite's own \"Meshes: Low\": simplified, rounded \"bubble-wrap\" builds, terrain and props. This is the potato look.", _s.LowMeshes, v => _s.LowMeshes = v, enabled: _s.PerformanceMode, disabledNote: "Needs Performance mode"));
+        _left.Children.Add(LevelRow("Textures", "Low = flat, simple colours with little surface detail.", _s.Textures, v => _s.Textures = v));
+        _left.Children.Add(LevelRow("View distance", "How far away buildings, trees and terrain stay detailed. Near removes distant clutter.", _s.ViewDistance, v => _s.ViewDistance = v));
+        _left.Children.Add(LevelRow("Foliage", "Bushes, small plants and ground clutter.", _s.Foliage, v => _s.Foliage = v));
+        _left.Children.Add(SwitchRow("Show grass", "Grass blades on the ground. Off gives clean, flat terrain.", _s.ShowGrass, v => _s.ShowGrass = v));
+        _left.Children.Add(LevelRow("Effects", "Particles, sparkles, explosions and smoke.", _s.Effects, v => _s.Effects = v));
+
+        string? pm = _s.PerformanceMode ? "Performance mode already turns this off; used in DirectX 11/12 modes" : null;
+        _right.Children.Add(Ui.Section("Lighting & performance"));
+        _right.Children.Add(LevelRow("Shadows", "Dynamic shadows from the sun and objects.", _s.Shadows, v => _s.Shadows = v, pm));
+        _right.Children.Add(LevelRow("Post-processing", "Ambient occlusion, bloom and colour grading. Low = clean, basic shading.", _s.PostProcessing, v => _s.PostProcessing = v, pm));
+        _right.Children.Add(LevelRow("Lighting & reflections", "Global illumination and reflections. Low = simple, even lighting.", _s.Lighting, v => _s.Lighting = v, pm));
+        _right.Children.Add(LevelRow("Surface detail", "Shading, landscape and anti-aliasing quality.", _s.SurfaceDetail, v => _s.SurfaceDetail = v, pm));
+        _right.Children.Add(SliderRow());
+        _right.Children.Add(SwitchRow("Uncap FPS", "Removes Fortnite's frame-rate limit for the smoothest motion your PC can deliver.", _s.UncapFps, v => _s.UncapFps = v));
+        _right.Children.Add(SwitchRow("Preload cosmetics", "Turns off cosmetic streaming so skins load up front: fewer texture pop-ins and stutters mid-match.", _s.PreloadCosmetics, v => _s.PreloadCosmetics = v));
+        _right.Children.Add(SwitchRow($"Stretched {_s.StretchWidth}×{_s.StretchHeight}", "Classic 4:3 stretched view. The settings file is locked read-only so Fortnite keeps it; in-game changes won't save until you unlock or reset.", _s.Stretched, v => _s.Stretched = v, caution: true));
+        _building = false;
+    }
+
+    private UIElement SliderRow()
+    {
+        var sp = new StackPanel { Margin = new Thickness(0, 10, 0, 6) };
+        var head = new DockPanel();
+        var val = Ui.Text($"{_s.RenderScale}%", 13, FontWeights.SemiBold);
+        DockPanel.SetDock(val, Dock.Right);
+        head.Children.Add(val);
+        head.Children.Add(Ui.Text("3D resolution", 13, FontWeights.SemiBold));
+        sp.Children.Add(head);
+        sp.Children.Add(Ui.Muted("Keep 100% for a clean, sharp potato. Lowering it only adds blur (more FPS on very weak GPUs).", 12));
+        var sl = new Slider { Minimum = 50, Maximum = 100, Value = _s.RenderScale, TickFrequency = 5, IsSnapToTickEnabled = true, Margin = new Thickness(0, 6, 0, 0) };
+        sl.ValueChanged += (_, e) => { _s.RenderScale = (int)e.NewValue; val.Text = $"{_s.RenderScale}%"; Changed(); };
+        sp.Children.Add(sl);
+        return sp;
+    }
+
+    private UIElement SwitchRow(string label, string desc, bool value, Action<bool> set, bool enabled = true, string? disabledNote = null, bool caution = false)
+    {
+        var row = new DockPanel { Margin = new Thickness(0, 8, 0, 8), Opacity = enabled ? 1 : 0.5 };
+        var sw = new ToggleButton { Style = Ui.Res<Style>("Switch"), IsChecked = value, IsEnabled = enabled, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0) };
+        sw.Click += (_, _) => { set(sw.IsChecked == true); Changed(); };
+        DockPanel.SetDock(sw, Dock.Right);
+        row.Children.Add(sw);
+        var txt = new StackPanel();
+        var name = new WrapPanel();
+        name.Children.Add(Ui.Text(label, 13, FontWeights.SemiBold));
+        if (caution) { name.Children.Add(new Border { Width = 8 }); name.Children.Add(Ui.Pill("Caution", true)); }
+        txt.Children.Add(name);
+        txt.Children.Add(Ui.Muted(enabled || disabledNote is null ? desc : $"{desc} ({disabledNote})", 12));
+        row.Children.Add(txt);
+        return row;
+    }
+
+    private UIElement LevelRow(string label, string desc, int value, Action<int> set, string? note = null)
+    {
+        var sp = new StackPanel { Margin = new Thickness(0, 8, 0, 8), Opacity = note is null ? 1 : 0.6 };
+        sp.Children.Add(Ui.Text(label, 13, FontWeights.SemiBold));
+        sp.Children.Add(Ui.Muted(note is null ? desc : $"{desc} {note}.", 12));
+        var chips = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
+        var group = "lvl-" + label + Guid.NewGuid().ToString("N")[..6];
+        for (int i = 0; i < 4; i++)
+        {
+            int level = i;
+            var rb = new RadioButton { Content = FortnitePotato.LevelNames[i], Style = Ui.Res<Style>("Chip"), GroupName = group, IsChecked = value == i, Margin = new Thickness(0, 0, 6, 0) };
+            rb.Checked += (_, _) => { set(level); Changed(); };
+            chips.Children.Add(rb);
+        }
+        sp.Children.Add(chips);
+        return sp;
+    }
+
+    // ---- honesty / driver / other games ----------------------------------------------------------------------
+    private static UIElement Honesty()
+    {
+        var sp = Ui.Section("What this really changes");
+        var g = new Grid();
+        g.ColumnDefinitions.Add(new ColumnDefinition());
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        g.ColumnDefinitions.Add(new ColumnDefinition());
+        var can = new StackPanel();
+        can.Children.Add(Ui.Pill("Applied by Money Tweaks"));
+        can.Children.Add(Ui.Muted("• Fortnite's own video settings in GameUserSettings.ini: Rendering mode, Meshes, Textures, View distance, Effects, Foliage, Grass, Shadows, Post-processing, Lighting, 3D resolution, FPS limit, cosmetic streaming, resolution.\n• The rounded low-poly look comes from Fortnite's Performance mode with Meshes: Low.\n• The file is backed up before the first change, and Reset restores it exactly.\n• Only settings already in your file are changed; nothing new is injected.", 12.5));
+        var cant = new StackPanel();
+        cant.Children.Add(Ui.Pill("Not possible / never done", true));
+        cant.Children.Add(Ui.Muted("• Replacing Fortnite's models, textures or shaders, or making shapes rounder than Fortnite's own Low meshes.\n• Engine.ini console-variable hacks: unsupported by Epic, often ignored, and can break after updates.\n• Editing game files (.pak/.utoc) or injecting into the game: protected by Easy Anti-Cheat and can get accounts banned.\n• The preview above is an illustration of the effect, not a capture of the game.", 12.5));
+        Grid.SetColumn(cant, 2);
+        g.Children.Add(can);
+        g.Children.Add(cant);
+        sp.Children.Add(g);
+        return sp;
+    }
+
+    private async Task LoadDriverGuideAsync()
+    {
+        var gpus = await Task.Run(() => HardwareMonitor.ReadSpecs().Gpus);
+        _driver.Children.Clear();
+        bool nv = gpus.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase), amd = gpus.Contains("AMD", StringComparison.OrdinalIgnoreCase) || gpus.Contains("Radeon", StringComparison.OrdinalIgnoreCase);
+        _driver.Children.Add(Ui.Muted($"Detected: {gpus}", 12));
+        if (nv)
+        {
+            _driver.Children.Add(Ui.Text("NVIDIA Control Panel → Manage 3D settings → Program settings → add Fortnite (FortniteClient-Win64-Shipping.exe):", 13, FontWeights.SemiBold));
+            _driver.Children.Add(Ui.Muted("1. Texture filtering - Quality: High performance\n2. Texture filtering - Anisotropic sample optimization: On, Trilinear optimization: On\n3. Low Latency Mode: On (or Ultra)\n4. Power management mode: Prefer maximum performance\n5. Vertical sync: Off\n6. For stretched: Display → Adjust desktop size and position → Scaling: Full-screen, Perform scaling on: GPU", 12.5));
+            _driver.Children.Add(Ui.Row(Ui.Btn("Open NVIDIA Control Panel", (_, _) => OpenNvidia(), margin: new Thickness(0, 8, 0, 0))));
+        }
+        if (amd)
+        {
+            _driver.Children.Add(Ui.Text("AMD Software → Gaming → Fortnite:", 13, FontWeights.SemiBold));
+            _driver.Children.Add(Ui.Muted("1. Texture Filtering Quality: Performance\n2. Surface Format Optimization: On\n3. Radeon Anti-Lag: On\n4. Wait for Vertical Refresh: Always off\n5. For stretched: Display → GPU Scaling: On, Scaling Mode: Full panel", 12.5));
+        }
+        if (!nv && !amd) _driver.Children.Add(Ui.Muted("Open your graphics control panel, set texture filtering to Performance, turn V-Sync off and, for stretched, set scaling to Full-screen.", 12.5));
+    }
+
+    private static void OpenNvidia()
+    {
+        var classic = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"NVIDIA Corporation\Control Panel Client\nvcplui.exe");
+        try
+        {
+            if (File.Exists(classic)) Process.Start(new ProcessStartInfo(classic) { UseShellExecute = true });
+            else Process.Start(new ProcessStartInfo("explorer.exe", @"shell:AppsFolder\NVIDIACorp.NVIDIAControlPanel_56jk63e8tpmy8!NVIDIACorp.NVIDIAControlPanel") { UseShellExecute = true });
+        }
+        catch (Exception ex) { Dialog.Show("Couldn't open NVIDIA Control Panel", ex.Message + "\n\nRight-click the desktop and choose NVIDIA Control Panel instead.", DialogKind.Warning); }
+    }
+
+    private void BuildOthers()
+    {
+        _others.Children.Clear();
+        foreach (var g in PotatoGraphics.Games.Where(g => g.Id != "fortnite")) _others.Children.Add(GameCard(g));
     }
 
     private static PotatoOptions OptionsFor(PotatoGame g)
     {
-        if (!App.Settings.Potato.TryGetValue(g.Id, out var o))
-        {
-            o = new PotatoOptions { PerformanceMode = g.SupportsPerformanceMode };
-            App.Settings.Potato[g.Id] = o;
-        }
+        if (!App.Settings.Potato.TryGetValue(g.Id, out var o)) { o = new PotatoOptions { PerformanceMode = false }; App.Settings.Potato[g.Id] = o; }
         return o;
     }
 
-    private void BuildGames()
-    {
-        _games.Children.Clear();
-        foreach (var g in PotatoGraphics.Games) _games.Children.Add(GameCard(g));
-    }
-
-    private Border GameCard(PotatoGame g)
+    private UIElement GameCard(PotatoGame g)
     {
         var o = OptionsFor(g);
-        var sp = new StackPanel();
+        var sp = new StackPanel { Margin = new Thickness(0, 6, 0, 12) };
         var head = new DockPanel();
         var btns = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
-        var apply = Ui.Btn("Apply potato", (_, _) => Run(g, true), "PrimaryButton");
+        var apply = Ui.Btn("Apply potato", (_, _) => RunOther(g, true), "PrimaryButton");
         apply.IsEnabled = g.Installed;
-        var restore = Ui.Btn("Restore original", (_, _) => Run(g, false), margin: new Thickness(0));
+        var restore = Ui.Btn("Restore original", (_, _) => RunOther(g, false), margin: new Thickness(0));
         restore.IsEnabled = g.HasBackup;
-        btns.Children.Add(apply);
-        btns.Children.Add(restore);
+        btns.Children.Add(apply); btns.Children.Add(restore);
         DockPanel.SetDock(btns, Dock.Right);
         head.Children.Add(btns);
         var title = new WrapPanel();
-        title.Children.Add(Ui.Text(g.Name, 16, FontWeights.SemiBold));
+        title.Children.Add(Ui.Text(g.Name, 15, FontWeights.SemiBold));
         title.Children.Add(new Border { Width = 8 });
-        title.Children.Add(Ui.Pill(g.Installed ? (g.HasBackup ? "Potato applied" : "Detected") : "Not found. Launch the game once", !g.Installed));
+        title.Children.Add(Ui.Pill(g.Installed ? (g.HasBackup ? "Potato applied" : "Detected") : "Not found", !g.Installed));
         head.Children.Add(title);
         sp.Children.Add(head);
         sp.Children.Add(Ui.Muted(g.Notes, 12));
-
-        var summary = Ui.Muted("", 12);
-        summary.Foreground = Ui.Brush("Accent");
-        summary.Margin = new Thickness(0, 8, 0, 0);
-
-        Slider? scale = null;
-        var levels = new WrapPanel { Margin = new Thickness(0, 12, 0, 4) };
+        var levels = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         foreach (var lvl in Enum.GetValues<PotatoLevel>())
         {
-            var label = lvl switch { PotatoLevel.Low => "Low", PotatoLevel.Potato => "Potato", _ => "Ultra potato" };
-            var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = "lvl-" + g.Id, IsChecked = o.Level == lvl, Margin = new Thickness(0, 0, 6, 6) };
-            rb.Checked += (_, _) =>
-            {
-                o.Level = lvl;
-                o.RenderScale = PotatoOptions.DefaultScale(lvl);
-                if (scale is not null) scale.Value = o.RenderScale;
-                Update();
-            };
+            var rb = new RadioButton { Content = lvl switch { PotatoLevel.Low => "Low", PotatoLevel.Potato => "Potato", _ => "Ultra potato" }, Style = Ui.Res<Style>("Chip"), GroupName = "lvl-" + g.Id, IsChecked = o.Level == lvl };
+            rb.Checked += (_, _) => { o.Level = lvl; o.RenderScale = PotatoOptions.DefaultScale(lvl) < 75 ? 75 : PotatoOptions.DefaultScale(lvl); App.Settings.Save(); };
             levels.Children.Add(rb);
         }
         sp.Children.Add(levels);
-
-        if (g.SupportsRenderScale)
-        {
-            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
-            var name = Ui.Muted("3D resolution", 12.5);
-            name.Width = 110;
-            var val = Ui.Text($"{o.RenderScale}%", 12.5);
-            val.Width = 50;
-            scale = new Slider { Minimum = 25, Maximum = 100, Value = o.RenderScale, TickFrequency = 5, IsSnapToTickEnabled = true, VerticalAlignment = VerticalAlignment.Center, Width = 360 };
-            scale.ValueChanged += (_, e) => { o.RenderScale = (int)e.NewValue; val.Text = $"{o.RenderScale}%"; Update(); };
-            DockPanel.SetDock(name, Dock.Left);
-            DockPanel.SetDock(val, Dock.Right);
-            row.Children.Add(name);
-            row.Children.Add(val);
-            row.Children.Add(scale);
-            sp.Children.Add(row);
-        }
-
-        var opts = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-        void Opt(string text, bool value, Action<bool> set, string tip)
-        {
-            var cb = new CheckBox { Content = text, IsChecked = value, Margin = new Thickness(0, 4, 18, 4), ToolTip = tip };
-            cb.Click += (_, _) => { set(cb.IsChecked == true); Update(); };
-            opts.Children.Add(cb);
-        }
-        if (g.SupportsPerformanceMode) Opt("Performance mode (low-poly builds)", o.PerformanceMode, v => o.PerformanceMode = v, "DirectX 11 Performance rendering: simplified meshes and flat shading. Gives the biggest FPS jump.");
-        if (g.SupportsFpsCap) Opt("Uncap FPS (smoothest)", o.UncapFps, v => o.UncapFps = v, "Removes the in-game frame-rate limit.");
-        if (g.SupportsStretched) Opt($"Stretched {o.StretchWidth}x{o.StretchHeight}", o.Stretched, v => o.Stretched = v, "Classic 4:3 stretched look. The settings file is set read-only so Fortnite keeps it. Set GPU scaling to Full-screen in your driver.");
-        sp.Children.Add(opts);
-        sp.Children.Add(summary);
-        if (g.Installed) sp.Children.Add(Ui.Muted(g.ConfigPath, 11));
-        Update();
-        return Ui.Card(sp);
-
-        void Update()
-        {
-            var parts = new List<string>
-            {
-                o.Level switch { PotatoLevel.Low => "Everything Low", PotatoLevel.Potato => "Potato: everything Low, short view distance", _ => "Ultra potato: absolute minimum" }
-            };
-            if (g.SupportsRenderScale) parts.Add($"{o.RenderScale}% 3D resolution{(o.RenderScale <= 50 ? " (blurry, smooth)" : "")}");
-            if (g.SupportsPerformanceMode && o.PerformanceMode) parts.Add("Performance mode");
-            if (g.SupportsFpsCap && o.UncapFps) parts.Add("uncapped FPS");
-            if (g.SupportsStretched && o.Stretched) parts.Add($"stretched {o.StretchWidth}x{o.StretchHeight}");
-            summary.Text = "Will apply: " + string.Join(" · ", parts);
-        }
+        return sp;
     }
 
-    private void Run(PotatoGame g, bool apply)
+    private void RunOther(PotatoGame g, bool apply)
     {
-        if (apply && PotatoGraphics.IsRunning(g))
-        {
-            Dialog.Show("Close the game first", $"{g.Name} is running and would overwrite its settings file when it exits.", DialogKind.Warning);
-            return;
-        }
+        if (apply && PotatoGraphics.IsRunning(g)) { Dialog.Show("Close the game first", $"{g.Name} is running and would overwrite its settings file when it exits.", DialogKind.Warning); return; }
         try
         {
             var msg = apply ? PotatoGraphics.Apply(g, OptionsFor(g)) : PotatoGraphics.Restore(g);
             App.Settings.Save();
-            if (apply && g.Id == "fortnite")
-                msg += "\n\nIn Fortnite, open Settings > Video and check that Rendering Mode is Performance and Mesh Quality is Low. That's what makes builds low-poly.";
-            Dialog.Show(apply ? $"{g.Name} is now a potato" : $"{g.Name} restored", msg);
+            MainWindow.Current?.ShowToast($"{g.Name}: {msg}");
+        }
+        catch (Exception ex) { Log.Error($"Potato Graphics {g.Name}", ex); Dialog.Show("Couldn't change settings", ex.Message, DialogKind.Error); }
+        BuildOthers();
+    }
+
+    // ---- apply / reset -----------------------------------------------------------------------------------------
+    private void RefreshStatus()
+    {
+        var g = FortnitePotato.Game;
+        _status.Children.Clear();
+        _status.Children.Add(Ui.Pill(g.Installed ? "Fortnite detected" : "Fortnite settings not found", !g.Installed));
+        if (g.HasBackup) _status.Children.Add(Ui.Pill("Original backed up"));
+        if (FortnitePotato.IsLocked) _status.Children.Add(Ui.Pill("File locked (read-only)", true));
+        _reset.IsEnabled = g.HasBackup;
+        _unlock.Visibility = FortnitePotato.IsLocked ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void ReviewAndApply()
+    {
+        var g = FortnitePotato.Game;
+        if (!g.Installed) { Dialog.Show("Fortnite settings not found", $"Launch Fortnite once so it creates its settings file, then come back.\n\nExpected at:\n{g.ConfigPath}", DialogKind.Warning); return; }
+        if (PotatoGraphics.IsRunning(g)) { Dialog.Show("Close Fortnite first", "Fortnite rewrites its settings file when it exits, which would undo these changes.", DialogKind.Warning); return; }
+        List<SettingChange> plan;
+        try { plan = FortnitePotato.Plan(_s); }
+        catch (Exception ex) { Dialog.Show("Couldn't read Fortnite's settings", ex.Message, DialogKind.Error); return; }
+        var changes = plan.Where(p => p.Changes).GroupBy(p => p.Label).Select(x => x.First()).ToList();
+        var same = plan.Count(p => !p.Missing && !p.Changes);
+        var missing = plan.Where(p => p.Missing).GroupBy(p => p.Label).Select(x => x.First()).ToList();
+        var sb = new System.Text.StringBuilder();
+        if (changes.Count == 0) sb.AppendLine("Your file already matches these settings.");
+        else
+        {
+            sb.AppendLine($"Will change ({changes.Count}):");
+            foreach (var c in changes) sb.AppendLine($"• {c.Label}   ({c.Key.Replace("|", "] ")}: {c.Current} → {c.New})");
+        }
+        if (same > 0) sb.AppendLine($"\nAlready set: {same}");
+        if (missing.Count > 0)
+        {
+            sb.AppendLine($"\nNot in your file yet ({missing.Count}). Set these in Fortnite's menu:");
+            foreach (var m in missing) sb.AppendLine($"• {m.Label}");
+            if (missing.Any(m => m.Key.EndsWith("MeshQuality"))) sb.AppendLine("  (Meshes appears once you've switched to Performance mode in-game.)");
+        }
+        sb.AppendLine($"\nA backup of GameUserSettings.ini is {(g.HasBackup ? "already saved" : "made first")}. Reset puts it back.");
+        if (_s.Stretched) sb.AppendLine("The file will be locked read-only to keep the stretched resolution.");
+        if (!Dialog.Confirm($"Apply \"{PresetName(_s.Preset)}\" to Fortnite?", sb.ToString().TrimEnd(), "Apply")) return;
+        try
+        {
+            var (changed, miss) = FortnitePotato.Apply(_s);
+            var msg = $"{changed} settings written to Fortnite.";
+            msg += "\n\nIn Fortnite, open Settings › Video and check:\n• Rendering Mode: Performance\n• Meshes: " + (_s.LowMeshes ? "Low" : "your choice") + "\n• Textures: " + FortnitePotato.LevelNames[_s.Textures];
+            if (miss.Count > 0) msg += $"\n\n{miss.Count} setting(s) weren't in your file yet; set them in-game once.";
+            Dialog.Show("Fortnite is now a potato", msg);
         }
         catch (Exception ex)
         {
-            Log.Error($"Potato Graphics {g.Name}", ex);
-            Dialog.Show("Couldn't change settings", ex.Message, DialogKind.Error);
+            Log.Error("Fortnite potato apply", ex);
+            Dialog.Show("Couldn't apply", ex.Message, DialogKind.Error);
         }
-        BuildGames();
+        RefreshStatus();
     }
 
-    public void OnShown() { _ = _windows.RefreshAsync(); BuildGames(); }
-    public void OnHidden() => App.Settings.Save();
+    private void Reset()
+    {
+        var g = FortnitePotato.Game;
+        if (!g.HasBackup) { MainWindow.Current?.ShowToast("No backup yet. Nothing to reset."); return; }
+        if (PotatoGraphics.IsRunning(g)) { Dialog.Show("Close Fortnite first", "Fortnite would overwrite the restored file when it exits.", DialogKind.Warning); return; }
+        if (!Dialog.Confirm("Reset Fortnite graphics?", "Restores GameUserSettings.ini exactly as it was before Money Tweaks first changed it, and removes the read-only lock.", "Reset", DialogKind.Warning)) return;
+        try { MainWindow.Current?.ShowToast("Fortnite: " + FortnitePotato.Reset()); }
+        catch (Exception ex) { Dialog.Show("Couldn't reset", ex.Message, DialogKind.Error); }
+        RefreshStatus();
+    }
+
+    private static void OpenFolder()
+    {
+        var dir = System.IO.Path.GetDirectoryName(FortnitePotato.Game.ConfigPath)!;
+        if (Directory.Exists(dir)) Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
+        else MainWindow.Current?.ShowToast("Fortnite's config folder doesn't exist yet.");
+    }
+
+    public void OnShown() { _preview.AutoRotate = true; RefreshStatus(); BuildOthers(); _ = _windows.RefreshAsync(); }
+    public void OnHidden() { _preview.AutoRotate = false; App.Settings.Save(); }
 }
 
 public sealed class BoosterView : UserControl, IPageLifecycle

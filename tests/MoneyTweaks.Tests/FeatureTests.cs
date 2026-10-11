@@ -38,6 +38,32 @@ public class FeatureTests(ITestOutputHelper output)
         Assert.False(low.ContainsKey("ResolutionSizeX"));
     }
 
+    [Fact]
+    public void Section_scoped_keys_only_change_inside_their_section()
+    {
+        const string nl = "\r\n";
+        var ini = "[Other]" + nl + "MeshQuality=5" + nl + "[PerformanceMode]" + nl + "MeshQuality=2" + nl + "[Next]" + nl + "MeshQuality=7" + nl;
+        Assert.Equal("2", PotatoGraphics.ReadValue(ini, "PerformanceMode|MeshQuality", true));
+        var (text, changed) = PotatoGraphics.ApplyValues(ini, new Dictionary<string, string> { ["PerformanceMode|MeshQuality"] = "0" }, true);
+        Assert.Equal(1, changed);
+        Assert.Equal(ini.Replace("MeshQuality=2", "MeshQuality=0"), text);
+        Assert.Null(PotatoGraphics.ReadValue(ini, "Missing|MeshQuality", true));
+    }
+
+    [Fact]
+    public void Fortnite_presets_map_to_supported_keys()
+    {
+        var potato = FortnitePotato.Values(FortnitePotatoSettings.FromPreset(FnPreset.Potato)).ToDictionary(v => v.key, v => v.value);
+        Assert.Equal("es31", potato["PreferredFeatureLevel"]);
+        Assert.Equal("0", potato["PerformanceMode|MeshQuality"]);
+        Assert.Equal("False", potato["bShowGrass"]);
+        Assert.Equal("100.000000", potato["sg.ResolutionQuality"]); // potato look comes from meshes, not blur
+        var comp = FortnitePotato.Values(FortnitePotatoSettings.FromPreset(FnPreset.Competitive)).ToDictionary(v => v.key, v => v.value);
+        Assert.False(comp.ContainsKey("PerformanceMode|MeshQuality")); // competitive keeps the user's mesh choice
+        var dx = FortnitePotatoSettings.FromPreset(FnPreset.Potato); dx.PerformanceMode = false;
+        Assert.DoesNotContain(FortnitePotato.Values(dx), v => v.key is "PreferredFeatureLevel" or "PerformanceMode|MeshQuality");
+    }
+
     [Theory]
     [InlineData("v1.2.3", 1, 2, 3)]
     [InlineData("1.0.0", 1, 0, 0)]

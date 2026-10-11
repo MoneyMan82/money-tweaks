@@ -105,20 +105,48 @@ public static class PotatoGraphics
             true, ["RocketLeague"], true, false, false, false, RocketLeague),
     ];
 
-    /// <summary>Replaces "key=value" (ini) or "key:value" lines that already exist. Returns the new text and count.</summary>
+    /// <summary>
+    /// Replaces "key=value" (ini) or "key:value" lines that already exist. A key written as "Section|Key" is only
+    /// changed inside that [Section]. Returns the new text and the number of keys changed.
+    /// </summary>
     internal static (string text, int changed) ApplyValues(string text, IReadOnlyDictionary<string, string> values, bool isIni)
     {
         var sep = isIni ? "=" : ":";
         int changed = 0;
-        foreach (var (key, value) in values)
+        foreach (var (rawKey, value) in values)
         {
+            var (start, end, key) = Scope(text, rawKey);
+            if (start < 0) continue;
             // [^\r\n]* keeps the file's own line endings intact.
             var rx = new Regex($@"^{Regex.Escape(key)}{Regex.Escape(sep)}[^\r\n]*", RegexOptions.Multiline);
-            if (!rx.IsMatch(text)) continue;
-            text = rx.Replace(text, _ => $"{key}{sep}{value}");
+            var region = text[start..end];
+            if (!rx.IsMatch(region)) continue;
+            region = rx.Replace(region, _ => $"{key}{sep}{value}");
+            text = text[..start] + region + text[end..];
             changed++;
         }
         return (text, changed);
+    }
+
+    /// <summary>Current value of a key ("Section|Key" supported), or null when the file doesn't contain it.</summary>
+    internal static string? ReadValue(string text, string rawKey, bool isIni)
+    {
+        var (start, end, key) = Scope(text, rawKey);
+        if (start < 0) return null;
+        var m = Regex.Match(text[start..end], $@"^{Regex.Escape(key)}{Regex.Escape(isIni ? "=" : ":")}([^\r\n]*)", RegexOptions.Multiline);
+        return m.Success ? m.Groups[1].Value : null;
+    }
+
+    private static (int start, int end, string key) Scope(string text, string rawKey)
+    {
+        var bar = rawKey.IndexOf('|');
+        if (bar < 0) return (0, text.Length, rawKey);
+        var section = rawKey[..bar];
+        var head = Regex.Match(text, $@"^\[{Regex.Escape(section)}\][ \t]*\r?$", RegexOptions.Multiline);
+        if (!head.Success) return (-1, -1, rawKey[(bar + 1)..]);
+        var start = head.Index + head.Length;
+        var next = Regex.Match(text[start..], @"^\[", RegexOptions.Multiline);
+        return (start, next.Success ? start + next.Index : text.Length, rawKey[(bar + 1)..]);
     }
 
     public static bool IsRunning(PotatoGame g) =>
@@ -150,7 +178,7 @@ public static class PotatoGraphics
         return "Original settings restored.";
     }
 
-    private static void ClearReadOnly(string path)
+    internal static void ClearReadOnly(string path)
     {
         if (File.Exists(path) && new FileInfo(path).IsReadOnly)
             File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);

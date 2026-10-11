@@ -31,6 +31,7 @@ public sealed class AppSettings
     /// <summary>Check GitHub Releases for a newer version at startup.</summary>
     public bool AutoCheckUpdates { get; set; } = true;
     public Dictionary<string, PotatoOptions> Potato { get; set; } = [];
+    public FortnitePotatoSettings FortnitePotato { get; set; } = FortnitePotatoSettings.FromPreset(FnPreset.Potato);
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
