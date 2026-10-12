@@ -40,3 +40,20 @@ Resume point for future sessions. Keep it short.
 - Potato preview (src/MoneyTweaks/Controls/PotatoPreview.cs): `toy` branch = rounded low-poly illustration. Screenshot mode
   writes potato-preset-*.png for each preset to compare. Fortnite keys found in a real GameUserSettings.ini: [PerformanceMode] MeshQuality, sg.*, bShowGrass, CosmeticStreamingEnabled.
 - To release: bump <Version> in Directory.Build.props (keep it equal to the tag), commit, `git tag vX.Y.Z`, `git push origin vX.Y.Z`.
+
+## Session 2026-10-12: premium redesign + performance
+- Perf instrumentation: Core/Sys/Perf.cs (`[perf]` log lines >= threshold) + UI stall detector in MainWindow
+  (200 ms heartbeat, ignores screenshot captures). Read results in %LOCALAPPDATA%\MoneyTweaks\logs.
+- Real lag causes found & fixed: per-check powershell.exe (CommandOp.PrewarmChecks batches by module, parallel, 15 s cache,
+  cache cleared on apply/undo); TweakService.RefreshStatesAsync shows registry tweaks first, global gate of 4;
+  WinForms Screen in crosshair (now Monitors.All via EnumDisplayMonitors, UseWindowsForms removed);
+  Booster process scan off UI thread; HardwareMonitor process count via perf counter, NIC list cached 15 s, WMI temp 5 s;
+  Potato preview DispatcherTimer 30 fps only while rotating+active (was CompositionTarget.Rendering 60 fps forever);
+  App.SaveSettingsSoon debounce.
+- Design system: Themes/Theme.xaml (palette keys unchanged + Violet/Success/Subtle/CardFill/CardRim/HeroFill),
+  Controls/Ui.cs (Page eyebrow/icon, ClickCard, Tag, Empty, Loading, ResponsiveGrid, RingGauge/RingArc, StatTile).
+  App.ReduceMotion (setting null=auto). MainWindow: ambient layer (BitmapCache, opacity-only animation), sliding nav pill,
+  Ctrl+K palette (TweakListView.FocusTweak), toasts ShowToast(text, tone).
+- Logo recoloured (scratchpad logo2.py equivalent: blue→violet gradient line, same mark + gold coin). Website palette updated.
+- NOT released yet: version still 1.2.1. To ship: set <Version>1.3.0</Version>, commit, tag v1.3.0, push tag.
+- Updater: unchanged logic; latest GitHub release = v1.2.1 = app version → no update offered (no loop).

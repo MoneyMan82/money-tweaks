@@ -9,7 +9,24 @@ public partial class App : Application
 {
     public static AppSettings Settings { get; private set; } = new();
     public static bool ScreenshotMode { get; private set; }
+
+    /// <summary>Fewer animations/effects: user setting, else Windows' "Animation effects" off or a GPU below render tier 2.</summary>
+    public static bool ReduceMotion => Settings.ReduceMotion ?? (!SystemParameters.ClientAreaAnimation || (System.Windows.Media.RenderCapability.Tier >> 16) < 2);
+
+    private static System.Windows.Threading.DispatcherTimer? _saveTimer;
+    /// <summary>Coalesces rapid setting changes (sliders) into one disk write.</summary>
+    public static void SaveSettingsSoon()
+    {
+        _saveTimer ??= new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(700) };
+        _saveTimer.Stop();
+        _saveTimer.Tick -= SaveTick;
+        _saveTimer.Tick += SaveTick;
+        _saveTimer.Start();
+    }
+    private static void SaveTick(object? s, EventArgs e) { _saveTimer!.Stop(); Settings.Save(); }
     public static string Version => typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+
+    public static readonly System.Diagnostics.Stopwatch StartupClock = System.Diagnostics.Stopwatch.StartNew();
 
     protected override void OnStartup(StartupEventArgs e)
     {

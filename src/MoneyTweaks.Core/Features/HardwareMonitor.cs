@@ -21,6 +21,11 @@ public sealed class HardwareMonitor : IDisposable
 {
     private readonly PerformanceCounter? _cpu;
     private readonly PerformanceCounter? _disk;
+    private readonly PerformanceCounter? _procs;
+    private NetworkInterface[] _nics = [];
+    private DateTime _nicsAt = DateTime.MinValue;
+    private DateTime _tempAt = DateTime.MinValue;
+    private double? _lastTemp;
     private PerformanceCounterCategory? _gpuCat;
     private readonly Dictionary<string, PerformanceCounter> _gpuCounters = [];
     private long _lastRx, _lastTx;
@@ -34,14 +39,18 @@ public sealed class HardwareMonitor : IDisposable
         catch { try { _cpu = new PerformanceCounter("Processor", "% Processor Time", "_Total"); _cpu.NextValue(); } catch { _cpu = null; } }
         try { _disk = new PerformanceCounter("PhysicalDisk", "% Idle Time", "_Total"); _disk.NextValue(); } catch { _disk = null; }
         try { _gpuCat = new PerformanceCounterCategory("GPU Engine"); } catch { _gpuCat = null; }
+        // Process count from a counter: Process.GetProcesses() every second allocated ~300 undisposed Process objects.
+        try { _procs = new PerformanceCounter("System", "Processes"); _procs.NextValue(); } catch { _procs = null; }
         (_lastRx, _lastTx) = NetBytes();
         _lastNet = DateTime.UtcNow;
     }
 
-    private static (long rx, long tx) NetBytes()
+    private (long rx, long tx) NetBytes()
     {
         long rx = 0, tx = 0;
-        foreach (var n in NetworkInterface.GetAllNetworkInterfaces())
+        // Re-enumerating adapters is slow (WMI/IP helper); the adapter list rarely changes, so refresh it every 15 s.
+        if (DateTime.UtcNow - _nicsAt > TimeSpan.FromSeconds(15)) { _nics = NetworkInterface.GetAllNetworkInterfaces(); _nicsAt = DateTime.UtcNow; }
+        foreach (var n in _nics)
         {
             if (n.OperationalStatus != OperationalStatus.Up || n.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
             try { var s = n.GetIPStatistics(); rx += s.BytesReceived; tx += s.BytesSent; } catch { }
@@ -76,6 +85,14 @@ public sealed class HardwareMonitor : IDisposable
     private double? CpuTemp()
     {
         if (_tempUnavailable) return null;
+        if (DateTime.UtcNow - _tempAt < TimeSpan.FromSeconds(5)) return _lastTemp; // WMI is expensive; temps change slowly
+        _tempAt = DateTime.UtcNow;
+        _lastTemp = ReadTemp();
+        return _lastTemp;
+    }
+
+    private double? ReadTemp()
+    {
         try
         {
             using var s = new ManagementObjectSearcher(@"root\WMI", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
@@ -105,7 +122,15 @@ public sealed class HardwareMonitor : IDisposable
         double cpu = 0;
         try { cpu = Math.Clamp(_cpu?.NextValue() ?? 0, 0, 100); } catch { }
         return new HardwareSnapshot(cpu, (total - avail) / 1073741824.0, total / 1073741824.0, load,
-            GpuPercent(), disk, down, up, CpuTemp(), Process.GetProcesses().Length, TimeSpan.FromMilliseconds(Environment.TickCount64));
+            GpuPercent(), disk, down, up, CpuTemp(), ProcessCount(), TimeSpan.FromMilliseconds(Environment.TickCount64));
+    }
+
+    private int ProcessCount()
+    {
+        try { if (_procs is not null) return (int)_procs.NextValue(); } catch { }
+        var all = Process.GetProcesses();
+        foreach (var p in all) p.Dispose();
+        return all.Length;
     }
 
     public static SystemSpecs ReadSpecs()
@@ -152,6 +177,7 @@ public sealed class HardwareMonitor : IDisposable
     {
         _cpu?.Dispose();
         _disk?.Dispose();
+        _procs?.Dispose();
         foreach (var c in _gpuCounters.Values) c.Dispose();
     }
 }

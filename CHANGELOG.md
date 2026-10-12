@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased (next: 1.3.0)
+- **Premium redesign ("Midnight Circuit")**: deep black/graphite surfaces, electric-blue → violet accents, rim-lit cards,
+  new buttons, switches, chips, sliders, progress bars and scrollbars; refreshed logo colours (same mark).
+- New dashboard: hero with a real "tuning score" (share of Recommended tweaks active on this PC), animated CPU/GPU/RAM
+  rings, network/disk/temperature sparklines, gaming-toolkit tiles, per-category "applied" bars.
+- Command palette (Ctrl+K) to search all 334 tweaks, categories and tools.
+- Sliding sidebar selection, page transitions, stacked toasts, empty states, loading/scan progress, ambient lighting.
+- Settings › Motion & effects (Auto / Full / Reduced); Auto follows Windows animation settings and GPU tier.
+- **Performance** (measured with built-in [perf] logging):
+  - Networking state scan 10.5–14.1 s → ~5 s, and it no longer blocks the rest of the page: PowerShell checks run in
+    grouped, parallel batches (11 checks: 24.1 s individually → 5.6 s batched, identical results).
+  - Startup to first frame 679 ms → ~430 ms.
+  - Custom Crosshair no longer loads WinForms (329 ms freeze removed); Game Booster lists processes off the UI thread.
+  - Monitor sampling no longer creates ~300 Process objects per second; adapters and WMI temperature are cached.
+  - Potato preview renders at 30 fps only while auto-rotating, visible and focused (was 60 fps continuously).
+  - Slider changes are saved once (debounced) instead of on every tick.
+
 ## 1.2.1 – 2026-10-11
 - **Fixed: endless update prompt.** The v1.2.0 release was tagged on the same commit as 1.1.0, and the release workflow
   took its version from Directory.Build.props instead of the tag, so "v1.2.0" shipped 1.1.0 files. Installing it changed

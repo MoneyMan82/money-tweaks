@@ -4,52 +4,57 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="B2V"/>
         <DataTemplate x:Key="TweakTemplate">
-            <Border x:Name="card" Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="16,12">
+            <Border x:Name="card" Style="{StaticResource CardBorder}" Margin="0,0,0,10" Padding="0" Cursor="Arrow">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="4"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel>
+                    <!-- risk strip -->
+                    <Border x:Name="strip" CornerRadius="16,0,0,16" Background="{StaticResource AccentGradient}" Opacity="0.85"/>
+                    <StackPanel Grid.Column="1" Margin="18,14,8,14">
                         <WrapPanel>
-                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
                             <Border x:Name="risk" Style="{StaticResource Badge}" Background="{StaticResource AccentSoft}">
                                 <TextBlock x:Name="riskText" Text="{Binding RiskLabel}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
                             </Border>
-                            <Border Style="{StaticResource Badge}" Background="#1AFFFFFF" Visibility="{Binding NeedsAdmin, Converter={StaticResource B2V}}" ToolTip="Needs administrator rights">
+                            <Border Style="{StaticResource Badge}" Background="#14FFFFFF" Visibility="{Binding NeedsAdmin, Converter={StaticResource B2V}}" ToolTip="Needs administrator rights">
                                 <TextBlock Text="Admin" FontSize="10.5" Foreground="{StaticResource Muted}"/>
                             </Border>
-                            <Border Style="{StaticResource Badge}" Background="#1AFFFFFF" Visibility="{Binding NeedsReboot, Converter={StaticResource B2V}}" ToolTip="Takes full effect after a restart">
+                            <Border Style="{StaticResource Badge}" Background="#14FFFFFF" Visibility="{Binding NeedsReboot, Converter={StaticResource B2V}}" ToolTip="Takes full effect after a restart">
                                 <TextBlock Text="Restart" FontSize="10.5" Foreground="{StaticResource Muted}"/>
                             </Border>
-                            <Border Style="{StaticResource Badge}" Background="{StaticResource GoldSoft}" Visibility="{Binding IsRecommended, Converter={StaticResource B2V}}" ToolTip="Part of the Recommended preset">
-                                <TextBlock Text="★ Recommended" FontSize="10.5" Foreground="{StaticResource Gold}"/>
+                            <Border Style="{StaticResource Badge}" Background="{StaticResource VioletSoft}" Visibility="{Binding IsRecommended, Converter={StaticResource B2V}}" ToolTip="Part of the Recommended preset">
+                                <TextBlock Text="★ Recommended" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource Violet}"/>
                             </Border>
-                            <Border Style="{StaticResource Badge}" Background="#1AFFFFFF" Visibility="{Binding IsGuide, Converter={StaticResource B2V}}">
+                            <Border Style="{StaticResource Badge}" Background="#14FFFFFF" Visibility="{Binding IsGuide, Converter={StaticResource B2V}}">
                                 <TextBlock Text="Guide" FontSize="10.5" Foreground="{StaticResource Muted}"/>
                             </Border>
                         </WrapPanel>
-                        <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" Margin="0,5,0,0"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                            <TextBlock Text="{Binding StatusText}" FontSize="11.5" Foreground="{StaticResource Accent}" Margin="0,0,10,0"/>
-                            <TextBlock Text="{Binding Message}" FontSize="11.5" Foreground="{StaticResource Gold}" TextWrapping="Wrap" MaxWidth="560"/>
-                        </StackPanel>
-                        <ToggleButton x:Name="more" IsChecked="{Binding Expanded}" Cursor="Hand" HorizontalAlignment="Left" Margin="0,4,0,0">
-                            <ToggleButton.Template>
-                                <ControlTemplate TargetType="ToggleButton">
-                                    <TextBlock x:Name="t" Text="Show what changes ›" FontSize="11.5" Foreground="{StaticResource Muted}" Background="Transparent"/>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsChecked" Value="True"><Setter TargetName="t" Property="Text" Value="Hide details ‹"/></Trigger>
-                                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="t" Property="Foreground" Value="{StaticResource Accent}"/></Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </ToggleButton.Template>
-                        </ToggleButton>
-                        <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" Background="{StaticResource Surface}" CornerRadius="8" Padding="10,8" Margin="0,6,0,0">
-                            <TextBlock Text="{Binding Details}" FontFamily="Cascadia Mono, Consolas" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" Margin="0,6,0,0" MaxWidth="820" HorizontalAlignment="Left"/>
+                        <WrapPanel Margin="0,8,0,0">
+                            <Border x:Name="status" CornerRadius="7" Padding="8,2" Background="#10FFFFFF" Margin="0,0,10,0">
+                                <TextBlock x:Name="statusText" Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
+                            </Border>
+                            <TextBlock Text="{Binding Message}" FontSize="11.5" Foreground="{StaticResource Gold}" TextWrapping="Wrap" MaxWidth="560" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ToggleButton x:Name="more" IsChecked="{Binding Expanded}" Cursor="Hand" VerticalAlignment="Center">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <TextBlock x:Name="t" Text="What changes ›" FontSize="11.5" Foreground="{StaticResource Subtle}" Background="Transparent"/>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True"><Setter TargetName="t" Property="Text" Value="Hide details ‹"/></Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="t" Property="Foreground" Value="{StaticResource Accent}"/></Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                        </WrapPanel>
+                        <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" Background="#FF0A0D13" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,10,0,0">
+                            <TextBlock Text="{Binding Details}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
                         </Border>
                     </StackPanel>
-                    <Grid Grid.Column="1" VerticalAlignment="Top" Margin="16,2,0,0">
+                    <Grid Grid.Column="2" VerticalAlignment="Top" Margin="12,16,18,0">
                         <ToggleButton Style="{StaticResource Switch}" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding CanToggle}"
                                       IsThreeState="True" Click="Switch_Click" ToolTip="Apply / undo"/>
                     </Grid>
@@ -59,47 +64,90 @@
                 <DataTrigger Binding="{Binding IsCaution}" Value="True">
                     <Setter TargetName="risk" Property="Background" Value="{StaticResource GoldSoft}"/>
                     <Setter TargetName="riskText" Property="Foreground" Value="{StaticResource Gold}"/>
+                    <Setter TargetName="strip" Property="Background" Value="{StaticResource Gold}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Applied">
+                    <Setter TargetName="status" Property="Background" Value="{StaticResource SuccessSoft}"/>
+                    <Setter TargetName="statusText" Property="Foreground" Value="{StaticResource Success}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Partial">
+                    <Setter TargetName="status" Property="Background" Value="{StaticResource GoldSoft}"/>
+                    <Setter TargetName="statusText" Property="Foreground" Value="{StaticResource Gold}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="NotApplied">
+                    <Setter TargetName="status" Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="NotApplicable">
+                    <Setter TargetName="card" Property="Opacity" Value="0.6"/>
                 </DataTrigger>
                 <Trigger SourceName="card" Property="IsMouseOver" Value="True">
                     <Setter TargetName="card" Property="Background" Value="{StaticResource CardHover}"/>
+                    <Setter TargetName="card" Property="BorderBrush" Value="{StaticResource CardRimHover}"/>
                 </Trigger>
             </DataTemplate.Triggers>
         </DataTemplate>
     </UserControl.Resources>
 
-    <Grid Margin="24,4,24,0">
+    <Grid Margin="28,6,28,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <DockPanel>
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                <Button x:Name="RecommendedButton" Content="★ Apply recommended" Style="{StaticResource PrimaryButton}" Click="ApplyRecommended_Click" Margin="0,0,8,0"/>
-                <Button Content="Undo all in category" Click="UndoAll_Click"/>
+
+        <!-- Header -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal">
+                <Border Width="48" Height="48" CornerRadius="14" Background="{StaticResource AccentGradient}" VerticalAlignment="Top" Margin="0,4,16,0">
+                    <TextBlock x:Name="CatIcon" Style="{StaticResource Icon}" FontSize="20" Foreground="White" HorizontalAlignment="Center"/>
+                </Border>
+                <StackPanel MaxWidth="640">
+                    <TextBlock Text="TWEAK CATEGORY" Style="{StaticResource Eyebrow}"/>
+                    <TextBlock x:Name="TitleText" Style="{StaticResource H1}"/>
+                    <TextBlock x:Name="BlurbText" Style="{StaticResource MutedText}" FontSize="13.5" Margin="0,4,0,0"/>
+                </StackPanel>
             </StackPanel>
-            <StackPanel>
-                <TextBlock x:Name="TitleText" Style="{StaticResource H1}"/>
-                <TextBlock x:Name="BlurbText" Style="{StaticResource MutedText}" FontSize="13" Margin="0,4,0,0" MaxWidth="640" HorizontalAlignment="Left"/>
-            </StackPanel>
-        </DockPanel>
-        <DockPanel Grid.Row="1" Margin="0,16,0,12">
-            <TextBlock x:Name="CountText" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center"/>
-            <Grid Width="260" Margin="0,0,12,0">
-                <TextBox x:Name="SearchBox" TextChanged="Filter_Changed" Padding="30,7,10,7"/>
-                <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="13" Foreground="{StaticResource Muted}" Margin="11,0,0,0" IsHitTestVisible="False"/>
-            </Grid>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <RadioButton Style="{StaticResource Chip}" Content="All" GroupName="f" IsChecked="True" Tag="all" Checked="Filter_Changed"/>
-                <RadioButton Style="{StaticResource Chip}" Content="Applied" GroupName="f" Tag="applied" Checked="Filter_Changed"/>
-                <RadioButton Style="{StaticResource Chip}" Content="Not applied" GroupName="f" Tag="off" Checked="Filter_Changed"/>
-                <RadioButton Style="{StaticResource Chip}" Content="Safe" GroupName="f" Tag="safe" Checked="Filter_Changed"/>
-                <RadioButton Style="{StaticResource Chip}" Content="Caution" GroupName="f" Tag="caution" Checked="Filter_Changed"/>
-            </StackPanel>
-        </DockPanel>
+            <Border Grid.Column="1" Style="{StaticResource CardBorder}" Padding="16,12" VerticalAlignment="Top" MinWidth="200" Margin="16,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="APPLIED" Style="{StaticResource Eyebrow}" Foreground="{StaticResource Muted}"/>
+                    <TextBlock x:Name="AppliedBig" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="Bold" Text="–"/>
+                    <ProgressBar x:Name="AppliedBar" Margin="0,8,0,0" Maximum="1"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="1" Margin="0,18,0,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="RecommendedButton" Content="★  Apply recommended" Style="{StaticResource PrimaryButton}" Click="ApplyRecommended_Click" Margin="0,0,8,0"/>
+                    <Button Content="Undo all" Click="UndoAll_Click"/>
+                </StackPanel>
+                <Grid Width="260" Margin="0,0,12,0" HorizontalAlignment="Left">
+                    <TextBox x:Name="SearchBox" TextChanged="Filter_Changed" Padding="32,8,10,8"/>
+                    <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="13" Foreground="{StaticResource Muted}" Margin="12,0,0,0" IsHitTestVisible="False"/>
+                </Grid>
+                <WrapPanel VerticalAlignment="Center">
+                    <RadioButton Style="{StaticResource Chip}" Content="All" GroupName="f" IsChecked="True" Tag="all" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Applied" GroupName="f" Tag="applied" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Not applied" GroupName="f" Tag="off" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Safe" GroupName="f" Tag="safe" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Caution" GroupName="f" Tag="caution" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                </WrapPanel>
+            </DockPanel>
+            <DockPanel Margin="0,10,0,0">
+                <TextBlock x:Name="CountText" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center"/>
+                <ProgressBar x:Name="ScanBar" Width="220" HorizontalAlignment="Left" Visibility="Collapsed" Maximum="1"/>
+            </DockPanel>
+        </StackPanel>
+
         <ListBox x:Name="List" Grid.Row="2" ItemTemplate="{StaticResource TweakTemplate}" Background="Transparent" Foreground="{StaticResource Text}" BorderThickness="0"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True"
-                 VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.ScrollUnit="Pixel" Padding="0,0,6,16">
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                 VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.ScrollUnit="Pixel" Padding="0,0,6,20">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Template">
@@ -108,15 +156,17 @@
                         </Setter.Value>
                     </Setter>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Focusable" Value="False"/>
                 </Style>
             </ListBox.ItemContainerStyle>
             <ListBox.GroupStyle>
                 <GroupStyle>
                     <GroupStyle.HeaderTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="2,12,0,8">
-                                <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
-                                <TextBlock Text="{Binding ItemCount, StringFormat=' · {0}'}" FontSize="12" Foreground="{StaticResource Muted}"/>
+                            <StackPanel Orientation="Horizontal" Margin="2,14,0,10">
+                                <Border Width="6" Height="6" CornerRadius="3" Background="{StaticResource AccentGradient}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource Text}"/>
+                                <TextBlock Text="{Binding ItemCount, StringFormat='  {0}'}" FontSize="12" Foreground="{StaticResource Subtle}"/>
                             </StackPanel>
                         </DataTemplate>
                     </GroupStyle.HeaderTemplate>

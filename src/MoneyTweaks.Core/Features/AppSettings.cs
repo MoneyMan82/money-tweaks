@@ -30,6 +30,8 @@ public sealed class AppSettings
     public bool ShowWelcome { get; set; } = true;
     /// <summary>Check GitHub Releases for a newer version at startup.</summary>
     public bool AutoCheckUpdates { get; set; } = true;
+    /// <summary>null = follow Windows (animations off or weak GPU → reduce); true/false = user override.</summary>
+    public bool? ReduceMotion { get; set; }
     /// <summary>Set just before an in-app update installs; checked on the next start to confirm the update applied.</summary>
     public string? PendingUpdateTag { get; set; }
     public string? PendingUpdateVersion { get; set; }

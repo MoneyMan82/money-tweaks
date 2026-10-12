@@ -38,6 +38,13 @@ public static class BackupStore
 
 public static class TweakEngine
 {
+    /// <summary>Runs the slow PowerShell-based state checks of many tweaks in a single process before GetState is called.</summary>
+    public static void PrewarmChecks(IEnumerable<Tweak> tweaks)
+    {
+        using var perf = Perf.Measure("prewarm PowerShell checks", 50);
+        CommandOp.PrewarmChecks(tweaks.SelectMany(t => t.Ops).OfType<CommandOp>());
+    }
+
     public static TweakState GetState(Tweak t)
     {
         if (t.Kind == TweakKind.Guide) return BackupStore.Exists(t.Id) ? TweakState.Applied : TweakState.NotApplied;

@@ -11,6 +11,31 @@ using MoneyTweaks.Core.Sys;
 
 namespace MoneyTweaks.Views;
 
+/// <summary>Monitor bounds in physical pixels via EnumDisplayMonitors (replaces WinForms Screen, which cost ~300 ms to load).</summary>
+public static class Monitors
+{
+    [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] private struct MONITORINFO { public int Size; public RECT Monitor, Work; public uint Flags; }
+    private delegate bool MonitorEnumProc(nint monitor, nint hdc, nint rect, nint data);
+    [DllImport("user32.dll")] private static extern bool EnumDisplayMonitors(nint hdc, nint clip, MonitorEnumProc proc, nint data);
+    [DllImport("user32.dll")] private static extern bool GetMonitorInfo(nint monitor, ref MONITORINFO info);
+
+    /// <summary>All monitors, primary first.</summary>
+    public static List<Int32Rect> All()
+    {
+        var list = new List<(Int32Rect r, bool primary)>();
+        EnumDisplayMonitors(0, 0, (m, _, _, _) =>
+        {
+            var mi = new MONITORINFO { Size = Marshal.SizeOf<MONITORINFO>() };
+            if (GetMonitorInfo(m, ref mi))
+                list.Add((new Int32Rect(mi.Monitor.Left, mi.Monitor.Top, mi.Monitor.Right - mi.Monitor.Left, mi.Monitor.Bottom - mi.Monitor.Top), (mi.Flags & 1) != 0));
+            return true;
+        }, 0);
+        if (list.Count == 0) list.Add((new Int32Rect(0, 0, (int)SystemParameters.PrimaryScreenWidth, (int)SystemParameters.PrimaryScreenHeight), true));
+        return list.OrderByDescending(x => x.primary).Select(x => x.r).ToList();
+    }
+}
+
 /// <summary>Draws a crosshair from settings onto a canvas, centered.</summary>
 public static class CrosshairRenderer
 {
@@ -82,10 +107,10 @@ public sealed class CrosshairOverlay : Window
 
     public void Render(CrosshairSettings s)
     {
-        var screens = System.Windows.Forms.Screen.AllScreens;
-        var scr = screens[Math.Clamp(s.MonitorIndex, 0, screens.Length - 1)].Bounds;
+        var screens = Monitors.All();
+        var scr = screens[Math.Clamp(s.MonitorIndex, 0, screens.Count - 1)];
         var dpi = VisualTreeHelper.GetDpi(this);
-        Left = scr.Left / dpi.DpiScaleX; Top = scr.Top / dpi.DpiScaleY;
+        Left = scr.X / dpi.DpiScaleX; Top = scr.Y / dpi.DpiScaleY;
         Width = scr.Width / dpi.DpiScaleX; Height = scr.Height / dpi.DpiScaleY;
         // Snap to whole device pixels so thin lines stay crisp.
         CrosshairRenderer.Draw(_canvas, s, Math.Round(Width / 2), Math.Round(Height / 2));
@@ -107,7 +132,7 @@ public sealed class CrosshairView : UserControl, IPageLifecycle
     {
         _show = Ui.Btn("Show crosshair", (_, _) => ToggleOverlay(), "PrimaryButton");
         var (root, body) = Ui.Page("Custom Crosshair", "A click-through overlay that sits on top of your game. It works in borderless and windowed modes; exclusive fullscreen draws over every overlay, so switch the game to borderless. Toggle it anywhere with Ctrl + Alt + X.",
-            Ui.Row(_show));
+            Ui.Row(_show), eyebrow: "Gaming tools", icon: "\uE710");
 
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -141,7 +166,7 @@ public sealed class CrosshairView : UserControl, IPageLifecycle
         outline.Checked += (_, _) => { _s.Outline = true; Changed(); };
         outline.Unchecked += (_, _) => { _s.Outline = false; Changed(); };
         editor.Children.Add(outline);
-        var monitors = System.Windows.Forms.Screen.AllScreens.Length;
+        var monitors = Monitors.All().Count;
         if (monitors > 1)
         {
             var mp = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };

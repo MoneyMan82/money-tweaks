@@ -1,91 +1,226 @@
 <Window x:Class="MoneyTweaks.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Money Tweaks" Width="1240" Height="800" MinWidth="980" MinHeight="620"
+        Title="Money Tweaks" Width="1280" Height="820" MinWidth="1000" MinHeight="640"
         WindowStartupLocation="CenterScreen" Background="{StaticResource Bg}" Foreground="{StaticResource Text}"
-        Icon="Assets/MoneyTweaks.ico" UseLayoutRounding="True">
+        Icon="Assets/MoneyTweaks.ico" UseLayoutRounding="True" SnapsToDevicePixels="True">
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+        <WindowChrome CaptionHeight="52" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
+    <Window.InputBindings>
+        <KeyBinding Key="K" Modifiers="Control" Command="{x:Static ApplicationCommands.Find}"/>
+    </Window.InputBindings>
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static ApplicationCommands.Find}" Executed="OpenPalette"/>
+    </Window.CommandBindings>
+
     <Grid x:Name="Root" Background="{StaticResource Bg}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="248"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <!-- Ambient light: cached once as a bitmap; only its opacity "breathes", so it costs almost nothing per frame. -->
+        <Grid x:Name="Ambient" IsHitTestVisible="False" ClipToBounds="True">
+            <Grid.CacheMode><BitmapCache RenderAtScale="0.5"/></Grid.CacheMode>
+            <Ellipse Width="1100" Height="900" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-320,-520,0,0">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#384C8DFF" Offset="0"/>
+                        <GradientStop Color="#104C8DFF" Offset="0.5"/>
+                        <GradientStop Color="#004C8DFF" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Width="1200" Height="1000" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-480,-560">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#308B6CFF" Offset="0"/>
+                        <GradientStop Color="#0C8B6CFF" Offset="0.55"/>
+                        <GradientStop Color="#008B6CFF" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Rectangle Opacity="0.5">
+                <Rectangle.Fill>
+                    <DrawingBrush TileMode="Tile" Viewport="0,0,28,28" ViewportUnits="Absolute" Stretch="None">
+                        <DrawingBrush.Drawing>
+                            <GeometryDrawing Brush="#14FFFFFF">
+                                <GeometryDrawing.Geometry><EllipseGeometry Center="1,1" RadiusX="1" RadiusY="1"/></GeometryDrawing.Geometry>
+                            </GeometryDrawing>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </Rectangle.Fill>
+                <Rectangle.OpacityMask>
+                    <RadialGradientBrush Center="0.3,0.1" GradientOrigin="0.3,0.1" RadiusX="0.9" RadiusY="0.9">
+                        <GradientStop Color="#FF000000" Offset="0"/>
+                        <GradientStop Color="#00000000" Offset="1"/>
+                    </RadialGradientBrush>
+                </Rectangle.OpacityMask>
+            </Rectangle>
+        </Grid>
 
-        <!-- Sidebar -->
-        <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="18,14,0,10">
-                    <Image Source="Assets/logo.png" Width="34" Height="34" RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="Money Tweaks" FontFamily="{StaticResource DisplayFont}" FontSize="17" FontWeight="Bold"/>
-                        <TextBlock x:Name="VersionText" Text="v1.0.0 · free &amp; open source" Foreground="{StaticResource Muted}" FontSize="11"/>
-                    </StackPanel>
-                </StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="256"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-                <Border DockPanel.Dock="Bottom" Margin="12" Padding="12" CornerRadius="10" Background="{StaticResource Card}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse x:Name="AdminDot" Width="8" Height="8" Fill="{StaticResource Gold}" Margin="0,0,8,0"/>
-                            <TextBlock x:Name="AdminText" Text="Standard user" FontSize="12" FontWeight="SemiBold"/>
+            <!-- ═════ Sidebar ═════ -->
+            <Border Background="#E60A0D13" BorderBrush="#FF141A25" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,16,0,14">
+                        <Grid Width="38" Height="38">
+                            <Border CornerRadius="12" Background="{StaticResource AccentGradient}" Opacity="0.25" Margin="-4"/>
+                            <Image Source="Assets/logo.png" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Grid>
+                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock FontFamily="{StaticResource DisplayFont}" FontSize="17" FontWeight="Bold">
+                                <Run Text="Money "/><Run Text="Tweaks" Foreground="{StaticResource AccentGradientH}"/>
+                            </TextBlock>
+                            <TextBlock x:Name="VersionText" Text="v1.0.0" Foreground="{StaticResource Subtle}" FontSize="11"/>
                         </StackPanel>
-                        <TextBlock x:Name="AppliedSummary" Text="Counting applied tweaks…" Style="{StaticResource MutedText}" FontSize="11.5" Margin="0,4,0,0"/>
-                        <Button x:Name="ElevateButton" Content="Restart as admin" Style="{StaticResource GoldButton}" Margin="0,10,0,0" Padding="8,6" Click="Elevate_Click"/>
                     </StackPanel>
-                </Border>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,0,10,0">
-                    <StackPanel x:Name="Nav">
-                        <TextBlock Text="OVERVIEW" Foreground="{StaticResource Muted}" FontSize="10.5" FontWeight="Bold" Margin="12,8,0,4"/>
-                        <RadioButton Style="{StaticResource NavButton}" Tag="dashboard" IsChecked="True" Checked="Nav_Checked">
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE80F;" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" Margin="0,0,12,0"/><TextBlock Text="Dashboard" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
-                        </RadioButton>
-                        <TextBlock Text="TWEAKS" Foreground="{StaticResource Muted}" FontSize="10.5" FontWeight="Bold" Margin="12,14,0,4"/>
-                        <StackPanel x:Name="CategoryNav"/>
-                        <TextBlock Text="TOOLS" Foreground="{StaticResource Muted}" FontSize="10.5" FontWeight="Bold" Margin="12,14,0,4"/>
-                        <StackPanel x:Name="ToolNav"/>
+                    <Border DockPanel.Dock="Bottom" Margin="14,10,14,14" Padding="14" CornerRadius="14" Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardRim}" BorderThickness="1">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Width="10" Height="10" Margin="0,0,9,0">
+                                    <Ellipse x:Name="AdminHalo" Fill="{StaticResource Gold}" Opacity="0.25" Margin="-3"/>
+                                    <Ellipse x:Name="AdminDot" Fill="{StaticResource Gold}"/>
+                                </Grid>
+                                <TextBlock x:Name="AdminText" Text="Standard user" FontSize="12" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <TextBlock x:Name="AppliedSummary" Text="Counting applied tweaks…" Style="{StaticResource MutedText}" FontSize="11.5" Margin="0,6,0,0"/>
+                            <Button x:Name="ElevateButton" Content="Restart as admin" Style="{StaticResource GoldButton}" Margin="0,12,0,0" Padding="8,7" Click="Elevate_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,0,6,0">
+                        <Grid x:Name="NavGrid">
+                            <Canvas x:Name="NavCanvas" IsHitTestVisible="False">
+                                <Border x:Name="NavIndicator" Width="232" Height="38" CornerRadius="10" Opacity="0" BorderThickness="1" BorderBrush="#334C8DFF">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                            <GradientStop Color="#2C4C8DFF" Offset="0"/>
+                                            <GradientStop Color="#0A8B6CFF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border Width="3" CornerRadius="2" HorizontalAlignment="Left" Margin="0,8" Background="{StaticResource AccentGradient}"/>
+                                </Border>
+                            </Canvas>
+                            <StackPanel x:Name="Nav">
+                                <TextBlock Text="OVERVIEW" Foreground="{StaticResource Subtle}" FontSize="10.5" FontWeight="Bold" Margin="12,6,0,6"/>
+                                <StackPanel x:Name="OverviewNav"/>
+                                <TextBlock Text="TWEAKS" Foreground="{StaticResource Subtle}" FontSize="10.5" FontWeight="Bold" Margin="12,16,0,6"/>
+                                <StackPanel x:Name="CategoryNav"/>
+                                <TextBlock Text="TOOLS" Foreground="{StaticResource Subtle}" FontSize="10.5" FontWeight="Bold" Margin="12,16,0,6"/>
+                                <StackPanel x:Name="ToolNav"/>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- ═════ Content ═════ -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="52"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Style="{StaticResource ChromeButton}" Content="&#xE921;" Click="Min_Click" ToolTip="Minimize"/>
+                        <Button x:Name="MaxButton" Style="{StaticResource ChromeButton}" Content="&#xE922;" Click="Max_Click" ToolTip="Maximize"/>
+                        <Button Style="{StaticResource CloseChromeButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Close"/>
                     </StackPanel>
-                </ScrollViewer>
-            </DockPanel>
-        </Border>
+                    <Button DockPanel.Dock="Right" Click="OpenPalette" WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,0,16,0" VerticalAlignment="Center" Padding="12,7" ToolTip="Search everything (Ctrl+K)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,10,0"/>
+                            <TextBlock Text="Search tweaks &amp; tools" Foreground="{StaticResource Muted}" FontWeight="Normal" Margin="0,0,22,0"/>
+                            <Border CornerRadius="5" Background="#14FFFFFF" Padding="6,1">
+                                <TextBlock Text="Ctrl K" FontSize="10.5" Foreground="{StaticResource Muted}"/>
+                            </Border>
+                        </StackPanel>
+                    </Button>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0">
+                        <TextBlock x:Name="CrumbRoot" Text="Overview" Foreground="{StaticResource Subtle}" FontSize="12"/>
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE76C;" FontSize="9" Foreground="{StaticResource Subtle}" Margin="8,0"/>
+                        <TextBlock x:Name="CrumbText" Text="Dashboard" Foreground="{StaticResource Text}" FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </DockPanel>
 
-        <!-- Content -->
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="40"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Style="{StaticResource ChromeButton}" Content="&#xE921;" Click="Min_Click" ToolTip="Minimize"/>
-                    <Button x:Name="MaxButton" Style="{StaticResource ChromeButton}" Content="&#xE922;" Click="Max_Click" ToolTip="Maximize"/>
-                    <Button Style="{StaticResource ChromeButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Close"/>
+                <StackPanel Grid.Row="1">
+                    <Border x:Name="UpdateBanner" Margin="28,0,28,10" Padding="14,10" CornerRadius="12" Background="{StaticResource AccentSoft}" BorderBrush="#664C8DFF" BorderThickness="1" Visibility="Collapsed">
+                        <DockPanel>
+                            <Button x:Name="UpdateButton" DockPanel.Dock="Right" Content="Update now" Style="{StaticResource PrimaryButton}" Padding="14,6" Margin="12,0,0,0" Click="Update_Click"/>
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" Foreground="{StaticResource Accent}" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="UpdateText" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12.5"/>
+                        </DockPanel>
+                    </Border>
+                    <Border x:Name="AdminBanner" Margin="28,0,28,10" Padding="14,10" CornerRadius="12" Background="{StaticResource GoldSoft}" BorderBrush="#55F5B84A" BorderThickness="1">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Restart as admin" Style="{StaticResource GoldButton}" Padding="14,6" Margin="12,0,0,0" Click="Elevate_Click"/>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Click="DismissAdminBanner" ToolTip="Hide for this session"><TextBlock Text="&#xE711;" Style="{StaticResource Icon}" FontSize="10"/></Button>
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE7BA;" Foreground="{StaticResource Gold}" Margin="0,0,10,0"/>
+                            <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12.5"
+                                       Text="Running without administrator rights. Browse everything and change per-user tweaks; system-wide tweaks will ask you to restart as admin."/>
+                        </DockPanel>
+                    </Border>
                 </StackPanel>
-                <TextBlock x:Name="CrumbText" Text="Dashboard" Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center" Margin="24,0,0,0"/>
-            </DockPanel>
-            <StackPanel Grid.Row="1">
-            <Border x:Name="UpdateBanner" Margin="24,0,24,8" Padding="14,10" CornerRadius="10" Background="{StaticResource AccentSoft}" BorderBrush="#662BE38B" BorderThickness="1" Visibility="Collapsed">
+                <ContentControl x:Name="Host" Grid.Row="2" Focusable="False"/>
+            </Grid>
+        </Grid>
+
+        <!-- ═════ Toasts ═════ -->
+        <StackPanel x:Name="ToastHost" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,28,24" Width="380" IsHitTestVisible="False"/>
+
+        <!-- ═════ Command palette (Ctrl+K) ═════ -->
+        <Grid x:Name="Palette" Visibility="Collapsed">
+            <Border Background="#B3020306" MouseLeftButtonDown="ClosePalette"/>
+            <Border x:Name="PalettePanel" Style="{StaticResource CardBorder}" Width="660" VerticalAlignment="Top" Margin="0,90,0,40" Padding="0" Background="#F2101520">
+                <Border.RenderTransform><TranslateTransform x:Name="PaletteShift" Y="0"/></Border.RenderTransform>
                 <DockPanel>
-                    <Button x:Name="UpdateButton" DockPanel.Dock="Right" Content="Update now" Style="{StaticResource PrimaryButton}" Padding="12,5" Click="Update_Click"/>
-                    <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" Foreground="{StaticResource Accent}" Margin="0,0,10,0"/>
-                    <TextBlock x:Name="UpdateText" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12.5"/>
+                    <Grid DockPanel.Dock="Top" Margin="18,14,18,10">
+                        <TextBox x:Name="PaletteBox" Padding="28,10,10,10" FontSize="15" TextChanged="PaletteFilter" PreviewKeyDown="PaletteKeys"/>
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="14" Foreground="{StaticResource Accent}" Margin="13,0,0,0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <DockPanel DockPanel.Dock="Bottom" Margin="18,6,18,12">
+                        <TextBlock x:Name="PaletteCount" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource Subtle}"/>
+                        <TextBlock Text="↑ ↓ to move  ·  Enter to open  ·  Esc to close" FontSize="11" Foreground="{StaticResource Subtle}"/>
+                    </DockPanel>
+                    <ListBox x:Name="PaletteList" MaxHeight="430" Background="Transparent" BorderThickness="0" Margin="8,0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                             MouseLeftButtonUp="PaletteClick" Foreground="{StaticResource Text}">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="b" CornerRadius="10" Padding="12,8" Margin="0,1" Background="Transparent">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#0FFFFFFF"/></Trigger>
+                                                <Trigger Property="IsSelected" Value="True"><Setter TargetName="b" Property="Background" Value="{StaticResource AccentSoft}"/></Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Kind}" FontSize="11" Foreground="{StaticResource Subtle}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    <Border Width="30" Height="30" CornerRadius="9" Background="#14FFFFFF" Margin="0,0,12,0">
+                                        <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" FontSize="13" Foreground="{StaticResource Accent}" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </DockPanel>
-            </Border>
-            <Border x:Name="AdminBanner" Margin="24,0,24,8" Padding="14,10" CornerRadius="10" Background="{StaticResource GoldSoft}" BorderBrush="#66F5C451" BorderThickness="1">
-                <DockPanel>
-                    <Button DockPanel.Dock="Right" Content="Restart as admin" Style="{StaticResource GoldButton}" Padding="12,5" Click="Elevate_Click"/>
-                    <TextBlock Style="{StaticResource Icon}" Text="&#xE7BA;" Foreground="{StaticResource Gold}" Margin="0,0,10,0"/>
-                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12.5"
-                               Text="Running without administrator rights. You can browse everything and change per-user tweaks; system-wide tweaks will ask you to restart as admin."/>
-                </DockPanel>
-            </Border>
-            </StackPanel>
-            <ContentControl x:Name="Host" Grid.Row="2" Focusable="False"/>
-            <Border x:Name="Toast" Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,22" Padding="16,10"
-                    CornerRadius="10" Background="{StaticResource Surface}" BorderBrush="{StaticResource Accent}" BorderThickness="1" Opacity="0" IsHitTestVisible="False">
-                <TextBlock x:Name="ToastText" FontSize="13"/>
             </Border>
         </Grid>
     </Grid>

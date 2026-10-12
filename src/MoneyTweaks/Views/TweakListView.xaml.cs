@@ -23,6 +23,7 @@ public partial class TweakListView : UserControl, IPageLifecycle
         InitializeComponent();
         _category = category;
         TitleText.Text = CategoryInfo.DisplayName(category);
+        CatIcon.Text = MainWindow.CategoryIcons[category];
         BlurbText.Text = CategoryInfo.Blurb(category);
         _items = new(TweakCatalog.InCategory(category).Select(t => new TweakItem(t)));
         _view = CollectionViewSource.GetDefaultView(_items);
@@ -42,17 +43,40 @@ public partial class TweakListView : UserControl, IPageLifecycle
 
     public void OnHidden() { }
 
+    private bool Scanning
+    {
+        set
+        {
+            ScanBar.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            ScanBar.Value = 0;
+            if (value) CountText.Text = $"Checking {_items.Count} tweaks on this PC…";
+        }
+    }
+
+    private void ScanProgress(int done, int total)
+    {
+        ScanBar.Maximum = Math.Max(1, total);
+        ScanBar.Value = done;
+        CountText.Text = $"Checking {done}/{total} tweaks on this PC…";
+    }
+
+    /// <summary>Used by the command palette: filter the list down to one tweak by name.</summary>
+    public void FocusTweak(string name)
+    {
+        SearchBox.Text = name;
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
     private async Task RefreshAllAsync()
     {
-        // Check states with limited parallelism: some checks spawn PowerShell/powercfg.
-        using var gate = new SemaphoreSlim(6);
-        await Task.WhenAll(_items.Select(async i =>
-        {
-            await gate.WaitAsync();
-            try { await i.RefreshAsync(); } finally { gate.Release(); }
-        }));
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Scanning = true;
+        await TweakService.RefreshStatesAsync(_items, new Progress<int>(n => ScanProgress(n, _items.Count)));
+        Scanning = false;
         _view.Refresh();
         UpdateCount();
+        Core.Sys.Log.Info($"[perf] state scan {_category} ({_items.Count} tweaks): {sw.ElapsedMilliseconds} ms");
     }
 
     private bool Matches(object o)
@@ -75,7 +99,11 @@ public partial class TweakListView : UserControl, IPageLifecycle
     {
         var applied = _items.Count(i => i.State == TweakState.Applied);
         var na = _items.Count(i => i.State == TweakState.NotApplicable);
-        CountText.Text = $"{applied} of {_items.Count} applied" + (na > 0 ? $" · {na} not applicable here" : "");
+        var relevant = _items.Count - na;
+        CountText.Text = $"{_view.Cast<object>().Count()} shown" + (na > 0 ? $" · {na} not applicable on this PC" : "");
+        AppliedBig.Text = $"{applied} / {relevant}";
+        AppliedBar.Maximum = Math.Max(1, relevant);
+        Controls.Ui.Animate(AppliedBar, System.Windows.Controls.Primitives.RangeBase.ValueProperty, applied, 500);
     }
 
     private void Filter_Changed(object sender, RoutedEventArgs e)

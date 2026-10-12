@@ -70,6 +70,27 @@ public sealed class TweakItem(Tweak tweak) : Observable
 public static class TweakService
 {
     private static bool _restorePointThisSession;
+    // One app-wide limit on concurrent state checks (some read the registry, some start processes).
+    private static readonly SemaphoreSlim StateGate = new(4);
+
+    /// <summary>Refreshes many items off the UI thread: batched PowerShell checks first, then bounded parallel checks.</summary>
+    public static async Task RefreshStatesAsync(IReadOnlyCollection<TweakItem> items, IProgress<int>? done = null)
+    {
+        static bool Slow(TweakItem i) => i.Tweak.Ops.OfType<Core.Ops.CommandOp>().Any(o => o.HasSlowCheck);
+        int count = 0;
+        async Task RefreshAll(IEnumerable<TweakItem> set) => await Task.WhenAll(set.Select(async i =>
+        {
+            await StateGate.WaitAsync();
+            try { await i.RefreshAsync(); }
+            finally { StateGate.Release(); done?.Report(Interlocked.Increment(ref count)); }
+        }));
+        // Start the slow PowerShell checks in the background and show every registry-backed tweak right away.
+        var slow = items.Where(Slow).ToList();
+        var prewarm = Task.Run(() => TweakEngine.PrewarmChecks(slow.Select(i => i.Tweak)));
+        await RefreshAll(items.Where(i => !Slow(i)));
+        await prewarm;
+        await RefreshAll(slow);
+    }
     public static event Action? Changed;
 
     public static bool EnsureAdmin(IEnumerable<Tweak> tweaks)

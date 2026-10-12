@@ -18,7 +18,7 @@ public sealed class StartupView : UserControl, IPageLifecycle
     public StartupView()
     {
         var (root, body) = Ui.Page("Startup Apps", "Choose which apps launch when you sign in. This uses the same on/off flags as Task Manager's Startup tab, so nothing is deleted and you can switch apps back on any time.",
-            Ui.Row(Ui.Btn("Refresh", (_, _) => Load())));
+            Ui.Row(Ui.Btn("Refresh", (_, _) => Load())), eyebrow: "System", icon: "\uE7E8");
         body.Children.Add(Ui.Card(_list));
         Content = root;
     }
@@ -27,7 +27,7 @@ public sealed class StartupView : UserControl, IPageLifecycle
     {
         _list.Children.Clear();
         var entries = StartupManager.List();
-        if (entries.Count == 0) _list.Children.Add(Ui.Muted("No Run-key startup apps found."));
+        if (entries.Count == 0) _list.Children.Add(Ui.Empty("\uE73E", "Nothing starts with Windows", "No apps are registered to launch at sign-in. Nice and clean."));
         foreach (var e in entries)
         {
             var row = new DockPanel { Margin = new Thickness(0, 6, 0, 6) };
@@ -67,7 +67,7 @@ public sealed class RestoreView : UserControl, IPageLifecycle
 
     public RestoreView()
     {
-        var (root, body) = Ui.Page("Backup & Restore", "Every tweak stores the original values before it changes anything. Undo tweaks one by one with their switches, all at once here, or roll back the whole system with a Windows restore point.");
+        var (root, body) = Ui.Page("Backup & Restore", "Every tweak stores the original values before it changes anything. Undo tweaks one by one with their switches, all at once here, or roll back the whole system with a Windows restore point.", eyebrow: "Safety", icon: "\uE777");
 
         var rp = Ui.Section("System restore points", "Money Tweaks creates one automatically before your first change each session (Settings). Windows allows one new restore point per 24 hours by default.");
         rp.Children.Add(Ui.Row(
@@ -102,7 +102,7 @@ public sealed class RestoreView : UserControl, IPageLifecycle
             var b = BackupStore.Load(id);
             _applied.Children.Add(Ui.Muted($"• {t?.Name ?? id} — applied {b?.AppliedAt:g}", 12.5));
         }
-        if (ids.Count == 0) _applied.Children.Add(Ui.Muted("Nothing applied yet."));
+        if (ids.Count == 0) _applied.Children.Add(Ui.Empty("\uE8A5", "No tweaks applied yet", "When you apply a tweak, its backup shows up here so you can undo it any time."));
 
         _points.Children.Clear();
         var pts = await Task.Run(RestorePoints.List);
@@ -128,7 +128,7 @@ public sealed class RestoreView : UserControl, IPageLifecycle
         IsEnabled = false;
         try
         {
-            await Task.WhenAll(items.Select(i => i.RefreshAsync()));
+            await TweakService.RefreshStatesAsync(items);
             var (ok, failed, reboot) = await TweakService.BatchAsync(items, false);
             Dialog.Show("Undo complete", $"{ok} reverted{(failed > 0 ? $", {failed} could not be reverted automatically (see Activity Log)" : "")}.{(reboot ? "\n\nRestart Windows to finish." : "")}");
         }
@@ -147,7 +147,7 @@ public sealed class LogView : UserControl, IPageLifecycle
     public LogView()
     {
         var (root, body) = Ui.Page("Activity Log", "Everything Money Tweaks changes, every failure and every undo is written here and to a daily log file.",
-            Ui.Row(Ui.Btn("Refresh", (_, _) => Load()), Ui.Btn("Open log folder", (_, _) => Process.Start(new ProcessStartInfo("explorer.exe", AppPaths.Logs) { UseShellExecute = true }))));
+            Ui.Row(Ui.Btn("Refresh", (_, _) => Load()), Ui.Btn("Open log folder", (_, _) => Process.Start(new ProcessStartInfo("explorer.exe", AppPaths.Logs) { UseShellExecute = true }))), eyebrow: "System", icon: "\uE81C");
         body.Children.Add(_box);
         Content = root;
         Log.Written += _ => Dispatcher.InvokeAsync(() => { if (IsVisible) Load(); });
@@ -167,7 +167,7 @@ public sealed class AboutView : UserControl, IPageLifecycle
 {
     public AboutView()
     {
-        var (root, body) = Ui.Page("Settings & About", $"Money Tweaks {App.Version}: a free, open-source Windows tweaker. No accounts, no ads, no telemetry, no paid tiers.");
+        var (root, body) = Ui.Page("Settings & About", $"Money Tweaks {App.Version}: a free, open-source Windows tweaker. No accounts, no ads, no telemetry, no paid tiers.", eyebrow: "Money Tweaks", icon: "\uE713");
 
         var st = Ui.Section("Safety settings");
         var rp = new CheckBox { Content = "Create a restore point before the first change in each session (admin)", IsChecked = App.Settings.CreateRestorePointBeforeBatch, Margin = new Thickness(0, 4, 0, 4) };
@@ -176,6 +176,22 @@ public sealed class AboutView : UserControl, IPageLifecycle
         cc.Click += (_, _) => { App.Settings.ConfirmCautionTweaks = cc.IsChecked == true; App.Settings.Save(); };
         st.Children.Add(rp);
         st.Children.Add(cc);
+        st.Children.Add(new TextBlock { Text = "Motion & effects", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 14, 0, 2) });
+        st.Children.Add(Ui.Muted("Auto follows Windows (Settings › Accessibility › Visual effects › Animation effects) and your GPU. Reduced turns off page transitions, the ambient glow animation and the 3D preview's auto-rotate.", 12));
+        var motion = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        foreach (var (label, value) in new (string, bool?)[] { ("Auto", null), ("Full", false), ("Reduced", true) })
+        {
+            var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = "motion", IsChecked = App.Settings.ReduceMotion == value };
+            rb.Checked += (_, _) =>
+            {
+                App.Settings.ReduceMotion = value;
+                App.Settings.Save();
+                MainWindow.Current?.StartAmbient();
+                MainWindow.Current?.ShowToast(App.ReduceMotion ? "Reduced motion is on." : "Full motion is on.");
+            };
+            motion.Children.Add(rb);
+        }
+        st.Children.Add(motion);
         body.Children.Add(Ui.Card(st));
 
         var up = Ui.Section("Updates", $"You have Money Tweaks {App.Version}. Updates come from the official GitHub releases and are checksum-verified before installing.");

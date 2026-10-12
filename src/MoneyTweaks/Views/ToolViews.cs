@@ -55,7 +55,7 @@ public sealed class TweakBundle : StackPanel
         }
     }
 
-    public Task RefreshAsync() => Task.WhenAll(Items.Select(i => i.RefreshAsync()));
+    public Task RefreshAsync() => TweakService.RefreshStatesAsync(Items);
 
     public async Task ApplyAllAsync()
     {
@@ -82,7 +82,7 @@ public sealed class PotatoView : UserControl, IPageLifecycle
 
     public PotatoView()
     {
-        var (root, body) = Ui.Page("Potato Graphics", "Get Fortnite's smooth, rounded, low-poly \"potato\" look and the FPS that comes with it. Pick a preset, compare it in the preview, review every change, then apply. Money Tweaks only changes Fortnite's own video settings, backs up the file first, and can put everything back in one click.");
+        var (root, body) = Ui.Page("Potato Graphics", "Get Fortnite's smooth, rounded, low-poly \"potato\" look and the FPS that comes with it. Pick a preset, compare it in the preview, review every change, then apply. Money Tweaks only changes Fortnite's own video settings, backs up the file first, and can put everything back in one click.", eyebrow: "Gaming tools", icon: "\uE790");
 
         // ---- Fortnite studio -----------------------------------------------------------------------------------
         var studio = new StackPanel();
@@ -206,7 +206,7 @@ public sealed class PotatoView : UserControl, IPageLifecycle
             foreach (var rb in _presets.Children.OfType<RadioButton>()) rb.IsChecked = (string)rb.Content == "Custom";
             _building = false;
         }
-        App.Settings.Save();
+        App.SaveSettingsSoon();
         _debounce.Stop();
         _debounce.Start();
     }
@@ -487,7 +487,7 @@ public sealed class BoosterView : UserControl, IPageLifecycle
 {
     private readonly GameBooster _booster = new();
     private readonly WrapPanel _procs = new();
-    private readonly TextBox _game = new() { Width = 300 };
+    private readonly TextBox _game = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly CheckBox _purge = new() { Content = "Clear standby memory (admin)", Margin = new Thickness(0, 10, 0, 0) };
     private readonly TextBlock _report = Ui.Muted("");
     private readonly Button _start, _end;
@@ -498,7 +498,7 @@ public sealed class BoosterView : UserControl, IPageLifecycle
         _end = Ui.Btn("End boost", End);
         _end.IsEnabled = false;
         var (root, body) = Ui.Page("Game Booster", "One click before you play: switches to the High/Ultimate Performance power plan, closes the background apps you choose, raises your game to High priority and clears cached standby memory. End boost restores your power plan.",
-            Ui.Row(_start, _end));
+            Ui.Row(_start, _end), eyebrow: "Gaming tools", icon: "\uE945");
 
         var gs = Ui.Section("Game to prioritize", "Process name of the running game, e.g. FortniteClient-Win64-Shipping or cs2. Leave it empty to skip.");
         _game.Text = App.Settings.BoosterGameProcess;
@@ -517,10 +517,18 @@ public sealed class BoosterView : UserControl, IPageLifecycle
         Content = root;
     }
 
-    private void LoadProcs()
+    private bool _loadingProcs;
+    private async void LoadProcs()
     {
+        if (_loadingProcs) return;
+        _loadingProcs = true;
         _procs.Children.Clear();
-        foreach (var p in GameBooster.ClosableProcesses().Take(60))
+        _procs.Children.Add(Ui.Muted("Scanning running apps…"));
+        // Enumerating processes and window titles takes 100-300 ms: keep it off the UI thread.
+        var procs = await Task.Run(() => GameBooster.ClosableProcesses().Take(60).ToList());
+        _loadingProcs = false;
+        _procs.Children.Clear();
+        foreach (var p in procs)
         {
             var cb = new CheckBox
             {
@@ -576,7 +584,7 @@ public sealed class InputDelayView : UserControl, IPageLifecycle
         _hold = Ui.Btn("Hold high-precision timer", Hold, "PrimaryButton");
         _release = Ui.Btn("Release", Release);
         _release.IsEnabled = false;
-        var (root, body) = Ui.Page("Input Delay Reducer", "Lowers the Windows timer interval so games and input polling wake up more often, and bundles the input-related tweaks in one place. The timer request is held only while Money Tweaks is open; close the app and Windows goes back to normal.");
+        var (root, body) = Ui.Page("Input Delay Reducer", "Lowers the Windows timer interval so games and input polling wake up more often, and bundles the input-related tweaks in one place. The timer request is held only while Money Tweaks is open; close the app and Windows goes back to normal.", eyebrow: "Gaming tools", icon: "\uE962");
 
         var ts = Ui.Section("Kernel timer resolution");
         ts.Children.Add(_current);
@@ -648,7 +656,7 @@ public sealed class PingView : UserControl, IPageLifecycle
     public PingView()
     {
         _toggle = Ui.Btn("▶ Start monitoring", Toggle, "PrimaryButton");
-        var (root, body) = Ui.Page("Ping Stabilizer", "Measures latency, jitter and packet loss continuously, then applies the network tweaks that cut lag spikes. It can't fix a bad route to a game server; it removes the local causes of spikes.");
+        var (root, body) = Ui.Page("Ping Stabilizer", "Measures latency, jitter and packet loss continuously, then applies the network tweaks that cut lag spikes. It can't fix a bad route to a game server; it removes the local causes of spikes.", eyebrow: "Gaming tools", icon: "\uE701");
         _host.Text = App.Settings.PingHost;
         var hostRow = new StackPanel { Orientation = Orientation.Horizontal };
         hostRow.Children.Add(_host);

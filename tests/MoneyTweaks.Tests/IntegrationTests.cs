@@ -58,6 +58,22 @@ public class IntegrationTests(ITestOutputHelper output) : IDisposable
     }
 
     [Fact]
+    public void Batched_powershell_checks_match_individual_checks()
+    {
+        if (!Enabled) return;
+        var net = TweakCatalog.All.Where(t => t.Ops.OfType<CommandOp>().Any(o => o.HasSlowCheck)).ToList();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        TweakEngine.PrewarmChecks(net);
+        var batched = net.ToDictionary(t => t.Id, TweakEngine.GetState);
+        output.WriteLine($"{net.Count} PowerShell-checked tweaks, batched prewarm + states: {sw.ElapsedMilliseconds} ms");
+        System.Threading.Thread.Sleep(16000); // let the 15 s cache expire so each check runs on its own
+        sw.Restart();
+        var single = net.ToDictionary(t => t.Id, TweakEngine.GetState);
+        output.WriteLine($"individual checks: {sw.ElapsedMilliseconds} ms");
+        foreach (var t in net) Assert.True(batched[t.Id] == single[t.Id], $"{t.Id}: batched {batched[t.Id]} vs single {single[t.Id]}");
+    }
+
+    [Fact]
     public void Powercfg_state_is_readable()
     {
         if (!Enabled) return;

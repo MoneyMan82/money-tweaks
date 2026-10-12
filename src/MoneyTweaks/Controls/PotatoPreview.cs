@@ -515,11 +515,17 @@ public sealed class PotatoPreview : Grid
     private readonly Border _divider = new() { Width = 2, Background = Brushes.White, IsHitTestVisible = false };
     private readonly Border _handle;
     private readonly TextBlock _beforeLabel, _afterLabel, _hint;
-    private double _split = 0.5, _angle = 0.6, _lastTick;
+    private double _split = 0.5, _angle = 0.6;
+    private long _lastSpin;
+    // 30 fps timer that only runs while rotating and visible. CompositionTarget.Rendering kept WPF rendering at
+    // 60 fps for as long as a handler was attached, even when nothing moved.
+    private readonly System.Windows.Threading.DispatcherTimer _spin = new(System.Windows.Threading.DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
+    private Window? _window;
     private bool _dragSplit, _dragOrbit;
     private Point _dragStart;
     private double _dragAngle;
-    public bool AutoRotate { get; set; } = true;
+    private bool _autoRotate = true;
+    public bool AutoRotate { get => _autoRotate; set { _autoRotate = value; UpdateSpin(); } }
     public int BeforeTriangles { get; private set; }
     public int AfterTriangles { get; private set; }
     public event Action? TrianglesChanged;
@@ -558,8 +564,19 @@ public sealed class PotatoPreview : Grid
         _overlay.MouseLeftButtonDown += OnDown;
         _overlay.MouseMove += OnMove;
         _overlay.MouseLeftButtonUp += (_, _) => { _dragSplit = _dragOrbit = false; _overlay.ReleaseMouseCapture(); };
-        Loaded += (_, _) => CompositionTarget.Rendering += OnFrame;
-        Unloaded += (_, _) => CompositionTarget.Rendering -= OnFrame;
+        _spin.Tick += OnSpin;
+        Loaded += (_, _) =>
+        {
+            _window = Window.GetWindow(this);
+            if (_window is not null) { _window.Activated += WindowChanged; _window.Deactivated += WindowChanged; _window.StateChanged += WindowChanged; }
+            UpdateSpin();
+        };
+        Unloaded += (_, _) =>
+        {
+            _spin.Stop();
+            if (_window is not null) { _window.Activated -= WindowChanged; _window.Deactivated -= WindowChanged; _window.StateChanged -= WindowChanged; }
+        };
+        IsVisibleChanged += (_, _) => UpdateSpin();
 
         var (b, bt) = PotatoScene.Build(PreviewLook.HighDefaults);
         _sceneB.Content = b;
@@ -581,6 +598,7 @@ public sealed class PotatoPreview : Grid
 
     public void SetAfter(PreviewLook look, string label)
     {
+        using var perf = Core.Sys.Perf.Measure("potato scene build", 10);
         var (a, at) = PotatoScene.Build(look);
         _sceneA.Content = a;
         AfterTriangles = at;
@@ -616,12 +634,22 @@ public sealed class PotatoPreview : Grid
         else _overlay.Cursor = Math.Abs(p.X - ActualWidth * _split) < 24 ? Cursors.SizeWE : Cursors.Hand;
     }
 
-    private void OnFrame(object? s, EventArgs e)
+    private void WindowChanged(object? s, EventArgs e) => UpdateSpin();
+
+    private void UpdateSpin()
     {
-        var t = ((RenderingEventArgs)e).RenderingTime.TotalSeconds;
-        var dt = _lastTick == 0 ? 0 : Math.Min(0.1, t - _lastTick);
-        _lastTick = t;
-        if (!AutoRotate || _dragOrbit || !IsVisible) return;
+        bool run = _autoRotate && IsLoaded && IsVisible && !App.ReduceMotion
+            && _window is { IsActive: true } w && w.WindowState != WindowState.Minimized;
+        if (run && !_spin.IsEnabled) { _lastSpin = System.Diagnostics.Stopwatch.GetTimestamp(); _spin.Start(); }
+        else if (!run && _spin.IsEnabled) _spin.Stop();
+    }
+
+    private void OnSpin(object? s, EventArgs e)
+    {
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        var dt = Math.Min(0.1, System.Diagnostics.Stopwatch.GetElapsedTime(_lastSpin, now).TotalSeconds);
+        _lastSpin = now;
+        if (_dragOrbit) return;
         _angle += dt * 0.12;
         UpdateCameras();
     }

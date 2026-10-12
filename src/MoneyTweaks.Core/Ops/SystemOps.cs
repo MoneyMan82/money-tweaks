@@ -176,21 +176,70 @@ public sealed class CommandOp : TweakOp
 
     private static ProcessResult Exec(string c, Shell shell) => shell == Shell.Cmd ? ProcessRunner.Cmd(c) : ProcessRunner.PowerShell(c);
 
+    // Check outputs from a batched PowerShell run (see PrewarmChecks). Starting powershell.exe costs ~0.5-1.5 s, so
+    // running each check in its own process made the Networking page take >10 s to show its states.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string output, DateTime at)> CheckCache = new();
+    private static readonly TimeSpan CacheLifetime = TimeSpan.FromSeconds(15);
+    private string CacheKey => $"{CheckShell ?? Shell}|{CheckCommand}";
+
+    /// <summary>Runs all PowerShell state checks of <paramref name="ops"/> in one powershell.exe and caches the outputs.</summary>
+    public static void PrewarmChecks(IEnumerable<CommandOp> ops)
+    {
+        var todo = ops.Where(o => o.CheckCommand is not null && o.AppliedPattern is not null && (o.CheckShell ?? o.Shell) == Shell.PowerShell)
+            .Where(o => !(CheckCache.TryGetValue(o.CacheKey, out var c) && DateTime.UtcNow - c.at < CacheLifetime))
+            .DistinctBy(o => o.CheckCommand).ToList();
+        if (todo.Count == 0) return;
+        // Most of the cost is module loading (NetAdapter, NetTCPIP, DnsClient…), so group checks by module and run the
+        // groups in parallel processes: each process loads one module once.
+        var groups = todo.GroupBy(o => Regex.Match(o.CheckCommand!, @"Get-([A-Za-z]+)").Groups[1].Value switch
+        {
+            var v when v.StartsWith("NetAdapter") => "NetAdapter",
+            var v when v.StartsWith("Dns") => "Dns",
+            var v when v.StartsWith("Net") => "NetTCPIP",
+            _ => "Other",
+        }).Select(g => g.ToList()).ToList();
+        Parallel.ForEach(groups, new ParallelOptions { MaxDegreeOfParallelism = 3 }, RunBatch);
+    }
+
+    private static void RunBatch(List<CommandOp> batch)
+    {
+        var sb = new System.Text.StringBuilder("$ErrorActionPreference='Continue';");
+        for (int i = 0; i < batch.Count; i++)
+            sb.Append($"Write-Output '@@MT{i}@@';try{{ & {{ {batch[i].CheckCommand} }} 2>&1 | Out-String -Width 300 }}catch{{ '' }};");
+        Sys.ProcessResult r;
+        try { r = ProcessRunner.PowerShell(sb.ToString(), 90_000); }
+        catch { return; }
+        var parts = Regex.Split(r.StdOut, @"@@MT(\d+)@@\r?\n?");
+        var now = DateTime.UtcNow;
+        for (int i = 1; i + 1 < parts.Length; i += 2)
+            if (int.TryParse(parts[i], out var idx) && idx < batch.Count)
+                CheckCache[batch[idx].CacheKey] = (parts[i + 1].Trim(), now);
+    }
+
+    /// <summary>True when this op's state check needs PowerShell (slow); registry-only tweaks can be shown immediately.</summary>
+    public bool HasSlowCheck => CheckCommand is not null && AppliedPattern is not null && (CheckShell ?? Shell) == Shell.PowerShell;
+
     public override OpState Check()
     {
         if (CheckCommand is null || AppliedPattern is null) return OpState.Unknown;
         try
         {
-            var r = Exec(CheckCommand, CheckShell ?? Shell);
-            return Regex.IsMatch(r.Combined, AppliedPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline) ? OpState.Applied : OpState.NotApplied;
+            string output;
+            if (CheckCache.TryGetValue(CacheKey, out var cached) && DateTime.UtcNow - cached.at < CacheLifetime) output = cached.output;
+            else
+            {
+                output = Exec(CheckCommand, CheckShell ?? Shell).Combined;
+                CheckCache[CacheKey] = (output, DateTime.UtcNow);
+            }
+            return Regex.IsMatch(output, AppliedPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline) ? OpState.Applied : OpState.NotApplied;
         }
         catch { return OpState.Unknown; }
     }
 
     public override OpBackup Capture() => new() { Kind = "command" };
 
-    public override void Apply() => RunChecked(ApplyCommand);
-    public override void Undo(OpBackup? backup) => RunChecked(UndoCommand);
+    public override void Apply() { CheckCache.TryRemove(CacheKey, out _); RunChecked(ApplyCommand); CheckCache.TryRemove(CacheKey, out _); }
+    public override void Undo(OpBackup? backup) { CheckCache.TryRemove(CacheKey, out _); RunChecked(UndoCommand); CheckCache.TryRemove(CacheKey, out _); }
 
     private void RunChecked(string c)
     {
