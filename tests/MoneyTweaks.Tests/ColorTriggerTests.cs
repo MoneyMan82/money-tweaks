@@ -2,7 +2,7 @@ using MoneyTweaks.Core.Macros;
 
 namespace MoneyTweaks.Tests;
 
-public class ColorTriggerTests(Xunit.Abstractions.ITestOutputHelper output)
+public class ColorTriggerTests
 {
     private static byte[] Px(params (byte r, byte g, byte b)[] colors) => colors.SelectMany(c => new[] { c.b, c.g, c.r, (byte)255 }).ToArray();
 
