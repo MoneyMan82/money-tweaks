@@ -142,15 +142,16 @@ public class ColorTriggerTests
     {
         var sink = new RecordingSink();
         using var mgr = new MacroManager(() => sink, () => "notepad");
-        var m = new Macro { Name = "p", Repeat = 1, Steps = [new() { Kind = StepKind.KeyDown, Key = "W" }, new() { Kind = StepKind.Delay, Ms = 400 }, new() { Kind = StepKind.KeyPress, Key = "E", Ms = 1 }] };
+        var m = new Macro { Name = "p", Repeat = 1, Steps = [new() { Kind = StepKind.KeyDown, Key = "W" }, new() { Kind = StepKind.Delay, Ms = 1500 }, new() { Kind = StepKind.KeyPress, Key = "E", Ms = 1 }] };
         var done = new TaskCompletionSource<StopReason>();
         mgr.Stopped += (_, r, _) => done.TrySetResult(r);
         mgr.Start(m);
-        await Task.Delay(100);
+        // Wait for the key-down itself rather than a fixed time: CI machines can be slow under parallel tests.
+        for (int i = 0; i < 300 && !sink.Snapshot().Contains("W:down"); i++) await Task.Delay(10);
         mgr.Pause();
         Assert.True(mgr.Paused);
         Assert.Equal("W:up", sink.Snapshot().Last());
-        await Task.Delay(600);                       // delay step finishes but the next step waits
+        await Task.Delay(1800);                      // delay step finishes but the next step waits
         Assert.DoesNotContain("E:down", sink.Snapshot());
         mgr.Resume();
         Assert.Equal(StopReason.Finished, await done.Task.WaitAsync(TimeSpan.FromSeconds(3)));
