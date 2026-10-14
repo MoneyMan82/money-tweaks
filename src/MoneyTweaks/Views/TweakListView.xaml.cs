@@ -123,6 +123,28 @@ public partial class TweakListView : UserControl, IPageLifecycle
         if (item.NeedsReboot && item.State == TweakState.Applied) MainWindow.Current?.ShowToast("Applied. Restart Windows for it to take full effect.");
     }
 
+    private async void Test_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: TweakItem item } || item.Busy) return;
+        var r = await TweakService.VerifyAsync(item);
+        item.Expanded = true;
+        UpdateCount();
+        bool canLive = Core.Engine.TweakVerifier.CanRoundTrip(item.Tweak, out _) && item.State == TweakState.NotApplied;
+        var kind = r.Status switch { Core.Engine.VerifyStatus.Fail => DialogKind.Error, Core.Engine.VerifyStatus.Warning => DialogKind.Warning, _ => DialogKind.Info };
+        var text = r.ToText() + (canLive ? "\n\nThis read-only test changed nothing. A live test applies the tweak, reads it back, undoes it and checks every original value is restored." : "");
+        if (Dialog.Show($"Test: {r.StatusLabel}", text, kind, canLive ? "Run live test…" : "OK", canLive ? "Close" : null) && canLive)
+        {
+            var live = await TweakService.RoundTripAsync(item);
+            if (live is not null) Dialog.Show($"Live test: {live.StatusLabel}", live.ToText(), live.Status == Core.Engine.VerifyStatus.Fail ? DialogKind.Error : DialogKind.Info);
+            UpdateCount();
+        }
+    }
+
+    private void Benchmark_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakItem item }) BenchmarkView.Open("tweak", item.Tweak.Id);
+    }
+
     private async void ApplyRecommended_Click(object sender, RoutedEventArgs e)
     {
         var rec = _items.Where(i => i.IsRecommended && i.State == TweakState.NotApplied).ToList();

@@ -74,6 +74,7 @@ public static class TweakEngine
         }
         if (t.MinBuild > 0 && OsInfo.Build < t.MinBuild)
             return new(t, false, $"Requires Windows build {t.MinBuild} or newer.", TweakState.NotApplicable);
+        if (TweakAudit.DisabledReason(t) is { } disabled) return new(t, false, disabled, GetState(t));
         if (t.RequiresAdmin && !Admin.IsElevated)
             return new(t, false, "Administrator rights are required. Use 'Restart as admin'.", GetState(t));
 
@@ -113,9 +114,30 @@ public static class TweakEngine
                 return new(t, false, ex.Message, GetState(t));
             }
         }
-        Log.Info($"Applied: {t.Name}{(t.RequiresReboot ? " (restart required)" : "")}");
-        var msg = t.RequiresReboot ? "Applied. Restart Windows to finish." : "Applied.";
-        return new(t, true, msg, GetState(t));
+        // A command exiting with 0 proves nothing: read every value back and roll back if Windows didn't keep it.
+        var state = GetState(t);
+        if (state is TweakState.NotApplied or TweakState.Partial && t.Ops.Any(o => o is CommandOp))
+        {
+            // Some programs (uninstallers, netsh) finish their work just after exiting: give them a moment.
+            Thread.Sleep(3000);
+            CommandOp.InvalidateCache();
+            state = GetState(t);
+        }
+        if (state is TweakState.NotApplied or TweakState.Partial)
+        {
+            Log.Warn($"Apply '{t.Name}': read-back shows {state}; rolling back");
+            foreach (var j in Enumerable.Reverse(done))
+            {
+                try { t.Ops[j].Undo(backup!.Ops[j]); }
+                catch (Exception rex) { Log.Error($"Rollback of {t.Id} step {j + 1} failed", rex); }
+            }
+            if (freshBackup) BackupStore.Delete(t.Id);
+            return new(t, false, "Windows did not keep the change (read-back after applying didn't match), so it was rolled back.", GetState(t));
+        }
+        bool verified = t.Ops.All(TweakVerifier.HasReadBack);
+        Log.Info($"Applied: {t.Name}{(verified ? " (verified by read-back)" : " (no read-back available)")}{(t.RequiresReboot ? " (restart required)" : "")}");
+        var msg = (verified ? "Applied and verified." : "Applied. One step can't be read back from Windows, so it is unverified.") + (t.RequiresReboot ? " Restart Windows to finish." : "");
+        return new(t, true, msg, state);
     }
 
     public static TweakResult Undo(Tweak t)
@@ -142,9 +164,15 @@ public static class TweakEngine
         }
         if (errors.Count == 0)
         {
+            var diffs = TweakVerifier.RestoreMismatches(t, backup);
+            if (diffs.Count > 0)
+            {
+                Log.Warn($"Undo '{t.Name}': read-back differs from backup: {string.Join("; ", diffs)}");
+                return new(t, false, "Reverted, but read-back differs from the backup (kept so you can retry): " + string.Join("; ", diffs), GetState(t));
+            }
             BackupStore.Delete(t.Id);
             Log.Info($"Reverted: {t.Name}{(backup is null ? " (no backup found, restored Windows defaults)" : "")}");
-            return new(t, true, t.RequiresReboot ? "Reverted. Restart Windows to finish." : "Reverted.", GetState(t));
+            return new(t, true, (backup is null ? "Reverted to Windows defaults." : "Reverted and verified against the backup.") + (t.RequiresReboot ? " Restart Windows to finish." : ""), GetState(t));
         }
         return new(t, false, string.Join(" | ", errors), GetState(t));
     }

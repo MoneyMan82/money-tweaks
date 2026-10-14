@@ -52,15 +52,15 @@ public static partial class TweakCatalog
         const TweakCategory N = TweakCategory.Networking;
 
         yield return T(N, "net.nagle", "Disable Nagle's algorithm",
-            "Sets TcpAckFrequency=1 and TCPNoDelay=1 on every active network interface so small game packets are sent and acknowledged immediately instead of being batched.",
+            "Sets TcpAckFrequency=1 and TCPNoDelay=1 on every active network interface, so small TCP packets are acknowledged immediately instead of being batched. TCP only: Fortnite and most shooters send gameplay over UDP, so in-match ping is not affected.",
             new DynamicRegOp("TcpAckFrequency=1 on active interfaces", true, () => ActiveTcpInterfaces().Select(p => new RegValueOp(Hive.HKLM, p, "TcpAckFrequency", RegistryValueKind.DWord, 1))),
-            new DynamicRegOp("TCPNoDelay=1 on active interfaces", true, () => ActiveTcpInterfaces().Select(p => new RegValueOp(Hive.HKLM, p, "TCPNoDelay", RegistryValueKind.DWord, 1)))) with { Recommended = true, RequiresReboot = true };
+            new DynamicRegOp("TCPNoDelay=1 on active interfaces", true, () => ActiveTcpInterfaces().Select(p => new RegValueOp(Hive.HKLM, p, "TCPNoDelay", RegistryValueKind.DWord, 1)))) with { RequiresReboot = true };
         yield return T(N, "net.throttling-index", "Disable network throttling",
             "Sets NetworkThrottlingIndex to off. Windows normally limits non-multimedia network packet processing while media plays.",
             LMu(SysProfile, "NetworkThrottlingIndex", 0xFFFFFFFF, 10)) with { Recommended = true, RequiresReboot = true };
         yield return T(N, "net.qos-reserve", "Remove QoS bandwidth reserve",
-            "Sets the QoS Packet Scheduler's reservable bandwidth limit to 0%, so no bandwidth is held back for QoS-tagged traffic.",
-            LM(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit", 0)) with { Recommended = true };
+            "Sets the QoS Packet Scheduler's reservable bandwidth limit to 0%. Windows only reserves bandwidth for apps that explicitly request QoS, so on most PCs this changes nothing measurable.",
+            LM(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit", 0));
         yield return T(N, "net.autotuning", "TCP receive window auto-tuning: normal",
             "Makes sure TCP receive-window auto-tuning is at 'normal', its best setting for fast connections. Some 'optimizers' set it to disabled, which caps download speed.",
             Cmd("netsh int tcp set global autotuninglevel=normal", "netsh int tcp set global autotuninglevel=normal",
@@ -106,10 +106,10 @@ public static partial class TweakCatalog
             "Keeps IPv6 enabled but makes Windows prefer IPv4 when both are available.",
             LM(@"SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters", "DisabledComponents", 0x20)) with { Risk = Risk.Caution, RequiresReboot = true };
         yield return T(N, "net.port-range", "Faster TCP port reuse",
-            "Shortens TIME_WAIT to 30 seconds and widens the dynamic port range, which helps when many connections open and close quickly.",
+            "Shortens TIME_WAIT to 30 seconds, which helps when many TCP connections open and close quickly. MaxUserPort is also written for older tools, but Windows Vista and later ignore it (the dynamic port range is already 49152-65535).",
             LM(TcpParams, "TcpTimedWaitDelay", 30), LM(TcpParams, "MaxUserPort", 65534)) with { RequiresReboot = true };
         yield return T(N, "net.default-ttl", "Set default TTL to 64",
-            "Sets the IP time-to-live for outgoing packets to 64, the common value used by Linux and most consoles.",
+            "Sets the IP time-to-live for outgoing packets to 64, the common value used by Linux and most consoles. TTL only limits how many hops a packet may take; it does not change speed or ping.",
             LM(TcpParams, "DefaultTTL", 64)) with { RequiresReboot = true };
     }
 
@@ -140,7 +140,7 @@ public static partial class TweakCatalog
         yield return T(A, "adv.timer-hpet", "Remove forced HPET (platform clock)",
             "Deletes a 'useplatformclock' override if a previous tool set one, so Windows can use its default (faster) timer source.",
             Cmd("bcdedit /deletevalue useplatformclock & exit /b 0", "exit /b 0",
-                null, null, label: "bcdedit /deletevalue useplatformclock")) with { RequiresReboot = true, Group = "Timers" };
+                "bcdedit /enum {current}", @"\A(?![\s\S]*useplatformclock)(?=[\s\S]*\{current\})", label: "bcdedit /deletevalue useplatformclock")) with { RequiresReboot = true, Group = "Timers" };
         yield return T(A, "adv.global-timer-res", "Global timer resolution requests",
             "On Windows 11, a program's timer-resolution request normally only affects that program. This restores the old system-wide behavior, which the Input Delay Reducer relies on.",
             LM(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", 1)) with { MinBuild = 22000, Risk = Risk.Caution, RequiresReboot = true, Group = "Timers" };

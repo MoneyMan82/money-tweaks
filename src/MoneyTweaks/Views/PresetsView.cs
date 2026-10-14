@@ -87,6 +87,7 @@ public sealed class PresetsView : UserControl, IPageLifecycle
         var row = Ui.Row(Ui.Btn("Apply", async (_, _) => await ApplyAsync(p), "PrimaryButton"), Ui.Btn("Preview", async (_, _) => await PreviewAsync(p)));
         row.Margin = new Thickness(0, 14, 0, 0);
         if (lastRun is not null) row.Children.Add(Ui.Btn("Undo last apply", async (_, _) => await UndoAsync(p, lastRun)));
+        row.Children.Add(Ui.Btn("Benchmark", (_, _) => BenchmarkView.Open("preset", p.Id), "GhostButton"));
         row.Children.Add(Ui.Btn("Duplicate", (_, _) => Duplicate(p), "GhostButton"));
         if (!p.BuiltIn)
         {

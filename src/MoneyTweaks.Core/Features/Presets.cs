@@ -52,14 +52,14 @@ public static class PresetStore
         new()
         {
             Id = "builtin.competitive-fortnite", BuiltIn = true, Name = "Competitive Fortnite",
-            Description = "Game Mode on, Game DVR off, Fortnite at High CPU priority, launchers lowered, fullscreen optimizations off, raw mouse input and the network tweaks for small game packets.",
+            Description = "Game Mode on, Game DVR off, Fortnite at High CPU priority, launchers lowered, fullscreen optimizations off, raw mouse input and no network throttling.",
             TweakIds = ["gen.game-mode", "gen.background-recording", "gen.gamebar-tips", "game.fortnite", "opt.launcher-priority", "adv.fso",
-                "gen.mouse-accel", "gen.sticky-keys", "gen.usb-suspend", "net.nagle", "net.throttling-index", "adv.system-responsiveness", "adv.games-task"],
+                "gen.mouse-accel", "gen.sticky-keys", "gen.usb-suspend", "net.throttling-index", "adv.system-responsiveness", "adv.games-task"],
         },
         new()
         {
             Id = "builtin.low-latency", BuiltIn = true, Name = "Low Latency",
-            Description = "Input and timer tweaks: no mouse acceleration, fastest key repeat, no USB/adapter power saving, timer and scheduler settings, Nagle off.",
+            Description = "Input and timer tweaks: no mouse acceleration, fastest key repeat, no USB/adapter power saving, timer and scheduler settings, Nagle off (TCP only).",
             TweakIds = ["gen.mouse-accel", "gen.keyboard-repeat", "gen.sticky-keys", "gen.usb-suspend", "adv.global-timer-res", "adv.timer-dynamic-tick",
                 "adv.priority-separation", "net.nagle", "net.adapter-power"],
         },

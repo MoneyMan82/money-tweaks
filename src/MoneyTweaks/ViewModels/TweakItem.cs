@@ -17,9 +17,11 @@ public sealed class TweakItem(Tweak tweak) : Observable
     public bool NeedsAdmin => Tweak.RequiresAdmin;
     public bool NeedsReboot => Tweak.RequiresReboot;
     public bool IsRecommended => Tweak.Recommended;
-    public string Details => IsGuide
+    public string Details => (IsGuide
         ? string.Join("\n", Tweak.GuideSteps.Select((s, i) => $"{i + 1}. {s}"))
-        : string.Join("\n", Tweak.Ops.Select(o => "• " + o.Describe()));
+        : string.Join("\n", Tweak.Ops.Select(o => "• " + o.Describe())))
+        + (_verify is null ? "" : $"\n\nTEST {_verify.At:T}: {_verify.StatusLabel}. {_verify.Summary}" + string.Concat(_verify.Evidence.Select(e => "\n  – " + e)))
+        + string.Concat(TweakAudit.IssuesFor(Tweak).Select(i => $"\n! {i.Label}: {i.Text}"));
 
     private TweakState _state = TweakState.Unknown;
     public TweakState State
@@ -41,7 +43,16 @@ public sealed class TweakItem(Tweak tweak) : Observable
 
     private bool _busy;
     public bool Busy { get => _busy; set { if (Set(ref _busy, value)) Raise(nameof(CanToggle)); } }
-    public bool CanToggle => !Busy && State is not TweakState.NotApplicable and not TweakState.Unknown;
+    public bool CanToggle => !Busy && State is not TweakState.NotApplicable and not TweakState.Unknown
+        && (DisabledReason is null || State is TweakState.Applied or TweakState.Partial);
+    public string? DisabledReason { get; } = TweakAudit.DisabledReason(tweak);
+    public bool IsDisabled => DisabledReason is not null;
+
+    private VerifyReport? _verify;
+    /// <summary>Last Test/Verify result for this tweak (null until tested).</summary>
+    public VerifyReport? Verify { get => _verify; set { if (Set(ref _verify, value)) { Raise(nameof(VerifyLabel)); Raise(nameof(HasVerify)); Raise(nameof(Details)); } } }
+    public string VerifyLabel => _verify?.StatusLabel ?? "";
+    public bool HasVerify => _verify is not null;
 
     private string? _message;
     public string? Message { get => _message; set => Set(ref _message, value); }
@@ -63,6 +74,7 @@ public sealed class TweakItem(Tweak tweak) : Observable
     {
         var s = await Task.Run(() => TweakEngine.GetState(Tweak));
         State = s;
+        if (IsDisabled && Message is null) Message = "⚠ " + DisabledReason;
     }
 }
 
@@ -92,6 +104,46 @@ public static class TweakService
         await RefreshAll(slow);
     }
     public static event Action? Changed;
+
+    /// <summary>Read-only test: reads every value back from Windows. Changes nothing.</summary>
+    public static async Task<VerifyReport> VerifyAsync(TweakItem item)
+    {
+        item.Busy = true;
+        try
+        {
+            var r = await Task.Run(() => { TweakEngine.PrewarmChecks([item.Tweak]); return TweakVerifier.Verify(item.Tweak); });
+            item.Verify = r;
+            item.State = r.State;
+            item.Message = $"Test: {r.StatusLabel}. {r.Summary}";
+            Log.Info($"Verify {item.Tweak.Id}: {r.StatusLabel} – {r.Summary}");
+            return r;
+        }
+        finally { item.Busy = false; }
+    }
+
+    /// <summary>Live test after confirmation: apply, read back, undo, check every original value is back.</summary>
+    public static async Task<VerifyReport?> RoundTripAsync(TweakItem item)
+    {
+        if (!TweakVerifier.CanRoundTrip(item.Tweak, out var why)) { Dialog.Show("Live test not available", why); return null; }
+        if (item.State != TweakState.NotApplied) { Dialog.Show("Live test not available", "The live test only runs on tweaks that are currently off, so your current settings are never touched. Use the read-only Test instead."); return null; }
+        if (!Dialog.Confirm($"Live test “{item.Name}”?",
+                "Money Tweaks will apply this tweak, read every value back from Windows, undo it, and check that every original value is restored exactly. " +
+                "This takes a few seconds and briefly changes the setting." + (item.NeedsReboot ? "\n\nThe effect itself needs a restart, so only the stored settings can be checked." : ""),
+                "Run live test", item.IsCaution ? DialogKind.Warning : DialogKind.Confirm)) return null;
+        if (!EnsureAdmin([item.Tweak])) return null;
+        item.Busy = true;
+        item.Message = "Live test running…";
+        try
+        {
+            var r = await Task.Run(() => TweakVerifier.RoundTrip(item.Tweak));
+            item.Verify = r;
+            item.State = await Task.Run(() => TweakEngine.GetState(item.Tweak));
+            item.Message = $"Live test: {r.StatusLabel}. {r.Summary}";
+            Log.Info($"Round-trip {item.Tweak.Id}: {r.StatusLabel} – {r.Summary}");
+            return r;
+        }
+        finally { item.Busy = false; Changed?.Invoke(); }
+    }
 
     public static bool EnsureAdmin(IEnumerable<Tweak> tweaks)
     {

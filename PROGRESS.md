@@ -88,3 +88,21 @@ Resume point for future sessions. Keep it short.
   MacroService owns the watcher; GamingMacrosView: colour section, Pause button, colour status line, drag-drop rows, step highlight.
 - Tests: ColorTriggerTests (fake screen; real capture smoke test) + ColorWatcherCpuTests (non-parallel collection).
 - Not verified by automation: the picker UI by hand, drag-drop by mouse, real SendInput into games.
+
+## Session 2026-10-14 (evening): Tweak Testing & Benchmark (v1.6.0, not tagged)
+- Core/Engine/TweakAudit.cs: known limitations per tweak (Ineffective/Obsolete/Risky/OneWay/Security) + computed
+  duplicates/conflicts. DisabledReason: adv.vbs-hvci (engine refuses Apply; Undo allowed).
+- Core/Engine/TweakVerifier.cs: Verify (read-back per op type, backup check, restart-pending, live effect checks),
+  RestoreMismatches (used by TweakEngine.Undo), RoundTrip (live test, only on tweaks that are off; not App Removal).
+- TweakEngine.Apply: read-back after apply; NotApplied/Partial -> rollback (3 s settle + re-check for command ops).
+- CommandOp.ReadCheckOutput/HasCheck/InvalidateCache; DynamicRegOp.Resolve. Every command tweak now has a check.
+- Core/Benchmarks: BenchmarkModel (runs, studies, conditions, store benchmarks.json, CSV/JSON export), BenchmarkStats
+  (metrics, mean/sd, verdict = beyond max(noise floor, 2*SE) with n>=2 each, condition warnings, PresentMon/CapFrameX
+  CSV parser), BenchmarkSampler (HardwareMonitor 1 Hz + ICMP 2 Hz, nvidia-smi temps, power plan, AC, foreground, Fortnite running).
+- App: Views/BenchmarkView.cs (audit + studies + history + guide; NumberForm for manual FPS/ping), Test/Benchmark buttons
+  on tweak cards, Benchmark button on preset cards, nav entry "benchmark". Screenshot mode snaps benchmark-audit.
+- Tests: VerificationTests (registry collection) + BenchmarkStatsTests; opt-in MT_AUDIT_REAL=1 writes %TEMP%/mt-audit-real.txt.
+- Real read-only audit on the dev PC (non-admin): 334 audited, 256 pass, 9 warning, 5 fail (applied 2026-10-11, values
+  later reverted outside Money Tweaks), 64 unverifiable (60 not present, 2 bcdedit need admin, 2 BIOS).
+- Not verified by automation: FPS capture inside Fortnite (no API; CSV/manual by design), Fortnite server ping (manual),
+  live round-trip of admin-only tweaks (dev session not elevated), the UI flows by mouse beyond screenshots.

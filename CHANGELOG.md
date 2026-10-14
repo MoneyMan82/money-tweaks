@@ -1,6 +1,23 @@
 # Changelog
 
 ## 1.6.0 – unreleased
+- **Tweak Testing & Benchmark** (new page "Test & Benchmark"):
+  - Verify all tweaks (read-only): reads every registry value, service start type, power-plan index, scheduled task,
+    Store package and command check back from Windows; checks Undo has a usable backup; live-effect checks where Windows
+    exposes them (pointer acceleration, menu delay, key repeat, running game priority, edition for telemetry level,
+    disabled-but-running services, restart pending). PASS / WARNING / FAIL / UNVERIFIABLE with evidence; text report export.
+  - Test button on every tweak card; optional live round-trip test (apply → read back → undo → compare every original value).
+  - Before/after studies for a tweak, a preset or nothing: N timed runs per phase with CPU/GPU utilisation, RAM, CPU temp
+    (ACPI, if exposed), GPU temp (nvidia-smi), ICMP endpoint latency/jitter/loss (labelled as NOT Fortnite ping).
+    FPS / 1% / 0.1% lows / frame times from PresentMon or CapFrameX CSVs, or typed in; Fortnite ping typed in from Net Debug Stats.
+    Mean ± sd per phase, difference and %, verdict only when beyond run-to-run variation; condition-mismatch warnings;
+    bar chart per run; apply/roll back from the study with verification; history saved locally, CSV/JSON export, delete.
+- Engine: Apply now reads every value back and rolls back automatically if Windows didn't keep the change. Undo compares
+  the result against the backup and keeps the backup if anything differs.
+- Audit fixes: "Disable Memory Integrity (HVCI)" can no longer be applied (security protection; Undo still works).
+  Honest descriptions for Nagle (TCP only, not Fortnite's UDP), QoS reserve, MaxUserPort (ignored), TTL. Nagle and QoS reserve
+  are no longer "Recommended"; Nagle removed from the Competitive Fortnite preset. Hibernation and HPET tweaks gained read-back.
+  Duplicate/conflict detection (same registry value, DNS choices, power-plan order).
 - **Macro Maker upgrade**: screen-colour triggers (pick a pixel or region from any monitor, HEX/RGB, tolerance,
   appears / disappears / changes), AND/OR logic, and colour conditions combined with key triggers (key AND colour).
   Looping colour macros stop when the colour condition ends. Live colour-trigger status, Pause/Resume (held inputs are

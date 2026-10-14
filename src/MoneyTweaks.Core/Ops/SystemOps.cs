@@ -216,25 +216,34 @@ public sealed class CommandOp : TweakOp
                 CheckCache[batch[idx].CacheKey] = (parts[i + 1].Trim(), now);
     }
 
+    public static void InvalidateCache() => CheckCache.Clear();
+
     /// <summary>True when this op's state check needs PowerShell (slow); registry-only tweaks can be shown immediately.</summary>
     public bool HasSlowCheck => CheckCommand is not null && AppliedPattern is not null && (CheckShell ?? Shell) == Shell.PowerShell;
 
     public override OpState Check()
     {
         if (CheckCommand is null || AppliedPattern is null) return OpState.Unknown;
+        var output = ReadCheckOutput();
+        if (output is null) return OpState.Unknown;
+        return Regex.IsMatch(output, AppliedPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline) ? OpState.Applied : OpState.NotApplied;
+    }
+
+    /// <summary>Raw output of the state check (cached briefly), or null when there is no check or it could not run.</summary>
+    public string? ReadCheckOutput()
+    {
+        if (CheckCommand is null) return null;
         try
         {
-            string output;
-            if (CheckCache.TryGetValue(CacheKey, out var cached) && DateTime.UtcNow - cached.at < CacheLifetime) output = cached.output;
-            else
-            {
-                output = Exec(CheckCommand, CheckShell ?? Shell).Combined;
-                CheckCache[CacheKey] = (output, DateTime.UtcNow);
-            }
-            return Regex.IsMatch(output, AppliedPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline) ? OpState.Applied : OpState.NotApplied;
+            if (CheckCache.TryGetValue(CacheKey, out var cached) && DateTime.UtcNow - cached.at < CacheLifetime) return cached.output;
+            var output = Exec(CheckCommand, CheckShell ?? Shell).Combined;
+            CheckCache[CacheKey] = (output, DateTime.UtcNow);
+            return output;
         }
-        catch { return OpState.Unknown; }
+        catch { return null; }
     }
+
+    public bool HasCheck => CheckCommand is not null && AppliedPattern is not null;
 
     public override OpBackup Capture() => new() { Kind = "command" };
 
@@ -307,6 +316,9 @@ public sealed class DynamicRegOp(string label, bool admin, Func<IEnumerable<RegV
 {
     public override bool RequiresAdmin => admin;
     public override string Describe() => label;
+
+    /// <summary>The concrete registry values this op changes on this PC right now.</summary>
+    public IReadOnlyList<RegValueOp> Resolve() => Targets();
 
     private List<RegValueOp> Targets()
     {

@@ -92,7 +92,7 @@ public static partial class TweakCatalog
             new PowerCfgOp("sub_processor", "PROCTHROTTLEMIN", 100, "Minimum processor state")) with { Risk = Risk.Caution, Group = "Power" };
         yield return T(G, "gen.hibernate-off", "Disable hibernation",
             "Turns off hibernation and deletes hiberfil.sys, freeing several GB on the system drive. This also disables Fast Startup.",
-            Cmd("powercfg /hibernate off", "powercfg /hibernate on", label: "powercfg /hibernate off")) with { Group = "Power", Risk = Risk.Caution };
+            Cmd("powercfg /hibernate off", "powercfg /hibernate on", @"reg query HKLM\SYSTEM\CurrentControlSet\Control\Power /v HibernateEnabled", @"HibernateEnabled\s+REG_DWORD\s+0x0\s*$", label: "powercfg /hibernate off")) with { Group = "Power", Risk = Risk.Caution };
         yield return T(G, "gen.fast-startup-off", "Disable Fast Startup",
             "Fast Startup half-hibernates the kernel at shutdown, which can leave drivers in a stale state. Disabling it makes every boot a clean boot.",
             LM(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0, 1)) with { Group = "Power" };

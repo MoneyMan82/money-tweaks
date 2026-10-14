@@ -49,6 +49,10 @@
                                     </ControlTemplate>
                                 </ToggleButton.Template>
                             </ToggleButton>
+                            <Button Content="Test" Style="{StaticResource GhostButton}" Padding="10,3" FontSize="11.5" Margin="12,0,0,0" VerticalAlignment="Center"
+                                    Click="Test_Click" ToolTip="Read every setting back from Windows and check Undo is ready. Changes nothing."/>
+                            <Button Content="Benchmark" Style="{StaticResource GhostButton}" Padding="10,3" FontSize="11.5" Margin="4,0,0,0" VerticalAlignment="Center"
+                                    Click="Benchmark_Click" ToolTip="Measure before and after applying this tweak"/>
                         </WrapPanel>
                         <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" Background="#FF0A0D13" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,10,0,0">
                             <TextBlock Text="{Binding Details}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>

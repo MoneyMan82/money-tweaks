@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     internal static readonly (string tag, string icon, string label)[] Tools =
     [
         ("presets", "\uE8F1", "Presets"),
+        ("benchmark", "\uE9D2", "Test & Benchmark"),
         ("macros", "\uE765", "Gaming Macros"),
         ("potato", "\uE790", "Potato Graphics"),
         ("booster", "\uE945", "Game Booster"),
@@ -176,6 +177,7 @@ public partial class MainWindow : Window
                 "dashboard" => new DashboardView(),
                 "presets" => new PresetsView(),
                 "macros" => new GamingMacrosView(),
+                "benchmark" => new BenchmarkView(),
                 "potato" => new PotatoView(),
                 "booster" => new BoosterView(),
                 "input" => new InputDelayView(),
@@ -397,7 +399,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(dir);
         string[] tags = ["dashboard", "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
-            "presets", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
+            "presets", "benchmark", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
         foreach (var tag in tags)
         {
             Navigate(tag);
@@ -417,6 +419,12 @@ public partial class MainWindow : Window
                 await Task.Delay(1200);
                 await Snap(dir, "macros-editor");
                 mv.CloseEditorForScreenshot();
+            }
+            if (tag == "benchmark" && Host.Content is BenchmarkView bv)
+            {
+                await bv.AuditForScreenshotAsync(); // read-only verification
+                await Task.Delay(800);
+                await Snap(dir, "benchmark-audit");
             }
             if (tag == "presets" && Host.Content is PresetsView prv)
             {

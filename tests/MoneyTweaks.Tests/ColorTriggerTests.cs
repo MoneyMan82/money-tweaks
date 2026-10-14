@@ -86,11 +86,12 @@ public class ColorTriggerTests
         w.Rising += _ => Interlocked.Increment(ref fired);
         w.Status += s => { if (s.PausedForGame) sawPaused = true; };
         w.Start([ColorMacro(TriggerLogic.All)]);
-        await Task.Delay(250);
-        Assert.Equal(0, fired);
+        // Poll with a generous timeout: other test classes may keep the thread pool busy.
+        for (int i = 0; i < 60 && !sawPaused; i++) await Task.Delay(50);
         Assert.True(sawPaused);
+        Assert.Equal(0, fired);
         fg = "notepad";
-        await Task.Delay(250);
+        for (int i = 0; i < 60 && Volatile.Read(ref fired) == 0; i++) await Task.Delay(50);
         Assert.Equal(1, fired);
     }
 
