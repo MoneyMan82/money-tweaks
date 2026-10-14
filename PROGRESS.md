@@ -65,3 +65,8 @@ Resume point for future sessions. Keep it short.
   undo last run, duplicate, edit/rename, delete, export, import, inline editor with virtualized grouped picker.
 - No keyboard/mouse macros on purpose (anti-cheat/game ToS risk); stated in the UI.
 - Tests: tests/PresetTests.cs (11). Apply/undo UI not clicked through by automation (dialogs); engine paths are the tested ones.
+
+## Release state (2026-10-14)
+- Tags v1.3.0 and v1.4.0 both point at 1e223fc (redesign); their binaries are correctly stamped 1.3.0/1.4.0.
+- Presets + Potato screenshot mode (50a1708, b698c57) are NOT in any release yet. Props now 1.4.1; ship with tag v1.4.1.
+- Tags must never be moved (no force-push); always release a new version instead.
