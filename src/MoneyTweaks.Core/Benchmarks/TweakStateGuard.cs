@@ -31,6 +31,7 @@ public static class TweakStateGuard
         {
             switch (TweakEngine.GetState(t))
             {
+                case TweakState.Applied when !BackupStore.Exists(t.Id): skipped?.Add($"{t.Name} (already set outside Money Tweaks, left as is)"); break;
                 case TweakState.Applied: d[t.Id] = true; break;
                 case TweakState.NotApplied: d[t.Id] = false; break;
                 case var s: skipped?.Add($"{t.Name} ({s})"); break;

@@ -119,3 +119,6 @@ Resume point for future sessions. Keep it short.
 - Verified: build, tests, one 8 s scene run (completed, real frame/CPU/GPU/RAM/GPU-temp values logged). That run happened while
   Fortnite was running, so its numbers are not a valid result. NOT yet verified: FPS above 60 after the DesiredFrameRate change,
   the full Compare flow with real tweak switching by hand.
+- Fix (same session): the synthetic benchmark aborted when a preset tweak was already on without a Money Tweaks backup
+  (USB selective suspend on the user's High performance plan). Such tweaks are now left as is and listed; PowerCfgOp.DefaultValue
+  (USB suspend = 1) for Undo without backup, otherwise a clear message instead of a false read-back error.

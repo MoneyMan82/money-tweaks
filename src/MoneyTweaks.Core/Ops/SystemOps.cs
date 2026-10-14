@@ -107,6 +107,8 @@ public sealed class ServiceStartOp(string service, int start) : TweakOp
 public sealed class PowerCfgOp(string subgroup, string setting, int value, string label) : TweakOp
 {
     public override bool RequiresAdmin => false;
+    /// <summary>Windows default index, used by Undo when no backup exists. Null = unknown (Undo then refuses).</summary>
+    public int? DefaultValue { get; init; }
     public override string Describe() => $"Power plan: {label} = {value}";
     private static string PowerCfg => Path.Combine(ProcessRunner.System32, "powercfg.exe");
 
@@ -137,7 +139,12 @@ public sealed class PowerCfgOp(string subgroup, string setting, int value, strin
 
     public override void Undo(OpBackup? backup)
     {
-        if (backup?.Data.GetValueOrDefault("ac") is not { } ac) return;
+        if (backup?.Data.GetValueOrDefault("ac") is not { } ac)
+        {
+            // No record of the original value (it was set outside Money Tweaks): use the known Windows default if there is one.
+            if (DefaultValue is { } d) { Set(d, d); return; }
+            throw new TweakOpException($"{label} was set outside Money Tweaks, so there's no backup of its original value. Change it in Control Panel → Power Options → Advanced settings.");
+        }
         var dc = backup.Data.GetValueOrDefault("dc") ?? ac;
         Set(int.Parse(ac, CultureInfo.InvariantCulture), int.Parse(dc, CultureInfo.InvariantCulture));
     }

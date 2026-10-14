@@ -286,6 +286,19 @@ public class TweakStateGuardTests : IDisposable
     }
 
     [Fact]
+    public void Settings_made_outside_money_tweaks_are_left_alone()
+    {
+        Directory.CreateDirectory(_tmp); AppPaths.OverrideRoot(_tmp);
+        using (var k = Registry.CurrentUser.CreateSubKey(Key)) k.SetValue("C", 1, RegistryValueKind.DWord); // user set it, no backup
+        var c = T("t.c", "C");
+        Assert.Equal(TweakState.Applied, TweakEngine.GetState(c));
+        var skipped = new List<string>();
+        var original = TweakStateGuard.Capture([c], skipped);
+        Assert.Empty(original);
+        Assert.Contains(skipped, s => s.Contains("outside Money Tweaks"));
+    }
+
+    [Fact]
     public void Reboot_and_disabled_tweaks_are_not_switched()
     {
         Assert.False(TweakStateGuard.Eligible(TweakCatalog.Find("net.nagle")!, out var why));

@@ -86,7 +86,7 @@ public static partial class TweakCatalog
             new PowerCfgOp("sub_processor", "CPMINCORES", 100, "Processor minimum unparked cores")) with { Group = "Power" };
         yield return T(G, "gen.usb-suspend", "Disable USB selective suspend",
             "Stops Windows powering down idle USB ports, which can cause mouse, keyboard or headset dropouts.",
-            new PowerCfgOp("2a737441-1930-4402-8d77-b2bebba308a3", "48e6b7a6-50f5-4782-a5d4-53bb8f07e226", 0, "USB selective suspend")) with { Recommended = true, Group = "Power" };
+            new PowerCfgOp("2a737441-1930-4402-8d77-b2bebba308a3", "48e6b7a6-50f5-4782-a5d4-53bb8f07e226", 0, "USB selective suspend") { DefaultValue = 1 }) with { Recommended = true, Group = "Power" };
         yield return T(G, "gen.min-processor-state", "Minimum processor state 100%",
             "Keeps the CPU at full clock instead of ramping up from idle. Raises temperatures and power draw. Desktops only.",
             new PowerCfgOp("sub_processor", "PROCTHROTTLEMIN", 100, "Minimum processor state")) with { Risk = Risk.Caution, Group = "Power" };
