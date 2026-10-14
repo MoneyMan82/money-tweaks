@@ -58,6 +58,28 @@ public enum StopReason { Finished, Stopped, TriggerReleased, Emergency, Timeout,
 public sealed class MacroPlayer(IInputSink sink, Func<string?>? foregroundProcess = null)
 {
     private readonly HashSet<int> _keys = [];
+    private readonly ManualResetEventSlim _running = new(true);
+    private List<int> _pausedKeys = [];
+    private List<MouseBtn> _pausedButtons = [];
+    public bool Paused => !_running.IsSet;
+
+    /// <summary>Pauses before the next step and releases held inputs (they are pressed again on resume).</summary>
+    public void Pause()
+    {
+        if (!_running.IsSet) return;
+        _running.Reset();
+        _pausedKeys = [.. _keys];
+        _pausedButtons = [.. _buttons];
+        ReleaseAll();
+    }
+
+    public void Resume()
+    {
+        if (_running.IsSet) return;
+        foreach (var k in _pausedKeys) Down(k);
+        foreach (var b in _pausedButtons) MDown(b);
+        _running.Set();
+    }
     private readonly HashSet<MouseBtn> _buttons = [];
     public event Action<int>? StepStarted;
     public string? BlockedGame { get; private set; }
@@ -71,6 +93,7 @@ public sealed class MacroPlayer(IInputSink sink, Func<string?>? foregroundProces
                 for (int i = 0; i < m.Steps.Count; i++)
                 {
                     ct.ThrowIfCancellationRequested();
+                    if (!_running.IsSet) await Task.Run(() => _running.Wait(ct), ct);
                     if (foregroundProcess is not null && MacroPolicy.BlockedGame(foregroundProcess()) is { } game)
                     {
                         BlockedGame = game;
@@ -267,6 +290,24 @@ public sealed class MacroManager : IDisposable
     }
 
     /// <summary>Cancels the macro and immediately releases anything held, even before the run loop unwinds.</summary>
+    /// <summary>AND-gate for key triggers that also have colour conditions (supplied by the colour watcher).</summary>
+    public Func<Macro, bool>? ColorGate { get; set; }
+    public bool Paused => _player?.Paused ?? false;
+    public void Pause() => _player?.Pause();
+    public void Resume() => _player?.Resume();
+
+    /// <summary>Colour watcher rising edge: start a colour-triggered macro if nothing else runs.</summary>
+    public void OnColorRising(Macro m)
+    {
+        if (m.Trigger == TriggerKind.Color && Running is null && Armed.Any(a => a.Id == m.Id)) Start(m);
+    }
+
+    /// <summary>Colour watcher falling edge: looping colour macros stop when their condition ends.</summary>
+    public void OnColorFalling(Macro m)
+    {
+        if (Running is { } r && r.Id == m.Id && !DryRun && (r.Trigger == TriggerKind.Color || r.ColorTriggers.Count > 0) && r.Repeat == 0) Stop(StopReason.TriggerReleased);
+    }
+
     public void EmergencyStop()
     {
         Stop(StopReason.Emergency);
@@ -287,7 +328,8 @@ public sealed class MacroManager : IDisposable
             if (r.Trigger == TriggerKind.ToggleKey && down) { Stop(StopReason.Stopped); return; }
         }
         if (!down || Running is not null) return;
-        var m = Armed.FirstOrDefault(a => a.Trigger != TriggerKind.Manual && VirtualKeys.TryParse(a.TriggerKey, out var t) && t == vk);
+        var m = Armed.FirstOrDefault(a => a.Trigger is not (TriggerKind.Manual or TriggerKind.Color) && VirtualKeys.TryParse(a.TriggerKey, out var t) && t == vk
+            && (a.ColorTriggers.Count == 0 || (ColorGate?.Invoke(a) ?? false)));
         if (m is not null) Start(m);
     }
 
@@ -342,6 +384,11 @@ public static class MacroLibrary
             Description = "Opens the Snipping Tool region capture (Win+Shift+S).",
             Trigger = TriggerKind.Manual, Repeat = 1,
             Steps = [new() { Kind = StepKind.Combo, Key = "LWin+LShift+S", Ms = 60 }] },
+        new() { Id = "builtin.color-example", BuiltIn = true, Name = "Example: colour turns green → press Space", Game = "General", Category = "Example",
+            Description = "Shows how screen-colour triggers work: when the watched pixel turns green, Space is pressed once. Duplicate it, use Pick from screen to choose your pixel and colour, then arm triggers.",
+            Trigger = TriggerKind.Color, Repeat = 1, ColorPollMs = 150,
+            ColorTriggers = [new() { X = 0, Y = 0, Color = "#00FF00", Tolerance = 30, Mode = ColorMode.Appears }],
+            Steps = [K(StepKind.KeyPress, "Space")] },
         new() { Id = "builtin.paste-enter", BuiltIn = true, Name = "Paste and send", Game = "Desktop", Category = "Productivity",
             Description = "Pastes the clipboard and presses Enter after 150 ms, e.g. for chat messages you send often.",
             Trigger = TriggerKind.PressKey, TriggerKey = "F10", Repeat = 1,

@@ -23,6 +23,11 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
     private readonly System.Windows.Shapes.Ellipse _dot = new() { Width = 10, Height = 10, Margin = new Thickness(0, 0, 10, 0) };
     private string _game = "All";
     private DispatcherTimer? _countdown;
+    private readonly Button _pauseBtn;
+    private readonly TextBlock _colorStatus = Ui.Muted("", 11.5);
+    private readonly List<Border> _rows = [];
+    private string? _editingId;
+    private DateTime _lastColorUi;
 
     private static MacroManager Mgr => MacroService.Manager;
     private IEnumerable<Macro> All => MacroLibrary.BuiltIns.Concat(_file.Macros);
@@ -39,11 +44,13 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
 
         // Live status / control bar
         _stopBtn = Ui.Btn("Stop", (_, _) => { Mgr.Stop(); CancelCountdown(); });
+        _pauseBtn = Ui.Btn("Pause", (_, _) => { if (Mgr.Paused) Mgr.Resume(); else Mgr.Pause(); UpdateStatus(null, Mgr.Paused ? "Paused: held keys were released and will be pressed again on resume." : null); });
         var statusText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         statusText.Children.Add(_status);
         statusText.Children.Add(_statusSub);
+        statusText.Children.Add(_colorStatus);
         var statusRow = new DockPanel();
-        var btns = Ui.Row(_stopBtn, emergency, _armBtn);
+        var btns = Ui.Row(_stopBtn, _pauseBtn, emergency, _armBtn);
         btns.Margin = new Thickness(12, 0, 0, 0);
         DockPanel.SetDock(btns, Dock.Right);
         statusRow.Children.Add(btns);
@@ -67,7 +74,20 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         Content = root;
 
         Mgr.Started += m => Dispatcher.BeginInvoke(() => UpdateStatus($"Running: {m.Name}", Mgr.DryRun ? "Test mode: no input is sent." : m.TriggerText));
-        Mgr.Step += (m, i) => Dispatcher.BeginInvoke(() => { if (Mgr.Running == m && i < m.Steps.Count) _statusSub.Text = $"{(Mgr.DryRun ? "Test · " : "")}Step {i + 1}/{m.Steps.Count}: {m.Steps[i].Describe()}"; });
+        Mgr.Step += (m, i) => Dispatcher.BeginInvoke(() =>
+        {
+            if (Mgr.Running == m && i < m.Steps.Count) _statusSub.Text = $"{(Mgr.DryRun ? "Test · " : "")}Step {i + 1}/{m.Steps.Count}: {m.Steps[i].Describe()}";
+            if (_editingId == m.Id) HighlightRow(i); // live preview in the editor timeline
+        });
+        MacroService.Watcher.Status += s =>
+        {
+            var now = DateTime.UtcNow;
+            if ((now - _lastColorUi).TotalMilliseconds < 250) return; // at most 4 UI updates per second
+            _lastColorUi = now;
+            Dispatcher.BeginInvoke(() => _colorStatus.Text = s.PausedForGame
+                ? "Colour triggers paused: a game that blocks automation is focused."
+                : $"Colour watch · “{s.Macro.Name}”: " + string.Join("  ", s.Conditions.Select((c, i) => $"{(c ? "●" : "○")} {i + 1}")) + (s.Combined ? "  → TRUE" : "  → false"));
+        };
         Mgr.Stopped += (m, r, d) => Dispatcher.BeginInvoke(() => OnStopped(m, r, d));
         Rebuild();
         UpdateStatus(null, null);
@@ -81,6 +101,10 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         _statusSub.Text = sub ?? (MacroService.Armed ? "Hotkey triggers are armed: your macros start from their trigger keys." : "Hotkey triggers are off. Use Play, or arm triggers to use trigger keys.");
         _dot.Fill = Ui.Brush(running ? "Success" : MacroService.Armed ? "Accent" : "Subtle");
         _stopBtn.IsEnabled = running || _countdown is not null;
+        _pauseBtn.IsEnabled = running && !Mgr.DryRun;
+        _pauseBtn.Content = Mgr.Paused ? "Resume" : "Pause";
+        if (!MacroService.Watcher.IsRunning) _colorStatus.Text = "";
+        if (!running) HighlightRow(-1);
         _armBtn.Content = MacroService.Armed ? "Disarm triggers" : "Arm hotkey triggers";
     }
 
@@ -106,7 +130,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         else
         {
             var triggered = All.Where(m => m.Trigger != TriggerKind.Manual).ToList();
-            var clashes = triggered.GroupBy(m => m.TriggerKey, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1).ToList();
+            var clashes = triggered.Where(m => m.Trigger != TriggerKind.Color).GroupBy(m => m.TriggerKey, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1).ToList();
             if (clashes.Count > 0 && !Dialog.Confirm("Some macros share a trigger key",
                     string.Join("\n", clashes.Select(c => $"{c.Key}: {string.Join(", ", c.Select(x => x.Name))}")) + "\n\nOnly the first macro listed for each key will run. Change trigger keys in the editor to avoid this.", "Arm anyway", DialogKind.Warning))
                 return;
@@ -210,6 +234,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
     {
         if (Mgr.Running is not null) { MainWindow.Current?.ShowToast("A macro is already running. Stop it first.", "Gold"); return; }
         var copy = m.Copy(m.Name);
+        copy.Id = m.Id; // so the editor can highlight the running step
         if (copy.Repeat == 0) copy.Repeat = 1; // a test never loops forever
         copy.SafetyTimeoutSec = Math.Min(copy.SafetyTimeoutSec, 60);
         Mgr.Start(copy, dryRun: true);
@@ -295,22 +320,24 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         var errors = new TextBlock { Foreground = Ui.Brush("Danger"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
         var timeline = new StackPanel();
 
+        _editingId = m.Id;
         void RenderTimeline()
         {
             timeline.Children.Clear();
+            _rows.Clear();
             if (m.Steps.Count == 0) timeline.Children.Add(Ui.Muted("No steps yet. Add some with the buttons below.", 12.5));
             for (int i = 0; i < m.Steps.Count; i++) timeline.Children.Add(StepRow(m, i, RenderTimeline));
         }
         RenderTimeline();
 
         var trig = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
-        foreach (var (label, kind) in new[] { ("Run button", TriggerKind.Manual), ("Press key", TriggerKind.PressKey), ("Hold key", TriggerKind.HoldKey), ("Toggle key", TriggerKind.ToggleKey) })
+        foreach (var (label, kind) in new[] { ("Run button", TriggerKind.Manual), ("Press key", TriggerKind.PressKey), ("Hold key", TriggerKind.HoldKey), ("Toggle key", TriggerKind.ToggleKey), ("Screen colour", TriggerKind.Color) })
         {
             var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = "trig" + m.Id, IsChecked = m.Trigger == kind, Margin = new Thickness(0, 0, 6, 6), VerticalAlignment = VerticalAlignment.Center };
-            rb.Checked += (_, _) => { m.Trigger = kind; trigKey.IsEnabled = kind != TriggerKind.Manual; };
+            rb.Checked += (_, _) => { m.Trigger = kind; trigKey.Visibility = kind is TriggerKind.Manual or TriggerKind.Color ? Visibility.Collapsed : Visibility.Visible; };
             trig.Children.Add(rb);
         }
-        trigKey.IsEnabled = m.Trigger != TriggerKind.Manual;
+        trigKey.Visibility = m.Trigger is TriggerKind.Manual or TriggerKind.Color ? Visibility.Collapsed : Visibility.Visible;
         trig.Children.Add(trigKey);
 
         var add = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
@@ -331,6 +358,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         foreach (FrameworkElement c in meta.Children) c.Margin = new Thickness(0, 0, 16, 0);
         sp.Children.Add(meta);
         sp.Children.Add(Labeled("Trigger", trig));
+        sp.Children.Add(ColorSection(m));
         sp.Children.Add(new TextBlock { Text = "Timeline", Style = Ui.Res<Style>("H2"), Margin = new Thickness(0, 16, 0, 8) });
         sp.Children.Add(timeline);
         sp.Children.Add(add);
@@ -380,6 +408,8 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         DockPanel.SetDock(tools, Dock.Right);
         row.Children.Add(tools);
 
+        var grip = new TextBlock { Text = "\uE76F", Style = Ui.Res<Style>("Icon"), FontSize = 14, Foreground = Ui.Brush("Subtle"), Cursor = Cursors.SizeAll, Margin = new Thickness(0, 0, 8, 0), ToolTip = "Drag to reorder" };
+        row.Children.Add(grip);
         var num = new Border { Width = 28, Height = 28, CornerRadius = new CornerRadius(14), Background = Ui.Brush("AccentSoft"), Margin = new Thickness(0, 0, 10, 0),
             Child = new TextBlock { Text = (i + 1).ToString(), FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Ui.Brush("Accent"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
         row.Children.Add(num);
@@ -414,7 +444,30 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
             });
         }
         row.Children.Add(p);
-        return new Border { Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 6, 6, 6), Margin = new Thickness(0, 0, 0, 6), Child = row };
+        var block = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 6, 6, 6),
+            Margin = new Thickness(0, 0, 0, 6), Child = row, AllowDrop = true, BorderThickness = new Thickness(1), BorderBrush = Brushes.Transparent,
+        };
+        grip.MouseLeftButtonDown += (_, _) =>
+        {
+            block.Opacity = 0.5;
+            DragDrop.DoDragDrop(grip, new DataObject("mt-step", i), DragDropEffects.Move);
+            block.Opacity = 1;
+        };
+        block.DragOver += (_, e) => { e.Effects = e.Data.GetDataPresent("mt-step") ? DragDropEffects.Move : DragDropEffects.None; block.BorderBrush = Ui.Brush("Accent"); e.Handled = true; };
+        block.DragLeave += (_, _) => block.BorderBrush = Brushes.Transparent;
+        block.Drop += (_, e) =>
+        {
+            block.BorderBrush = Brushes.Transparent;
+            if (e.Data.GetData("mt-step") is not int from || from == i || from >= m.Steps.Count) return;
+            var step = m.Steps[from];
+            m.Steps.RemoveAt(from);
+            m.Steps.Insert(i, step);
+            rerender();
+        };
+        _rows.Add(block);
+        return block;
     }
 
     private static UIElement Labeled(string label, UIElement control)
@@ -454,14 +507,128 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         return tb;
     }
 
+    private void HighlightRow(int index)
+    {
+        for (int k = 0; k < _rows.Count; k++)
+            _rows[k].Background = k == index ? Ui.Brush("AccentSoft") : new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF));
+    }
+
+    // ---- screen-colour conditions ---------------------------------------------------------------------------
+    private UIElement ColorSection(Macro m)
+    {
+        var sp = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
+        sp.Children.Add(Ui.Text("Screen-colour conditions", 13, FontWeights.SemiBold));
+        sp.Children.Add(Ui.Muted("Watch a pixel or a small region (all monitors, any scaling). With the “Screen colour” trigger they start the macro, and a looping macro stops when they turn false. With a key trigger, the key only works while they are true (AND). Works with windowed/borderless games; exclusive fullscreen or protected video can read as black. Paused while a game that blocks automation is focused. Not for aiming or shooting automation.", 11.5));
+        var opts = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        foreach (var (label, logic) in new[] { ("Match ALL (AND)", TriggerLogic.All), ("Match ANY (OR)", TriggerLogic.Any) })
+        {
+            var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = "logic" + m.Id, IsChecked = m.ColorLogic == logic, Margin = new Thickness(0, 0, 6, 6), VerticalAlignment = VerticalAlignment.Center };
+            rb.Checked += (_, _) => m.ColorLogic = logic;
+            opts.Children.Add(rb);
+        }
+        var poll = NumberBox(m.ColorPollMs, 70);
+        poll.Margin = new Thickness(12, 0, 6, 6);
+        poll.TextChanged += (_, _) => { if (int.TryParse(poll.Text, out var v)) m.ColorPollMs = v; };
+        opts.Children.Add(poll);
+        opts.Children.Add(new TextBlock { Text = $"ms between checks (min {MacroPolicy.MinColorPollMs})", Foreground = Ui.Brush("Muted"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 6) });
+        sp.Children.Add(opts);
+        var list = new StackPanel();
+        var result = Ui.Muted("", 12);
+        void Render()
+        {
+            list.Children.Clear();
+            if (m.ColorTriggers.Count == 0) list.Children.Add(Ui.Muted("No colour conditions.", 12));
+            for (int i = 0; i < m.ColorTriggers.Count; i++) list.Children.Add(ColorRow(m, i, Render));
+        }
+        Render();
+        sp.Children.Add(list);
+        sp.Children.Add(Ui.Row(
+            Ui.Btn("+ Add colour condition", (_, _) => { if (m.ColorTriggers.Count < MacroPolicy.MaxColorTriggers) { m.ColorTriggers.Add(new ColorTrigger()); Render(); } }, "GhostButton"),
+            Ui.Btn("Check now", (_, _) =>
+            {
+                var lines = new List<string>();
+                var states = new List<bool>();
+                for (int i = 0; i < m.ColorTriggers.Count; i++)
+                {
+                    var t = m.ColorTriggers[i];
+                    var px = ScreenCapture.Capture(t.X, t.Y, t.Width, t.Height);
+                    if (px is null) { lines.Add($"{i + 1}: capture failed"); states.Add(false); continue; }
+                    var avg = ColorTrigger.Average(px);
+                    (int, int, int)? bl = null;
+                    var ok = t.Mode != ColorMode.Changes && t.Evaluate(px, ref bl);
+                    states.Add(ok);
+                    lines.Add($"{i + 1}: {(t.Mode == ColorMode.Changes ? "baseline" : ok ? "● true" : "○ false")} (seen {ColorTrigger.ToHex((byte)avg.r, (byte)avg.g, (byte)avg.b)})");
+                }
+                var all = m.ColorLogic == TriggerLogic.All ? states.All(x => x) : states.Any(x => x);
+                result.Text = lines.Count == 0 ? "Add a condition first." : string.Join("   ", lines) + $"   → combined: {(all ? "TRUE" : "false")}";
+            }, "GhostButton")));
+        sp.Children.Add(result);
+        return sp;
+    }
+
+    private UIElement ColorRow(Macro m, int i, Action rerender)
+    {
+        var t = m.ColorTriggers[i];
+        var swatch = new Border { Width = 28, Height = 28, CornerRadius = new CornerRadius(7), BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 10, 0) };
+        var rgb = Ui.Muted("", 11.5);
+        void Paint()
+        {
+            if (ColorTrigger.TryParseHex(t.Color, out var c)) { swatch.Background = new SolidColorBrush(Color.FromRgb(c.r, c.g, c.b)); rgb.Text = $"RGB {c.r}, {c.g}, {c.b}"; }
+            else rgb.Text = "Enter #RRGGBB";
+        }
+        var hex = new TextBox { Text = t.Color, Width = 100, MaxLength = 7 };
+        hex.TextChanged += (_, _) => { t.Color = hex.Text.Trim(); Paint(); };
+        Paint();
+        var region = Ui.Muted($"at {t.X}, {t.Y}" + (t.Width > 1 || t.Height > 1 ? $" · {t.Width}×{t.Height} px" : " · 1 pixel"), 11.5);
+        var tol = new Slider { Minimum = 0, Maximum = 255, Value = t.Tolerance, Width = 140, TickFrequency = 1, IsSnapToTickEnabled = true, VerticalAlignment = VerticalAlignment.Center };
+        var tolText = Ui.Muted($"±{t.Tolerance}", 11.5);
+        tol.ValueChanged += (_, e) => { t.Tolerance = (int)e.NewValue; tolText.Text = $"±{t.Tolerance}"; };
+
+        var top = new WrapPanel();
+        top.Children.Add(swatch);
+        top.Children.Add(hex);
+        rgb.Margin = new Thickness(10, 0, 10, 0); rgb.VerticalAlignment = VerticalAlignment.Center;
+        top.Children.Add(rgb);
+        top.Children.Add(Ui.Btn("Pick from screen", (_, _) =>
+        {
+            if (Window.GetWindow(this) is not { } w) return;
+            if (ScreenPicker.Pick(w) is { } r) { t.X = r.X; t.Y = r.Y; t.Width = r.Width; t.Height = r.Height; if (t.Mode != ColorMode.Changes) t.Color = r.Hex; rerender(); }
+        }, margin: new Thickness(0, 0, 8, 0)));
+        region.VerticalAlignment = VerticalAlignment.Center;
+        top.Children.Add(region);
+        var bottom = new WrapPanel { Margin = new Thickness(38, 8, 0, 0) };
+        foreach (var (label, mode) in new[] { ("Appears", ColorMode.Appears), ("Disappears", ColorMode.Disappears), ("Changes", ColorMode.Changes) })
+        {
+            var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = $"cm{m.Id}{i}", IsChecked = t.Mode == mode, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center };
+            rb.Checked += (_, _) => t.Mode = mode;
+            bottom.Children.Add(rb);
+        }
+        bottom.Children.Add(new TextBlock { Text = "Tolerance", Foreground = Ui.Brush("Muted"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 8, 0) });
+        bottom.Children.Add(tol);
+        tolText.Margin = new Thickness(8, 0, 0, 0); tolText.VerticalAlignment = VerticalAlignment.Center;
+        bottom.Children.Add(tolText);
+        var remove = new Button { Style = Ui.Res<Style>("GhostButton"), ToolTip = "Remove condition", Content = new TextBlock { Text = "\uE74D", Style = Ui.Res<Style>("Icon"), FontSize = 12 } };
+        remove.Click += (_, _) => { m.ColorTriggers.RemoveAt(i); rerender(); };
+        var dock = new DockPanel();
+        DockPanel.SetDock(remove, Dock.Right);
+        dock.Children.Add(remove);
+        var stack = new StackPanel();
+        stack.Children.Add(top);
+        stack.Children.Add(bottom);
+        dock.Children.Add(stack);
+        return new Border { Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 8, 6, 8), Margin = new Thickness(0, 8, 0, 0), Child = dock };
+    }
+
     private void CloseEditor()
     {
+        _editingId = null;
+        _rows.Clear();
         _editorHost.Child = null;
         _editorHost.Visibility = Visibility.Collapsed;
         _lists.Visibility = Visibility.Visible;
     }
 
-    internal void ShowEditorForScreenshot() => OpenEditor(MacroLibrary.BuiltIns.First(b => b.Id == "builtin.hold-sequence").Copy("Example: hold Shift sequence"));
+    internal void ShowEditorForScreenshot() => OpenEditor(MacroLibrary.BuiltIns.First(b => b.Id == "builtin.color-example").Copy("Example: colour trigger"));
     internal void CloseEditorForScreenshot() => CloseEditor();
 
     public void OnShown() { if (_editorHost.Visibility != Visibility.Visible) { _file = MacroStore.Load(); Rebuild(); } UpdateStatus(null, null); }

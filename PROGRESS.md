@@ -78,3 +78,13 @@ Resume point for future sessions. Keep it short.
 - App: MacroService (manager, Arm/Disarm hook, Ctrl+Alt+End hotkey, Shutdown on exit), Views/GamingMacrosView.cs (sidebar "Gaming Macros").
 - Tests: MacroTests (11) use a RecordingSink, so no real input is sent. Real SendInput into games is NOT verified by automation.
 - Version set to 1.5.0 (not tagged).
+
+## Session 2026-10-14 (later): Macro Maker upgrade (v1.6.0, not tagged)
+- Core/Macros/ColorTriggers.cs: ColorTrigger (Evaluate, hex), ScreenCapture (GDI BitBlt, cached 512×512 DIB, physical px,
+  virtual screen incl. negative coords), ColorWatcher (rising/falling edges, AND/OR, per-macro interval >= 50 ms,
+  union capture, blocked-game pause). TriggerKind.Color; Macro.ColorTriggers/ColorLogic/ColorPollMs.
+- MacroPlayer.Pause/Resume; MacroManager.ColorGate (key AND colour), OnColorRising/OnColorFalling.
+- App: Controls/ScreenPicker.cs (overlay, click=pixel, drag=region, GetCursorPos physical coords);
+  MacroService owns the watcher; GamingMacrosView: colour section, Pause button, colour status line, drag-drop rows, step highlight.
+- Tests: ColorTriggerTests (fake screen; real capture smoke test) + ColorWatcherCpuTests (non-parallel collection).
+- Not verified by automation: the picker UI by hand, drag-drop by mouse, real SendInput into games.

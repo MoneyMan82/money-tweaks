@@ -1,6 +1,14 @@
 # Changelog
 
-## 1.5.0 – unreleased
+## 1.6.0 – unreleased
+- **Macro Maker upgrade**: screen-colour triggers (pick a pixel or region from any monitor, HEX/RGB, tolerance,
+  appears / disappears / changes), AND/OR logic, and colour conditions combined with key triggers (key AND colour).
+  Looping colour macros stop when the colour condition ends. Live colour-trigger status, Pause/Resume (held inputs are
+  released while paused and pressed again on resume), drag-to-reorder timeline blocks, live step highlight during Test/Play.
+- Colour watcher: one background loop, one screen read per check when regions are close together, cached capture bitmap;
+  about 0.5% of one core with 4 × 50×50 regions at 10 checks/s. Paused while a blocked competitive game is focused.
+
+## 1.5.0 – 2026-10-14
 - **Gaming Macros** (new sidebar page): ready-made macros by game/category (auto-walk, hold-to-toggle mouse, Minecraft sprint
   and AFK fishing, hold-Shift sequence example, Game Bar clip, region screenshot, paste-and-send) and a visual timeline editor:
   key press/down/up, combinations, mouse click/down/up, delays, wait-for-key-press/release, repeats/loops, safety timeout.

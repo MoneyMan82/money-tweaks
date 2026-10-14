@@ -10,6 +10,9 @@ namespace MoneyTweaks;
 public static class MacroService
 {
     public static MacroManager Manager { get; } = new();
+    /// <summary>Screen-colour triggers; runs only while armed and only for macros that have colour conditions.</summary>
+    public static ColorWatcher Watcher { get; } = new();
+    private static bool _wired;
     private static GlobalKeyHook? _hook;
     public static bool Armed => _hook is not null;
     public const string EmergencyHotkeyText = "Ctrl+Alt+End";
@@ -35,6 +38,14 @@ public static class MacroService
     public static void Arm(IReadOnlyList<Macro> macros)
     {
         Manager.Armed = macros;
+        if (!_wired)
+        {
+            Watcher.Rising += Manager.OnColorRising;
+            Watcher.Falling += Manager.OnColorFalling;
+            Manager.ColorGate = Watcher.IsTrue;
+            _wired = true;
+        }
+        Watcher.Start(macros.Where(m => m.ColorTriggers.Count > 0).ToList());
         if (_hook is null)
         {
             _hook = new GlobalKeyHook();
@@ -45,6 +56,7 @@ public static class MacroService
 
     public static void Disarm()
     {
+        Watcher.Stop();
         if (_hook is null) return;
         _hook.Dispose();
         _hook = null;
@@ -55,6 +67,7 @@ public static class MacroService
     public static void Shutdown()
     {
         Disarm();
+        Watcher.Dispose();
         Manager.Dispose(); // releases any held keys/buttons
         if (_hwnd != 0) UnregisterHotKey(_hwnd, HotkeyId);
     }

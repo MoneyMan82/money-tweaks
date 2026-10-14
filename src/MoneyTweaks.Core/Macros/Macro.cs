@@ -5,7 +5,7 @@ using MoneyTweaks.Core.Sys;
 namespace MoneyTweaks.Core.Macros;
 
 public enum StepKind { KeyPress, KeyDown, KeyUp, Combo, MouseClick, MouseDown, MouseUp, Delay, WaitKeyDown, WaitKeyUp }
-public enum TriggerKind { Manual, PressKey, HoldKey, ToggleKey }
+public enum TriggerKind { Manual, PressKey, HoldKey, ToggleKey, Color }
 public enum MouseBtn { Left, Right, Middle }
 
 /// <summary>One timeline step. Pure data: no scripts, no mouse movement.</summary>
@@ -50,6 +50,11 @@ public sealed class Macro
     /// <summary>Hard stop after this many seconds, whatever happens.</summary>
     public int SafetyTimeoutSec { get; set; } = 600;
     public List<MacroStep> Steps { get; set; } = [];
+    /// <summary>Screen-colour conditions. With Trigger = Color they start the macro; with a key trigger they must also be true (AND).</summary>
+    public List<ColorTrigger> ColorTriggers { get; set; } = [];
+    /// <summary>All = every colour condition must hold (AND); Any = at least one (OR).</summary>
+    public TriggerLogic ColorLogic { get; set; } = TriggerLogic.All;
+    public int ColorPollMs { get; set; } = 150;
     public DateTime Modified { get; set; } = DateTime.Now;
     [JsonIgnore] public bool BuiltIn { get; init; }
 
@@ -57,6 +62,7 @@ public sealed class Macro
     {
         Name = name ?? Name, Description = Description, Game = Game, Category = Category, Trigger = Trigger, TriggerKey = TriggerKey,
         Repeat = Repeat, SafetyTimeoutSec = SafetyTimeoutSec, Steps = Steps.Select(s => s.Clone()).ToList(), Modified = DateTime.Now,
+        ColorTriggers = ColorTriggers.Select(c => c.Clone()).ToList(), ColorLogic = ColorLogic, ColorPollMs = ColorPollMs,
     };
 
     public string TriggerText => Trigger switch
@@ -64,8 +70,9 @@ public sealed class Macro
         TriggerKind.PressKey => $"Press {TriggerKey}",
         TriggerKind.HoldKey => $"Hold {TriggerKey} (stops on release)",
         TriggerKind.ToggleKey => $"Toggle with {TriggerKey}",
+        TriggerKind.Color => $"Screen colour ({ColorTriggers.Count} condition{(ColorTriggers.Count == 1 ? "" : "s")}, {(ColorLogic == TriggerLogic.All ? "AND" : "OR")})",
         _ => "Run button only",
-    };
+    } + (Trigger is not TriggerKind.Color and not TriggerKind.Manual && ColorTriggers.Count > 0 ? " + colour" : "");
 }
 
 public sealed class MacroFile
@@ -90,7 +97,7 @@ public static class MacroPolicy
     public static string? BlockedGame(string? processName) =>
         processName is null ? null : Blocked.FirstOrDefault(b => b.process.Equals(processName, StringComparison.OrdinalIgnoreCase)).game;
 
-    public const int MaxSteps = 500, MaxRepeat = 10_000, MaxStepMs = 60_000, MaxTimeoutSec = 3600;
+    public const int MaxSteps = 500, MaxRepeat = 10_000, MaxStepMs = 60_000, MaxTimeoutSec = 3600, MinColorPollMs = 50, MaxColorTriggers = 8;
 
     public static List<string> Validate(Macro m, IEnumerable<Macro> others)
     {
@@ -104,7 +111,17 @@ public static class MacroPolicy
         if (m.Steps.Count > MaxSteps) e.Add($"Too many steps (max {MaxSteps}).");
         if (m.Repeat < 0 || m.Repeat > MaxRepeat) e.Add($"Repeat must be 0 (loop) to {MaxRepeat}.");
         if (m.SafetyTimeoutSec < 1 || m.SafetyTimeoutSec > MaxTimeoutSec) e.Add($"Safety timeout must be 1–{MaxTimeoutSec} seconds.");
-        if (m.Trigger != TriggerKind.Manual && !VirtualKeys.TryParse(m.TriggerKey, out _)) e.Add("Choose a trigger key.");
+        if (m.Trigger is not (TriggerKind.Manual or TriggerKind.Color) && !VirtualKeys.TryParse(m.TriggerKey, out _)) e.Add("Choose a trigger key.");
+        if (m.Trigger == TriggerKind.Color && m.ColorTriggers.Count == 0) e.Add("Add at least one screen-colour condition.");
+        if (m.ColorTriggers.Count > MaxColorTriggers) e.Add($"Too many colour conditions (max {MaxColorTriggers}).");
+        if (m.ColorTriggers.Count > 0 && (m.ColorPollMs < MinColorPollMs || m.ColorPollMs > 5000)) e.Add($"Colour check interval must be {MinColorPollMs}–5000 ms.");
+        for (int i = 0; i < m.ColorTriggers.Count; i++)
+        {
+            var c = m.ColorTriggers[i];
+            if (c.Mode != ColorMode.Changes && !ColorTrigger.TryParseHex(c.Color, out _)) e.Add($"Colour condition {i + 1}: enter a colour like #FF8800.");
+            if (c.Tolerance is < 0 or > 255) e.Add($"Colour condition {i + 1}: tolerance must be 0–255.");
+            if (c.Width is < 1 or > ColorTrigger.MaxSide || c.Height is < 1 or > ColorTrigger.MaxSide) e.Add($"Colour condition {i + 1}: region must be 1–{ColorTrigger.MaxSide} pixels per side.");
+        }
         if (m.Repeat == 0 && m.Trigger == TriggerKind.PressKey) e.Add("A looping macro needs a way to stop: use Hold, Toggle or Run button.");
         for (int i = 0; i < m.Steps.Count; i++)
         {
