@@ -57,6 +57,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        MacroService.Shutdown(); // releases any keys a macro is holding
         Settings.Save();
         base.OnExit(e);
     }

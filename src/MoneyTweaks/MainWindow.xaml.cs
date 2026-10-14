@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     internal static readonly (string tag, string icon, string label)[] Tools =
     [
         ("presets", "\uE8F1", "Presets"),
+        ("macros", "\uE765", "Gaming Macros"),
         ("potato", "\uE790", "Potato Graphics"),
         ("booster", "\uE945", "Game Booster"),
         ("input", "\uE962", "Input Delay Reducer"),
@@ -71,6 +72,7 @@ public partial class MainWindow : Window
         {
             Log.Info($"[perf] startup to first frame: {App.StartupClock.ElapsedMilliseconds} ms");
             StartStallDetector();
+            MacroService.Init(this);
             StartAmbient();
             Activated += (_, _) => _ambient?.Resume(Ambient);
             Deactivated += (_, _) => _ambient?.Pause(Ambient);
@@ -173,6 +175,7 @@ public partial class MainWindow : Window
             {
                 "dashboard" => new DashboardView(),
                 "presets" => new PresetsView(),
+                "macros" => new GamingMacrosView(),
                 "potato" => new PotatoView(),
                 "booster" => new BoosterView(),
                 "input" => new InputDelayView(),
@@ -394,7 +397,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(dir);
         string[] tags = ["dashboard", "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
-            "presets", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
+            "presets", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
         foreach (var tag in tags)
         {
             Navigate(tag);
@@ -407,6 +410,13 @@ public partial class MainWindow : Window
                 await Task.Delay(600);
                 await Snap(dir, "palette");
                 ClosePalette(null, null);
+            }
+            if (tag == "macros" && Host.Content is GamingMacrosView mv)
+            {
+                mv.ShowEditorForScreenshot();
+                await Task.Delay(1200);
+                await Snap(dir, "macros-editor");
+                mv.CloseEditorForScreenshot();
             }
             if (tag == "presets" && Host.Content is PresetsView prv)
             {

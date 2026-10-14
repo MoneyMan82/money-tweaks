@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0 – unreleased
+- **Gaming Macros** (new sidebar page): ready-made macros by game/category (auto-walk, hold-to-toggle mouse, Minecraft sprint
+  and AFK fishing, hold-Shift sequence example, Game Bar clip, region screenshot, paste-and-send) and a visual timeline editor:
+  key press/down/up, combinations, mouse click/down/up, delays, wait-for-key-press/release, repeats/loops, safety timeout.
+  Triggers: Run button, press key, hold key (stops on release), toggle key. Test (no input), Play (3 s countdown), Stop,
+  Emergency stop (button + global Ctrl+Alt+End). Create, edit, duplicate, rename, delete, import/export (`.mtmacros.json`).
+- Safety: standard SendInput only (no drivers/injection, no cursor movement); held keys/buttons always released; refuses to run
+  while competitive anti-cheat games are focused; the trigger hook is only installed while armed and ignores injected input.
+
 ## 1.4.1 – 2026-10-14
 - **Presets** (new sidebar page): built-in Competitive Fortnite, Low Latency, Stable FPS, Potato Graphics (Windows side)
   and Balanced Gaming; custom presets with editor (search, pick tweaks, validation); preview shows every op; apply uses

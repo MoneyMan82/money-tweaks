@@ -70,3 +70,11 @@ Resume point for future sessions. Keep it short.
 - Tags v1.3.0 and v1.4.0 both point at 1e223fc (redesign); their binaries are correctly stamped 1.3.0/1.4.0.
 - Presets + Potato screenshot mode (50a1708, b698c57) are NOT in any release yet. Props now 1.4.1; ship with tag v1.4.1.
 - Tags must never be moved (no force-push); always release a new version instead.
+
+## Session 2026-10-14: Gaming Macros
+- Core/Macros: VirtualKeys (name<->VK), Macro.cs (model, MacroPolicy blocked games + Validate, MacroStore load/save/import/export),
+  MacroEngine.cs (IInputSink, SendInputSink scan-code input, MacroPlayer with ReleaseAll, GlobalKeyHook WH_KEYBOARD_LL ignoring
+  injected input, MacroManager one-at-a-time + triggers + safety timeout + blocked-game guard, MacroLibrary built-ins).
+- App: MacroService (manager, Arm/Disarm hook, Ctrl+Alt+End hotkey, Shutdown on exit), Views/GamingMacrosView.cs (sidebar "Gaming Macros").
+- Tests: MacroTests (11) use a RecordingSink, so no real input is sent. Real SendInput into games is NOT verified by automation.
+- Version set to 1.5.0 (not tagged).
