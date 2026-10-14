@@ -57,3 +57,11 @@ Resume point for future sessions. Keep it short.
 - Logo recoloured (scratchpad logo2.py equivalent: blue→violet gradient line, same mark + gold coin). Website palette updated.
 - NOT released yet: version still 1.2.1. To ship: set <Version>1.3.0</Version>, commit, tag v1.3.0, push tag.
 - Updater: unchanged logic; latest GitHub release = v1.2.1 = app version → no update offered (no loop).
+
+## Session 2026-10-14: Presets
+- Core/Features/Presets.cs: TweakPreset, PresetRun (history for exact undo), PresetStore (BuiltIns, atomic Save,
+  corrupt-file backup, Validate, Export/Import with format "money-tweaks-presets" v1, 1 MB cap, unknown ids dropped+reported).
+- Views/PresetsView.cs (sidebar "Presets", MainWindow.Tools): cards, preview (op list), apply via TweakService.BatchAsync,
+  undo last run, duplicate, edit/rename, delete, export, import, inline editor with virtualized grouped picker.
+- No keyboard/mouse macros on purpose (anti-cheat/game ToS risk); stated in the UI.
+- Tests: tests/PresetTests.cs (11). Apply/undo UI not clicked through by automation (dialogs); engine paths are the tested ones.

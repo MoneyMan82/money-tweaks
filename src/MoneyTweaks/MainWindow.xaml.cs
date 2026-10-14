@@ -28,6 +28,7 @@ public partial class MainWindow : Window
 
     internal static readonly (string tag, string icon, string label)[] Tools =
     [
+        ("presets", "\uE8F1", "Presets"),
         ("potato", "\uE790", "Potato Graphics"),
         ("booster", "\uE945", "Game Booster"),
         ("input", "\uE962", "Input Delay Reducer"),
@@ -171,6 +172,7 @@ public partial class MainWindow : Window
             page = tag switch
             {
                 "dashboard" => new DashboardView(),
+                "presets" => new PresetsView(),
                 "potato" => new PotatoView(),
                 "booster" => new BoosterView(),
                 "input" => new InputDelayView(),
@@ -392,7 +394,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(dir);
         string[] tags = ["dashboard", "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
-            "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
+            "presets", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
         foreach (var tag in tags)
         {
             Navigate(tag);
@@ -405,6 +407,13 @@ public partial class MainWindow : Window
                 await Task.Delay(600);
                 await Snap(dir, "palette");
                 ClosePalette(null, null);
+            }
+            if (tag == "presets" && Host.Content is PresetsView prv)
+            {
+                prv.ShowEditorForScreenshot();
+                await Task.Delay(1200);
+                await Snap(dir, "presets-editor");
+                prv.CloseEditorForScreenshot();
             }
             if (tag == "potato" && Host.Content is PotatoView pv && pv.Content is ScrollViewer sv)
             {

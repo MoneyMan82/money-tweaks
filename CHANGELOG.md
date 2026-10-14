@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased (next: 1.3.0)
+- **Presets** (new sidebar page): built-in Competitive Fortnite, Low Latency, Stable FPS, Potato Graphics (Windows side)
+  and Balanced Gaming; custom presets with editor (search, pick tweaks, validation); preview shows every op; apply uses
+  the normal engine (admin, restore point, backups); Undo reverts exactly the tweaks a run changed; duplicate, rename,
+  delete; import/export (`.mtpresets.json`) with validation. Stored in %LOCALAPPDATA%\MoneyTweaks\presets.json.
+- Potato Graphics: Fortnite-style original 3D scene (wood/brick/metal builds, pines, storm wall, original character) and
+  a "My Fortnite screenshots" mode to compare your own real before/after captures.
 - **Premium redesign ("Midnight Circuit")**: deep black/graphite surfaces, electric-blue → violet accents, rim-lit cards,
   new buttons, switches, chips, sliders, progress bars and scrollbars; refreshed logo colours (same mark).
 - New dashboard: hero with a real "tuning score" (share of Recommended tweaks active on this PC), animated CPU/GPU/RAM
