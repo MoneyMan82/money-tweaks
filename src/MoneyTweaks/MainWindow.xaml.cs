@@ -79,6 +79,7 @@ public partial class MainWindow : Window
             Deactivated += (_, _) => _ambient?.Pause(Ambient);
             await RefreshAppliedSummaryAsync();
             if (!App.ScreenshotMode) Updater.VerifyPendingUpdate();
+            if (!App.ScreenshotMode) await BenchmarkView.CheckPendingSyntheticRestoreAsync();
             if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode) await Updater.CheckAsync(manual: false);
         };
         SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);

@@ -21,7 +21,7 @@ namespace MoneyTweaks.Views;
 /// Tweak verification (read-back of every tweak) and before/after benchmarks with real measurements only:
 /// Windows counters, ICMP latency, frame-time CSVs, or numbers the user reads off the game.
 /// </summary>
-public sealed class BenchmarkView : UserControl, IPageLifecycle
+public sealed partial class BenchmarkView : UserControl, IPageLifecycle
 {
     private static (string kind, string id)? _pending;
     private static BenchmarkView? _instance;
@@ -69,6 +69,8 @@ public sealed class BenchmarkView : UserControl, IPageLifecycle
         _auditPanel.Children.Add(_auditList);
         body.Children.Add(Ui.Card(_auditPanel));
 
+        body.Children.Add(Ui.Section("Synthetic 3D benchmark", "A repeatable 3D stress scene, run without and/or with a preset applied. Your settings are restored afterwards."));
+        body.Children.Add(BuildSynthetic());
         body.Children.Add(Ui.Section("Before / after benchmark", "A study measures the same conditions several times before and after a change, then says whether the difference is bigger than the normal run-to-run variation."));
         body.Children.Add(Ui.Card(_newPanel));
         body.Children.Add(_studyPanel);
@@ -418,6 +420,8 @@ public sealed class BenchmarkView : UserControl, IPageLifecycle
         var before = RunsOf("Baseline");
         var after = RunsOf("After");
         bool hasTarget = s.TargetKind != "none";
+        bool synthetic = s.TargetKind == "synthetic";
+        if (synthetic) sp.Children.Add(Ui.Muted("Synthetic 3D benchmark: Before = without tweaks, After = with tweaks. Start new runs from the Synthetic 3D section above.", 12));
         var steps = Ui.Row(
             Ui.Btn($"1  Run baseline ×{s.RunsPerPhase}", async (_, _) => await RunPhaseAsync("Baseline"), before.Count == 0 ? "PrimaryButton" : "BaseButton"));
         if (hasTarget) steps.Children.Add(Ui.Btn($"2  Apply {(s.TargetKind == "preset" ? "preset" : "tweak")}", async (_, _) => await ApplyTargetAsync(), before.Count > 0 && s.AppliedAt is null ? "PrimaryButton" : "BaseButton"));
@@ -425,7 +429,7 @@ public sealed class BenchmarkView : UserControl, IPageLifecycle
         if (hasTarget && s.AppliedIds.Count > 0) steps.Children.Add(Ui.Btn("Roll back", async (_, _) => await RollbackAsync(), "GoldButton"));
         steps.Children.Add(Ui.Btn("Stop run", (_, _) => _cts?.Cancel(), "GhostButton"));
         steps.Margin = new Thickness(0, 12, 0, 0);
-        sp.Children.Add(steps);
+        if (!synthetic) sp.Children.Add(steps);
 
         _runBar = new ProgressBar { Height = 6, Maximum = 1, Margin = new Thickness(0, 8, 0, 4), Visibility = Visibility.Collapsed };
         _runText = Ui.Muted("", 12);

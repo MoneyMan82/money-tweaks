@@ -16,6 +16,8 @@ public static class MacroService
     private static GlobalKeyHook? _hook;
     public static bool Armed => _hook is not null;
     public const string EmergencyHotkeyText = "Ctrl+Alt+End";
+    /// <summary>Raised by the global emergency-stop hotkey (also stops the synthetic benchmark).</summary>
+    public static event Action? EmergencyStopPressed;
     private const int HotkeyId = 0x4D4D;
     [DllImport("user32.dll")] private static extern bool RegisterHotKey(nint h, int id, uint mods, uint vk);
     [DllImport("user32.dll")] private static extern bool UnregisterHotKey(nint h, int id);
@@ -28,7 +30,7 @@ public static class MacroService
         if (RegisterHotKey(_hwnd, HotkeyId, 0x0002 | 0x0001 | 0x4000, 0x23))
             HwndSource.FromHwnd(_hwnd)?.AddHook((nint _, int msg, nint wp, nint _, ref bool handled) =>
             {
-                if (msg == 0x0312 && wp == HotkeyId) { Manager.EmergencyStop(); handled = true; }
+                if (msg == 0x0312 && wp == HotkeyId) { Manager.EmergencyStop(); EmergencyStopPressed?.Invoke(); handled = true; }
                 return 0;
             });
         else Log.Warn($"{EmergencyHotkeyText} is used by another app; use the on-screen Emergency stop button instead.");

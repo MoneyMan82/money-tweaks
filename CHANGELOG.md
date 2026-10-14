@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.8.0 – unreleased
+- **Synthetic 3D benchmark** (Test & Benchmark page): seeded 3D stress scene rendered by WPF/DirectX on its own UI thread
+  (procedural textures, sun + orbiting coloured point lights, planar projected shadows, animated objects), intensity 1–5,
+  15–120 s, 720p/900p/1080p, 1–3 runs per state. Asks "Without tweaks", "With tweaks" or "Compare both" (runs alternate).
+  Real frame times from render callbacks (avg FPS, 1%/0.1% lows, frame-time p99, FPS per second), CPU/GPU/RAM from Windows
+  counters, CPU temp (ACPI) and GPU temp (nvidia-smi) where available. Side-by-side table, % change, "meaningful" verdict,
+  FPS chart, saved to history. Labelled synthetic, not a Fortnite benchmark; warns if a game is running.
+- Tweak switching uses the verified engine; original states are saved to disk first and restored (and read back) after the
+  test, on stop and on errors; an interrupted test offers the restore at next start. Reboot-only tweaks are not switched.
+- Emergency stop: button, Esc in the scene window, or Ctrl+Alt+End.
+
 ## 1.6.0 – unreleased
 - **Tweak Testing & Benchmark** (new page "Test & Benchmark"):
   - Verify all tweaks (read-only): reads every registry value, service start type, power-plan index, scheduled task,

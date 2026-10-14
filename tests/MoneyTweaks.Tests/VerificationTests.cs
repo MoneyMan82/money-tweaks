@@ -246,3 +246,51 @@ public class BenchmarkStatsTests
         Assert.Equal("127.0.0.1", run.Conditions.Endpoint);
     }
 }
+
+[Collection("registry")]
+public class TweakStateGuardTests : IDisposable
+{
+    private readonly string _tmp = Path.Combine(Path.GetTempPath(), "mt-guard-" + Guid.NewGuid().ToString("N"));
+    private const string Key = @"Software\MoneyTweaksTests\Guard";
+    public void Dispose()
+    {
+        try { Registry.CurrentUser.DeleteSubKeyTree(@"Software\MoneyTweaksTests", false); } catch { }
+        try { Directory.Delete(_tmp, true); } catch { }
+    }
+
+    private static Tweak T(string id, string name) => new() { Id = id, Category = TweakCategory.General, Name = id, Description = id, Ops = [new RegValueOp(Hive.HKCU, Key, name, RegistryValueKind.DWord, 1)] };
+
+    [Fact]
+    public void Switches_both_ways_and_restores_original_states_and_values()
+    {
+        Directory.CreateDirectory(_tmp); AppPaths.OverrideRoot(_tmp);
+        using (var k = Registry.CurrentUser.CreateSubKey(Key)) k.SetValue("A", 5, RegistryValueKind.DWord);
+        var a = T("t.a", "A"); var b = T("t.b", "B");
+        var map = new Dictionary<string, Tweak> { [a.Id] = a, [b.Id] = b };
+        Assert.True(TweakEngine.Apply(b).Success);                       // b was already on before the test
+        var original = TweakStateGuard.Capture([a, b]);
+        Assert.Equal(new Dictionary<string, bool> { ["t.a"] = false, ["t.b"] = true }, original);
+        TweakStateGuard.SavePending(original);
+        Assert.Empty(TweakStateGuard.SetAll(original.Keys, true, map.GetValueOrDefault));
+        Assert.Equal(TweakState.Applied, TweakEngine.GetState(a));
+        Assert.Empty(TweakStateGuard.SetAll(original.Keys, false, map.GetValueOrDefault));
+        Assert.Equal(TweakState.NotApplied, TweakEngine.GetState(b));
+        Assert.Equal(original, TweakStateGuard.LoadPending());
+        Assert.Empty(TweakStateGuard.Restore(original, map.GetValueOrDefault));
+        Assert.Equal(TweakState.NotApplied, TweakEngine.GetState(a));
+        Assert.Equal(TweakState.Applied, TweakEngine.GetState(b));
+        using (var k = Registry.CurrentUser.OpenSubKey(Key)!) Assert.Equal(5, k.GetValue("A")); // A's original value is back
+        TweakStateGuard.ClearPending();
+        Assert.Null(TweakStateGuard.LoadPending());
+        TweakEngine.Undo(b);
+    }
+
+    [Fact]
+    public void Reboot_and_disabled_tweaks_are_not_switched()
+    {
+        Assert.False(TweakStateGuard.Eligible(TweakCatalog.Find("net.nagle")!, out var why));
+        Assert.Contains("restart", why);
+        Assert.False(TweakStateGuard.Eligible(TweakCatalog.Find("adv.vbs-hvci")!, out _));
+        Assert.True(TweakStateGuard.Eligible(TweakCatalog.Find("gen.game-mode")!, out _));
+    }
+}

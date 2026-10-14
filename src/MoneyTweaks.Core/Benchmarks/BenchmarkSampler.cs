@@ -50,7 +50,7 @@ public static class BenchmarkSampler
         return ps.Length > 0;
     }
 
-    private static double? GpuTemp()
+    public static double? GpuTemp()
     {
         var smi = Path.Combine(ProcessRunner.System32, "nvidia-smi.exe");
         if (!File.Exists(smi)) return null;

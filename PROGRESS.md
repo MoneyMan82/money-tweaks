@@ -106,3 +106,16 @@ Resume point for future sessions. Keep it short.
   later reverted outside Money Tweaks), 64 unverifiable (60 not present, 2 bcdedit need admin, 2 BIOS).
 - Not verified by automation: FPS capture inside Fortnite (no API; CSV/manual by design), Fortnite server ping (manual),
   live round-trip of admin-only tweaks (dev session not elevated), the UI flows by mouse beyond screenshots.
+
+## Session 2026-10-14 (night): Synthetic 3D benchmark (not tagged; v1.7.0 is the latest tag)
+- App/Controls/StressScene.cs: SceneWindow on a dedicated STA thread (Dispatcher.Run), Viewport3D scene, seeded Random(1234);
+  frames counted when RenderingEventArgs.RenderingTime changes; 3 s warm-up excluded; HardwareMonitor sampled 1 Hz in background;
+  animations use Timeline.DesiredFrameRate = display refresh (WPF default caps at 60).
+- Core/Benchmarks/TweakStateGuard.cs: Eligible/Capture/SetAll/Restore + synthetic-restore.json pending file.
+- App/Views/BenchmarkView.Synthetic.cs (partial): mode chips, preset/intensity/duration/resolution/runs, run loop with
+  try/finally restore, results table + FPS chart, CheckPendingSyntheticRestoreAsync (called from MainWindow.Loaded).
+  MacroService.EmergencyStopPressed event (Ctrl+Alt+End). BenchmarkRun.FpsSeries. Synthetic studies hide the network steps.
+- Tests: TweakStateGuardTests (switch both ways, restore states and original values, pending file, eligibility). 79 pass.
+- Verified: build, tests, one 8 s scene run (completed, real frame/CPU/GPU/RAM/GPU-temp values logged). That run happened while
+  Fortnite was running, so its numbers are not a valid result. NOT yet verified: FPS above 60 after the DesiredFrameRate change,
+  the full Compare flow with real tweak switching by hand.

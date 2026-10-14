@@ -66,6 +66,8 @@ public sealed class BenchmarkRun
     public List<float> CpuSeries { get; set; } = [];
     public List<float> GpuSeries { get; set; } = [];
     public List<float> PingSeries { get; set; } = []; // -1 = lost
+    /// <summary>Frames per second, one value per measured second (synthetic 3D benchmark).</summary>
+    public List<float> FpsSeries { get; set; } = [];
 }
 
 public sealed class BenchmarkStudy

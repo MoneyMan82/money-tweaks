@@ -153,7 +153,7 @@ public static partial class TweakCatalog
     }
 
     /// <summary>(id, game, process exe)</summary>
-    internal static readonly (string id, string game, string exe)[] GameTable =
+    public static readonly (string id, string game, string exe)[] GameTable =
     [
         ("fortnite", "Fortnite", "FortniteClient-Win64-Shipping.exe"),
         ("valorant", "VALORANT", "VALORANT-Win64-Shipping.exe"),
