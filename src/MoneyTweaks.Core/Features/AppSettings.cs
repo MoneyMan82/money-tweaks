@@ -39,6 +39,9 @@ public sealed class AppSettings
     public string? SkippedUpdateTag { get; set; }
     public Dictionary<string, PotatoOptions> Potato { get; set; } = [];
     public FortnitePotatoSettings FortnitePotato { get; set; } = FortnitePotatoSettings.FromPreset(FnPreset.Potato);
+    /// <summary>User's own Fortnite captures for the Potato before/after comparison.</summary>
+    public string? PotatoBeforeShot { get; set; }
+    public string? PotatoAfterShot { get; set; }
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

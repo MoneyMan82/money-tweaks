@@ -106,6 +106,7 @@ public sealed class PotatoView : UserControl, IPageLifecycle
         under.Children.Add(rotate);
         under.Children.Add(_tris);
         studio.Children.Add(under);
+        studio.Children.Add(ScreenshotRow());
         studio.Children.Add(Ui.Muted("Illustration only: an original Money Tweaks scene, not Fortnite footage. It shows what each setting removes or simplifies; exact in-game results depend on Fortnite's renderer and your GPU.", 11.5));
 
         var cols = new Grid { Margin = new Thickness(0, 16, 0, 0) };
@@ -150,6 +151,58 @@ public sealed class PotatoView : UserControl, IPageLifecycle
         BuildOthers();
         _ = LoadDriverGuideAsync();
         RefreshStatus();
+    }
+
+    // ---- compare with the user's own real Fortnite screenshots ------------------------------------------------
+    private readonly TextBlock _shotStatus = Ui.Muted("", 12);
+
+    private UIElement ScreenshotRow()
+    {
+        var sp = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+        var modes = new WrapPanel();
+        var illo = new RadioButton { Content = "3D illustration", Style = Ui.Res<Style>("Chip"), GroupName = "pmode", IsChecked = true, Margin = new Thickness(0, 0, 6, 6) };
+        var mine = new RadioButton { Content = "My Fortnite screenshots", Style = Ui.Res<Style>("Chip"), GroupName = "pmode", Margin = new Thickness(0, 0, 6, 6) };
+        illo.Checked += (_, _) => _preview.ShowIllustration(PresetName(_s.Preset));
+        mine.Checked += async (_, _) => await ShowShotsAsync();
+        modes.Children.Add(illo);
+        modes.Children.Add(mine);
+        modes.Children.Add(Ui.Btn("Choose BEFORE screenshot…", async (_, _) => { if (Pick(true)) { mine.IsChecked = true; await ShowShotsAsync(); } }, margin: new Thickness(6, 0, 6, 6)));
+        modes.Children.Add(Ui.Btn("Choose AFTER screenshot…", async (_, _) => { if (Pick(false)) { mine.IsChecked = true; await ShowShotsAsync(); } }, margin: new Thickness(0, 0, 6, 6)));
+        sp.Children.Add(modes);
+        sp.Children.Add(Ui.Muted("To see the real in-game difference: take a screenshot in Fortnite before applying (Win+Alt+PrtScn saves to Videos\\Captures; NVIDIA Alt+F1 also works), apply a preset, restart Fortnite, take a second one from the same spot, then pick both here. Your images stay on this PC.", 11.5));
+        sp.Children.Add(_shotStatus);
+        return sp;
+    }
+
+    private static bool Pick(bool before)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = before ? "Screenshot BEFORE applying" : "Screenshot AFTER applying",
+            Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.jxr|All files|*.*",
+            InitialDirectory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Captures"),
+        };
+        if (dlg.ShowDialog() != true) return false;
+        if (before) App.Settings.PotatoBeforeShot = dlg.FileName; else App.Settings.PotatoAfterShot = dlg.FileName;
+        App.SaveSettingsSoon();
+        return true;
+    }
+
+    private async Task ShowShotsAsync()
+    {
+        string? b = App.Settings.PotatoBeforeShot, a = App.Settings.PotatoAfterShot;
+        if (b is null || a is null || !File.Exists(b) || !File.Exists(a))
+        {
+            _shotStatus.Text = "Pick both a BEFORE and an AFTER screenshot to compare them.";
+            return;
+        }
+        try
+        {
+            var imgs = await Task.WhenAll(PotatoPreview.LoadImageAsync(b), PotatoPreview.LoadImageAsync(a));
+            _preview.ShowScreenshots(imgs[0], imgs[1]);
+            _shotStatus.Text = $"Comparing {System.IO.Path.GetFileName(b)} → {System.IO.Path.GetFileName(a)}";
+        }
+        catch (Exception ex) { _shotStatus.Text = "Couldn't open those images: " + ex.Message; }
     }
 
     private static string PresetName(FnPreset p) => p switch

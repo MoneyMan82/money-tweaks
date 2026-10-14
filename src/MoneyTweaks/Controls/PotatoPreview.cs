@@ -38,7 +38,11 @@ public static class PotatoScene
         Bark = Color.FromRgb(0x7A, 0x4E, 0x2D), Rock = Color.FromRgb(0x93, 0x9A, 0xA3), Wood = Color.FromRgb(0xC8, 0x8E, 0x4E), WoodDark = Color.FromRgb(0x9C, 0x67, 0x34),
         Wall = Color.FromRgb(0xE8, 0xD9, 0xB5), Roof = Color.FromRgb(0xC9, 0x4B, 0x3A), Water = Color.FromRgb(0x3A, 0xA7, 0xE0), Mountain = Color.FromRgb(0x7E, 0x9C, 0x7A),
         Snow = Color.FromRgb(0xF2, 0xF5, 0xF7), Gold = Color.FromRgb(0xF5, 0xC4, 0x51), ChestWood = Color.FromRgb(0x8C, 0x5A, 0x2B), Blade = Color.FromRgb(0x6C, 0xC2, 0x4A),
-        LeafLight = Color.FromRgb(0x56, 0xBE, 0x48), Sand = Color.FromRgb(0xF0, 0xD9, 0x9C), Ocean = Color.FromRgb(0x2E, 0x8F, 0xD6);
+        LeafLight = Color.FromRgb(0x56, 0xBE, 0x48), Sand = Color.FromRgb(0xF0, 0xD9, 0x9C), Ocean = Color.FromRgb(0x2E, 0x8F, 0xD6),
+        Brick = Color.FromRgb(0xB8, 0x55, 0x3C), BrickDark = Color.FromRgb(0x91, 0x3F, 0x2D), Metal = Color.FromRgb(0x9E, 0xA8, 0xB6), MetalDark = Color.FromRgb(0x6F, 0x79, 0x88),
+        Dirt = Color.FromRgb(0xC9, 0xA2, 0x6B), Pine = Color.FromRgb(0x2E, 0x8C, 0x4A), PineLight = Color.FromRgb(0x3F, 0xA6, 0x5A),
+        Skin = Color.FromRgb(0xE8, 0xB8, 0x8F), Hoodie = Color.FromRgb(0x6C, 0x5C, 0xE7), Pants = Color.FromRgb(0x2D, 0x34, 0x48), Shoe = Color.FromRgb(0xF2, 0xF4, 0xF8), Hair = Color.FromRgb(0x3B, 0x24, 0x18),
+        Storm = Color.FromRgb(0x9B, 0x4D, 0xFF);
 
     private static readonly Dictionary<(Color, int, bool), Material> MatCache = [];
 
@@ -123,6 +127,23 @@ public static class PotatoScene
             Add(Ellipsoid(new Point3D(x, Height(x, z, L.MeshDetail) + 0.25 * s, z), 1.1 * s, 0.65 * s, 0.9 * s, Seg(7, 22), Seg(5, 14), 0.22 * L.MeshDetail * s, (int)(x * 13)),
                 L.Lighting > 0.6 ? Glossy(Rock, L.Lighting * 0.5, L.Texture) : M(Rock));
 
+        // Dirt path winding across the island.
+        Add(PathRibbon(L.MeshDetail, Seg(14, 70)), M(Dirt));
+
+        // Pine trees: tiered cones (high) or stacked smooth blobs (low meshes).
+        (double x, double z, double s)[] pines = [(-8.2, -2.6, 1.1), (6.8, 6.6, 1.0), (-4.6, 8.2, 0.9), (8.8, -4.0, 1.2)];
+        foreach (var (x, z, s) in pines)
+        {
+            var y = Height(x, z, L.MeshDetail);
+            Add(Cylinder(new Point3D(x, y - 0.1, z), (toy ? 0.26 : 0.16) * s, 1.1 * s, toy ? 9 : Seg(6, 14)), M(Bark));
+            for (int k = 0; k < 3; k++)
+            {
+                double r = (1.25 - k * 0.32) * s, yy = y + (1.0 + k * 0.85) * s;
+                if (toy) Add(Ellipsoid(new Point3D(x, yy + 0.35 * s, z), r, 0.62 * s, r, 11, 7, 0, 0), M(k % 2 == 0 ? Pine : PineLight));
+                else Add(Cone(new Point3D(x, yy, z), r, 1.25 * s, Seg(8, 22)), M(k % 2 == 0 ? Pine : PineLight));
+            }
+        }
+
         // Bushes come from the Foliage setting.
         int bushes = (int)Math.Round(8 * L.Foliage);
         for (int i = 0; i < bushes; i++)
@@ -155,30 +176,65 @@ public static class PotatoScene
             Add(Box(new Point3D(hx + 1.1, hy + 2.9, hz - 0.6), 0.35, 0.9, 0.35), M(Rock));
         }
 
-        // Player builds: planks (high), plain panels (medium), puffy "bubble-wrap" panels (low meshes).
-        var bx = 2.6; var bz = 1.6; var by = Height(bx, bz, L.MeshDetail);
-        if (L.MeshDetail < 0.3)
+        // Player build: wood, brick and metal walls, a floor, a ramp and a roof.
+        // High = planks/bricks/ribs; medium = plain panels; low meshes = puffy, rounded "bubble-wrap" pieces.
+        var bx = 3.0; var bz = 1.2; var by = Height(bx, bz, L.MeshDetail);
+        void BuildWall(Point3D c, bool alongX, Color main, Color alt, string kind)
         {
-            Add(Puffy(new Point3D(bx, by + 1.2, bz - 1.2), 2.4, 2.4, 0.32, 0.38, 9), Mat(Wood, 0, false));
-            Add(Puffy(new Point3D(bx, by + 0.05, bz), 2.4, 0.22, 2.4, 0.4, 9), Mat(WoodDark, 0, false));
-            var ramp = Puffy(new Point3D(0, 0, 0), 2.4, 0.3, 2.9, 0.4, 9);
-            AddTransformed(g, ramp, Mat(Wood, 0, false), new Point3D(bx + 2.4, by + 1.15, bz), 39, ref tris);
+            double w = 2.4, h = 2.4, t = 0.22;
+            double sx = alongX ? w : t, sz = alongX ? t : w;
+            if (toy) { Add(Puffy(c, sx + 0.08, h, sz + 0.16, 0.38, 9), Mat(main, 0, false)); return; }
+            if (L.MeshDetail < 0.8) { Add(Box(c, sx, h, sz), M(main)); return; }
+            switch (kind)
+            {
+                case "wood":
+                    for (int i = 0; i < 6; i++) Add(Box(new Point3D(c.X, c.Y - h / 2 + 0.2 + i * 0.4, c.Z), alongX ? w : t, 0.34, alongX ? t : w), M(i % 2 == 0 ? main : alt));
+                    Add(Box(new Point3D(c.X - (alongX ? w / 2 - 0.07 : 0), c.Y, c.Z - (alongX ? 0 : w / 2 - 0.07)), alongX ? 0.14 : t + 0.08, h, alongX ? t + 0.08 : 0.14), M(alt));
+                    Add(Box(new Point3D(c.X + (alongX ? w / 2 - 0.07 : 0), c.Y, c.Z + (alongX ? 0 : w / 2 - 0.07)), alongX ? 0.14 : t + 0.08, h, alongX ? t + 0.08 : 0.14), M(alt));
+                    break;
+                case "brick":
+                    Add(Box(c, sx * 0.98, h, sz * 0.8), M(Color.FromRgb(0xD9, 0xC9, 0xB4)));
+                    for (int row = 0; row < 7; row++)
+                        for (int col = 0; col < 4; col++)
+                        {
+                            double off = (row % 2) * 0.3, u = -w / 2 + 0.3 + col * 0.6 + off;
+                            if (u > w / 2 - 0.25) continue;
+                            var pc = new Point3D(c.X + (alongX ? u : 0), c.Y - h / 2 + 0.17 + row * 0.34, c.Z + (alongX ? 0 : u));
+                            Add(Box(pc, alongX ? 0.54 : t, 0.28, alongX ? t : 0.54), M((row + col) % 3 == 0 ? alt : main));
+                        }
+                    break;
+                default: // metal
+                    Add(Box(c, sx, h, sz), M(main));
+                    for (int i = 0; i < 5; i++)
+                    {
+                        double u = -w / 2 + 0.25 + i * 0.475;
+                        Add(Box(new Point3D(c.X + (alongX ? u : 0), c.Y, c.Z + (alongX ? 0 : u)), alongX ? 0.09 : t + 0.1, h * 0.96, alongX ? t + 0.1 : 0.09),
+                            L.Lighting > 0.5 ? Glossy(alt, 0.5) : M(alt));
+                    }
+                    break;
+            }
         }
-        else if (L.MeshDetail < 0.8)
+        BuildWall(new Point3D(bx, by + 1.2, bz + 1.2), true, Wood, WoodDark, "wood");
+        BuildWall(new Point3D(bx, by + 1.2, bz - 1.2), true, Brick, BrickDark, "brick");
+        BuildWall(new Point3D(bx - 1.2, by + 1.2, bz), false, Brick, BrickDark, "brick");
+        BuildWall(new Point3D(bx + 1.2, by + 1.2, bz), false, Metal, MetalDark, "metal");
+        // Second-storey floor + roof
+        if (toy)
         {
-            Add(Box(new Point3D(bx, by + 1.2, bz - 1.2), 2.4, 2.4, 0.22), M(Wood));
-            Add(Box(new Point3D(bx, by + 0.05, bz), 2.4, 0.15, 2.4), M(WoodDark));
-            AddTransformed(g, Box(new Point3D(0, 0, 0), 2.4, 0.2, 2.9), M(Wood), new Point3D(bx + 2.4, by + 1.15, bz), 39, ref tris);
+            Add(Puffy(new Point3D(bx, by + 2.48, bz), 2.6, 0.26, 2.6, 0.4, 9), Mat(WoodDark, 0, false));
+            Add(Ellipsoid(new Point3D(bx, by + 2.6, bz), 1.75, 1.15, 1.75, 12, 7, 0, 0), M(Metal));
         }
         else
         {
-            for (int i = 0; i < 6; i++) Add(Box(new Point3D(bx, by + 0.25 + i * 0.4, bz - 1.2), 2.4, 0.34, 0.2), M(i % 2 == 0 ? Wood : WoodDark));
-            Add(Box(new Point3D(bx - 1.15, by + 1.2, bz - 1.1), 0.14, 2.4, 0.3), M(WoodDark));
-            Add(Box(new Point3D(bx + 1.15, by + 1.2, bz - 1.1), 0.14, 2.4, 0.3), M(WoodDark));
-            for (int i = 0; i < 6; i++) Add(Box(new Point3D(bx - 1.0 + i * 0.4, by + 0.05, bz), 0.36, 0.15, 2.4), M(i % 2 == 0 ? WoodDark : Wood));
-            for (int i = 0; i < 7; i++)
-                AddTransformed(g, Box(new Point3D(0, 0, -1.25 + i * 0.41), 2.4, 0.18, 0.37), M(i % 2 == 0 ? Wood : WoodDark), new Point3D(bx + 2.4, by + 1.15, bz), 39, ref tris);
+            Add(Box(new Point3D(bx, by + 2.48, bz), 2.5, 0.16, 2.5), M(WoodDark));
+            Add(Cone(new Point3D(bx, by + 2.56, bz), 1.8, 1.3, 4), L.Lighting > 0.5 ? Glossy(Metal, 0.5, L.Texture) : M(Metal));
         }
+        // Ramp up to the second storey (wood).
+        if (toy) AddTransformed(g, Puffy(new Point3D(0, 0, 0), 3.3, 0.3, 2.4, 0.4, 9), Mat(Wood, 0, false), new Point3D(bx - 2.35, by + 1.2, bz), -45, ref tris);
+        else if (L.MeshDetail < 0.8) AddTransformed(g, Box(new Point3D(0, 0, 0), 3.3, 0.2, 2.4), M(Wood), new Point3D(bx - 2.35, by + 1.2, bz), -45, ref tris);
+        else
+            for (int i = 0; i < 7; i++)
+                AddTransformed(g, Box(new Point3D(-1.4 + i * 0.47, 0, 0), 0.43, 0.18, 2.4), M(i % 2 == 0 ? Wood : WoodDark), new Point3D(bx - 2.35, by + 1.2, bz), -45, ref tris);
 
         // Loot chest + effect particles.
         var cx = 0.6; var cz = 3.4; var cy = Height(cx, cz, L.MeshDetail);
@@ -194,6 +250,23 @@ public static class PotatoScene
         {
             var p = new Point3D(cx + (rnd.NextDouble() - 0.5) * 1.6, cy + 0.6 + rnd.NextDouble() * 1.6, cz + (rnd.NextDouble() - 0.5) * 1.6);
             Add(Box(p, 0.07, 0.07, 0.07), new EmissiveMaterial(new SolidColorBrush(Gold)));
+        }
+
+        // An original stylized player character (not based on any game's skins).
+        {
+            double px = cx + 1.6, pz = cz - 0.6, py = Height(px, pz, L.MeshDetail);
+            int cs = toy ? 9 : Seg(10, 22), cst = toy ? 6 : Seg(7, 14);
+            Add(Cylinder(new Point3D(px - 0.14, py + 0.08, pz), toy ? 0.15 : 0.12, 0.72, cs), M(Pants));
+            Add(Cylinder(new Point3D(px + 0.14, py + 0.08, pz), toy ? 0.15 : 0.12, 0.72, cs), M(Pants));
+            Add(Ellipsoid(new Point3D(px - 0.14, py + 0.07, pz + 0.06), 0.13, 0.08, 0.2, cs, cst, 0, 0), Mat(Shoe, 0, false));
+            Add(Ellipsoid(new Point3D(px + 0.14, py + 0.07, pz + 0.06), 0.13, 0.08, 0.2, cs, cst, 0, 0), Mat(Shoe, 0, false));
+            Add(Ellipsoid(new Point3D(px, py + 1.12, pz), toy ? 0.4 : 0.36, 0.44, toy ? 0.3 : 0.24, cs, cst, 0, 0), M(Hoodie));
+            Add(Cylinder(new Point3D(px - 0.44, py + 0.72, pz), toy ? 0.12 : 0.09, 0.62, cs), M(Hoodie));
+            Add(Cylinder(new Point3D(px + 0.44, py + 0.72, pz), toy ? 0.12 : 0.09, 0.62, cs), M(Hoodie));
+            Add(Ellipsoid(new Point3D(px - 0.44, py + 0.68, pz), 0.09, 0.09, 0.09, cs, cst, 0, 0), M(Skin));
+            Add(Ellipsoid(new Point3D(px + 0.44, py + 0.68, pz), 0.09, 0.09, 0.09, cs, cst, 0, 0), M(Skin));
+            Add(Ellipsoid(new Point3D(px, py + 1.78, pz), toy ? 0.3 : 0.26, toy ? 0.3 : 0.28, toy ? 0.3 : 0.26, cs, cst, 0, 0), M(Skin));
+            Add(Ellipsoid(new Point3D(px, py + 1.92, pz - 0.03), toy ? 0.31 : 0.27, 0.17, toy ? 0.31 : 0.27, cs, cst, 0, 0), M(Hair));
         }
 
         // Shadows (blob shadows offset along the key light) and ambient occlusion (contact darkening).
@@ -237,6 +310,14 @@ public static class PotatoScene
                     if (Math.Abs(tx - 2.6) < 4 && Math.Abs(tz - 1.6) < 3) continue; // keep the builds visible
                     Add(Ellipsoid(new Point3D(tx, Height(tx, tz, L.MeshDetail) + 0.8, tz), 0.75, 1.1, 0.75, Seg(9, 14), Seg(6, 10), 0.06 * L.MeshDetail, i), M(LeafDark));
                 }
+        }
+        // Storm wall at the edge of the play area (translucent, drawn last so it blends over everything behind it).
+        {
+            var storm = new MaterialGroup();
+            storm.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(0x48, Storm.R, Storm.G, Storm.B))));
+            storm.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(0x30, Storm.R, Storm.G, Storm.B))));
+            storm.Freeze();
+            Add(Tube(24, -1.2, 16, toy ? 24 : 72), storm, storm);
         }
         g.Freeze();
         return (g, tris);
@@ -431,6 +512,45 @@ public static class PotatoScene
         return m;
     }
 
+    private static MeshGeometry3D PathRibbon(double detail, int seg)
+    {
+        var m = new MeshGeometry3D();
+        for (int i = 0; i <= seg; i++)
+        {
+            double t = i / (double)seg, x = -11 + 22 * t, z = -3 + 6 * t + 2.2 * Math.Sin(t * 3.4), w = 0.7;
+            double dx = 22, dz = 6 + 2.2 * 3.4 * Math.Cos(t * 3.4), len = Math.Sqrt(dx * dx + dz * dz);
+            double nx = -dz / len * w, nz = dx / len * w;
+            m.Positions.Add(new Point3D(x + nx, Height(x + nx, z + nz, detail) + 0.04, z + nz));
+            m.Positions.Add(new Point3D(x - nx, Height(x - nx, z - nz, detail) + 0.04, z - nz));
+            m.Normals.Add(new Vector3D(0, 1, 0)); m.Normals.Add(new Vector3D(0, 1, 0));
+            m.TextureCoordinates.Add(new Point(t * 8, 0)); m.TextureCoordinates.Add(new Point(t * 8, 1));
+            if (i == 0) continue;
+            int k = i * 2;
+            m.TriangleIndices.Add(k - 2); m.TriangleIndices.Add(k); m.TriangleIndices.Add(k - 1);
+            m.TriangleIndices.Add(k - 1); m.TriangleIndices.Add(k); m.TriangleIndices.Add(k + 1);
+        }
+        return m;
+    }
+
+    private static MeshGeometry3D Tube(double r, double y0, double h, int seg)
+    {
+        var m = new MeshGeometry3D();
+        for (int i = 0; i <= seg; i++)
+        {
+            double a = 2 * Math.PI * i / seg, x = Math.Cos(a), z = Math.Sin(a);
+            m.Positions.Add(new Point3D(x * r, y0, z * r)); m.Positions.Add(new Point3D(x * r, y0 + h, z * r));
+            m.Normals.Add(new Vector3D(-x, 0, -z)); m.Normals.Add(new Vector3D(-x, 0, -z));
+            m.TextureCoordinates.Add(new Point(i / (double)seg, 1)); m.TextureCoordinates.Add(new Point(i / (double)seg, 0));
+        }
+        for (int i = 0; i < seg; i++)
+        {
+            int a = i * 2;
+            m.TriangleIndices.Add(a); m.TriangleIndices.Add(a + 2); m.TriangleIndices.Add(a + 1);
+            m.TriangleIndices.Add(a + 1); m.TriangleIndices.Add(a + 2); m.TriangleIndices.Add(a + 3);
+        }
+        return m;
+    }
+
     private static MeshGeometry3D Cylinder(Point3D b, double r, double h, int seg)
     {
         var m = new MeshGeometry3D();
@@ -511,6 +631,10 @@ public sealed class PotatoPreview : Grid
     private readonly PerspectiveCamera _camB = new() { FieldOfView = 48 }, _camA = new() { FieldOfView = 48 };
     private readonly ModelVisual3D _sceneB = new(), _sceneA = new();
     private readonly RectangleGeometry _clip = new();
+    private readonly RectangleGeometry _imgClip = new();
+    private readonly Image _imgBefore = new() { Stretch = Stretch.UniformToFill, Visibility = Visibility.Collapsed };
+    private readonly Image _imgAfter = new() { Stretch = Stretch.UniformToFill, Visibility = Visibility.Collapsed };
+    public bool ShowingScreenshots { get; private set; }
     private readonly Canvas _overlay = new() { Background = Brushes.Transparent, Cursor = Cursors.SizeWE };
     private readonly Border _divider = new() { Width = 2, Background = Brushes.White, IsHitTestVisible = false };
     private readonly Border _handle;
@@ -533,13 +657,18 @@ public sealed class PotatoPreview : Grid
     public PotatoPreview()
     {
         ClipToBounds = true;
-        Background = new LinearGradientBrush(Color.FromRgb(0x8F, 0xD3, 0xF7), Color.FromRgb(0xDD, 0xF3, 0xFF), 90);
+        Background = new LinearGradientBrush(Color.FromRgb(0x3C, 0x8C, 0xF5), Color.FromRgb(0xB8, 0xE8, 0xFF), 90);
         _before.Camera = _camB; _after.Camera = _camA;
         _before.Children.Add(_sceneB); _after.Children.Add(_sceneA);
         _after.Clip = _clip;
         RenderOptions.SetEdgeMode(_before, EdgeMode.Unspecified);
         Children.Add(_before);
         Children.Add(_after);
+        _imgAfter.Clip = _imgClip;
+        RenderOptions.SetBitmapScalingMode(_imgBefore, BitmapScalingMode.HighQuality);
+        RenderOptions.SetBitmapScalingMode(_imgAfter, BitmapScalingMode.HighQuality);
+        Children.Add(_imgBefore);
+        Children.Add(_imgAfter);
 
         _handle = new Border
         {
@@ -602,16 +731,54 @@ public sealed class PotatoPreview : Grid
         var (a, at) = PotatoScene.Build(look);
         _sceneA.Content = a;
         AfterTriangles = at;
-        _afterLabel.Text = "AFTER · " + label;
+        if (!ShowingScreenshots) _afterLabel.Text = "AFTER · " + label;
         // 3D resolution below 100% renders fewer pixels: shown as softness on the "after" half only.
         _after.Effect = look.RenderScale < 100 ? new BlurEffect { Radius = (100 - look.RenderScale) / 14.0, RenderingBias = RenderingBias.Performance } : null;
         TrianglesChanged?.Invoke();
     }
 
+    /// <summary>Compare two real screenshots instead of the 3D illustration (3D rendering stops while shown).</summary>
+    public void ShowScreenshots(ImageSource before, ImageSource after)
+    {
+        _imgBefore.Source = before;
+        _imgAfter.Source = after;
+        _imgBefore.Visibility = _imgAfter.Visibility = Visibility.Visible;
+        _before.Visibility = _after.Visibility = Visibility.Collapsed;
+        _beforeLabel.Text = "BEFORE · your screenshot";
+        _afterLabel.Text = "AFTER · your screenshot";
+        ShowingScreenshots = true;
+        UpdateSpin();
+    }
+
+    public void ShowIllustration(string afterLabel)
+    {
+        _imgBefore.Visibility = _imgAfter.Visibility = Visibility.Collapsed;
+        _imgBefore.Source = _imgAfter.Source = null;
+        _before.Visibility = _after.Visibility = Visibility.Visible;
+        _beforeLabel.Text = "BEFORE · high settings";
+        _afterLabel.Text = "AFTER · " + afterLabel;
+        ShowingScreenshots = false;
+        UpdateSpin();
+    }
+
+    /// <summary>Loads and downscales an image off the UI thread (frozen, so it can cross threads).</summary>
+    public static Task<BitmapSource> LoadImageAsync(string path) => Task.Run<BitmapSource>(() =>
+    {
+        var bi = new BitmapImage();
+        bi.BeginInit();
+        bi.UriSource = new Uri(path);
+        bi.CacheOption = BitmapCacheOption.OnLoad;
+        bi.DecodePixelWidth = 1920;
+        bi.EndInit();
+        bi.Freeze();
+        return bi;
+    });
+
     private void Layout()
     {
         var x = ActualWidth * _split;
         _clip.Rect = new Rect(x, 0, Math.Max(0, ActualWidth - x), ActualHeight);
+        _imgClip.Rect = _clip.Rect;
         Canvas.SetLeft(_divider, x - 1); _divider.Height = ActualHeight;
         Canvas.SetLeft(_handle, x - 17); Canvas.SetTop(_handle, ActualHeight / 2 - 17);
     }
@@ -638,7 +805,7 @@ public sealed class PotatoPreview : Grid
 
     private void UpdateSpin()
     {
-        bool run = _autoRotate && IsLoaded && IsVisible && !App.ReduceMotion
+        bool run = _autoRotate && !ShowingScreenshots && IsLoaded && IsVisible && !App.ReduceMotion
             && _window is { IsActive: true } w && w.WindowState != WindowState.Minimized;
         if (run && !_spin.IsEnabled) { _lastSpin = System.Diagnostics.Stopwatch.GetTimestamp(); _spin.Start(); }
         else if (!run && _spin.IsEnabled) _spin.Stop();
