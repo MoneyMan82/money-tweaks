@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.8.0 – unreleased
+## 1.9.0 – 2026-10-15 (also covers the untracked 1.8.0 / 1.8.1 tags)
 - **Synthetic benchmark audit fixes**: counterbalanced A/B order (off,on,on,off…) plus a 10 s unmeasured priming run (the old
   off,on,off,on order always gave "without" the cold-GPU first run); waits for CPU to settle after switching tweaks; no nvidia-smi
   launches during measured frames (GPU temp read once at the end); each run stores its real start time; headline verdict
