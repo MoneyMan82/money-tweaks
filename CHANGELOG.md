@@ -1,6 +1,12 @@
 # Changelog
 
 ## 1.8.0 – unreleased
+- **Smart Optimization Scanner** (new page): read-only scan of hardware (CPU/GPU/RAM speed), power plan and battery, RAM use and
+  largest apps, busy background processes (1 s CPU sample), startup apps, network adapters (Wi-Fi vs Ethernet, link speed),
+  system drive space, HAGS, candidate tweak states, reverted tweaks and restarts pending. Findings have severity, evidence,
+  explanation, expected benefit (no FPS/ping promises) and confidence. Fix applies catalog tweaks through the verified engine
+  (backup, read-back, auto-rollback) after showing every change; Undo fix and Ignore persist in scanner.json. Never touches
+  services or security settings, never closes apps.
 - **Synthetic 3D benchmark** (Test & Benchmark page): seeded 3D stress scene rendered by WPF/DirectX on its own UI thread
   (procedural textures, sun + orbiting coloured point lights, planar projected shadows, animated objects), intensity 1–5,
   15–120 s, 720p/900p/1080p, 1–3 runs per state. Asks "Without tweaks", "With tweaks" or "Compare both" (runs alternate).

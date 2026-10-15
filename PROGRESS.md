@@ -122,3 +122,11 @@ Resume point for future sessions. Keep it short.
 - Fix (same session): the synthetic benchmark aborted when a preset tweak was already on without a Money Tweaks backup
   (USB selective suspend on the user's High performance plan). Such tweaks are now left as is and listed; PowerCfgOp.DefaultValue
   (USB suspend = 1) for Undo without backup, otherwise a clear message instead of a false read-back error.
+
+## Session 2026-10-15: Smart Optimization Scanner (in 1.8.0, not tagged)
+- Core/Scanner/OptimizationScanner.cs: ScanFacts (Collect = read-only), Analyze = pure rules -> Finding records,
+  Candidates/Fixable (no Services, no TweakAudit-disabled), ScannerState (Ignored, Fixed -> tweak ids) in scanner.json.
+- App/Views/ScannerView.cs: facts card, severity counts, finding cards with Fix…/Undo fix/Ignore, "Fixed by the scanner" list;
+  nav tag "scanner"; screenshot mode waits for the scan and snaps scanner-results.
+- Tests: ScannerTests (healthy PC = no findings, detection with evidence, laptops not nagged, fix filter, real read-only collect). 85 pass.
+- Not verified by hand: clicking Fix/Undo in the UI (engine paths are the same ones covered by existing tests).

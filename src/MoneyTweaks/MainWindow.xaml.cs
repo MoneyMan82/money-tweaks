@@ -28,6 +28,7 @@ public partial class MainWindow : Window
 
     internal static readonly (string tag, string icon, string label)[] Tools =
     [
+        ("scanner", "\uE721", "Smart Scanner"),
         ("presets", "\uE8F1", "Presets"),
         ("benchmark", "\uE9D2", "Test & Benchmark"),
         ("macros", "\uE765", "Gaming Macros"),
@@ -179,6 +180,7 @@ public partial class MainWindow : Window
                 "presets" => new PresetsView(),
                 "macros" => new GamingMacrosView(),
                 "benchmark" => new BenchmarkView(),
+                "scanner" => new ScannerView(),
                 "potato" => new PotatoView(),
                 "booster" => new BoosterView(),
                 "input" => new InputDelayView(),
@@ -400,7 +402,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(dir);
         string[] tags = ["dashboard", "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
-            "presets", "benchmark", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
+            "scanner", "presets", "benchmark", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
         foreach (var tag in tags)
         {
             Navigate(tag);
@@ -420,6 +422,12 @@ public partial class MainWindow : Window
                 await Task.Delay(1200);
                 await Snap(dir, "macros-editor");
                 mv.CloseEditorForScreenshot();
+            }
+            if (tag == "scanner" && Host.Content is ScannerView scv)
+            {
+                for (int i = 0; i < 150 && scv.IsScanning; i++) await Task.Delay(200);
+                await Task.Delay(600);
+                await Snap(dir, "scanner-results");
             }
             if (tag == "benchmark" && Host.Content is BenchmarkView bv)
             {
