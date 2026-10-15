@@ -20,7 +20,8 @@ public sealed partial class BenchmarkView
     private readonly TextBlock _synthStatus = Ui.Muted("", 12.5);
     private Button? _synthStart, _synthStop;
     private CancellationTokenSource? _synthCts;
-    private string? _synthMode; // "without", "with", "compare"
+    private string? _synthMode; // "without", "with", "compare", "each"
+    private sealed record Step(string? TweakId, bool On);
     private string _synthPreset = "builtin.competitive-fortnite";
     private int _synthIntensity = 3, _synthDuration = 30, _synthRuns = 2;
     private (int w, int h) _synthRes = (1280, 720);
@@ -42,7 +43,7 @@ public sealed partial class BenchmarkView
 
         _synth.Children.Add(Label("What do you want to test?"));
         var modes = new WrapPanel();
-        foreach (var (k, label) in new[] { ("without", "Without tweaks"), ("with", "With tweaks"), ("compare", "Compare both") })
+        foreach (var (k, label) in new[] { ("without", "Without tweaks"), ("with", "With tweaks"), ("compare", "Compare both"), ("each", "Each tweak separately") })
         {
             var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = "smode", IsChecked = _synthMode == k, Margin = new Thickness(0, 0, 6, 6) };
             rb.Checked += (_, _) => { _synthMode = k; if (_synthStart is not null) _synthStart.IsEnabled = true; };
@@ -87,17 +88,31 @@ public sealed partial class BenchmarkView
         finally { _busy = false; }
         skipped.AddRange(notEligible);
 
-        string[] plan = _synthMode switch
+        // Counterbalanced A/B order (off,on,on,off…) so warm-up and thermal drift don't favour one state.
+        var unmeasurable = original.Keys.Select(TweakCatalog.Find).Where(t => t is not null && SyntheticPlan.NotMeasurable(t) is not null)
+            .Select(t => $"{t!.Name} ({SyntheticPlan.NotMeasurable(t)})").ToList();
+        var plan = _synthMode switch
         {
-            "without" => Enumerable.Repeat("off", _synthRuns).ToArray(),
-            "with" => Enumerable.Repeat("on", _synthRuns).ToArray(),
-            _ => Enumerable.Range(0, _synthRuns * 2).Select(i => i % 2 == 0 ? "off" : "on").ToArray(), // alternate A/B so drift hits both equally
+            "without" => Enumerable.Repeat(new Step(null, false), _synthRuns).ToList(),
+            "with" => Enumerable.Repeat(new Step(null, true), _synthRuns).ToList(),
+            "each" => original.Keys.Where(id => SyntheticPlan.NotMeasurable(TweakCatalog.Find(id)!) is null)
+                .SelectMany(id => SyntheticPlan.Abba(_synthRuns).Select(on => new Step(id, on))).ToList(),
+            _ => SyntheticPlan.Abba(_synthRuns).Select(on => new Step(null, on)).ToList(),
         };
-        var willChange = original.Where(kv => plan.Contains(kv.Value ? "off" : "on")).Select(kv => TweakCatalog.Find(kv.Key)!).ToList();
-        var msg = $"Preset: {preset.Name}\nRuns: {string.Join(", ", plan.Select(p => p == "on" ? "with" : "without"))} · {_synthDuration} s each · intensity {_synthIntensity} · {_synthRes.w}×{_synthRes.h}\n\n" +
+        if (plan.Count == 0)
+        {
+            Dialog.Show("Nothing this test can measure", "None of this preset's switchable tweaks can affect a windowed 3D scene:\n" + string.Join("\n", unmeasurable.Select(u => "• " + u)) +
+                "\n\nThey may still matter in real games. Measure those in the game itself with a PresentMon/CapFrameX CSV (Before / after benchmark below).");
+            return;
+        }
+        var willChange = original.Where(kv => plan.Any(p => (p.TweakId is null || p.TweakId == kv.Key) && p.On != kv.Value)).Select(kv => TweakCatalog.Find(kv.Key)!).ToList();
+        var minutes = Math.Ceiling(plan.Count * (_synthDuration + StressScene.WarmupSec + 10) / 60.0 + 0.3);
+        var msg = $"Preset: {preset.Name}\n{plan.Count} measured runs ({_synthDuration} s each, about {minutes:0} min) · intensity {_synthIntensity} · {_synthRes.w}×{_synthRes.h}\n" +
+                  "Order is counterbalanced (off, on, on, off…) after a 10 s unmeasured priming run, and each run waits for background activity to settle.\n\n" +
                   (willChange.Count == 0 ? "No Windows settings need to change." :
                    $"Temporarily changed ({willChange.Count}):\n" + string.Join("\n", willChange.Select(t => "• " + t.Name)) +
                    "\n\nEvery tweak is put back exactly as it is now when the test ends, is stopped, or fails. If Money Tweaks is closed mid-test, it offers the restore on next start.") +
+                  (unmeasurable.Count > 0 ? $"\n\nCan't affect this synthetic scene ({unmeasurable.Count}){(_synthMode == "each" ? ", not tested" : "")}: {string.Join(", ", unmeasurable)}" : "") +
                   (skipped.Count > 0 ? $"\n\nNot switched ({skipped.Count}): {string.Join(", ", skipped)}" : "") +
                   "\n\n“Without tweaks” only turns off the tweaks in this preset, not every Windows setting. Close other apps for consistent results.";
         var games = await Task.Run(RunningGames);
@@ -113,25 +128,30 @@ public sealed partial class BenchmarkView
         _synthStart!.IsEnabled = false; _synthStop!.IsEnabled = true;
         _synthResult.Children.Clear();
         if (willChange.Count > 0) TweakStateGuard.SavePending(original);
-        var runs = new List<(string state, SceneResult r)>();
+        var runs = new List<(Step step, DateTime at, SceneResult r)>();
         string? error = null;
         List<string> restoreProblems = [];
         try
         {
-            for (int i = 0; i < plan.Length; i++)
+            _synthStatus.Text = "Priming run (10 s, not measured): warms up the GPU so no state gets the cold first run…";
+            var prime = await StressScene.RunAsync(new SceneOptions(_synthIntensity, 10, _synthRes.w, _synthRes.h, "Priming run · not measured"), ct);
+            if (!prime.Completed) throw new OperationCanceledException(prime.StopReason);
+            for (int i = 0; i < plan.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
-                bool on = plan[i] == "on";
-                _synthStatus.Text = $"Run {i + 1}/{plan.Length}: switching tweaks {(on ? "on" : "off")}…";
-                var problems = await Task.Run(() => TweakStateGuard.SetAll(original.Keys, on), ct);
+                var step = plan[i];
+                var what = step.TweakId is null ? $"{(step.On ? "with" : "without")} tweaks" : $"{TweakCatalog.Find(step.TweakId)!.Name} {(step.On ? "ON" : "OFF")}";
+                _synthStatus.Text = $"Run {i + 1}/{plan.Count}: switching ({what})…";
+                List<string> ids = step.TweakId is null ? original.Keys.ToList() : [step.TweakId];
+                var problems = await Task.Run(() => TweakStateGuard.SetAll(ids, step.On), ct);
                 if (problems.Count > 0) throw new InvalidOperationException("Couldn't set the tweak state, so the comparison would be invalid:\n" + string.Join("\n", problems));
-                _synthStatus.Text = $"Run {i + 1}/{plan.Length} ({(on ? "with" : "without")} tweaks): settling 3 s…";
-                await Task.Delay(3000, ct);
-                _synthStatus.Text = $"Run {i + 1}/{plan.Length} ({(on ? "with" : "without")} tweaks): running. Esc or Emergency stop to cancel.";
-                var r = await StressScene.RunAsync(new SceneOptions(_synthIntensity, _synthDuration, _synthRes.w, _synthRes.h,
-                    $"Run {i + 1}/{plan.Length} · {(on ? "WITH" : "WITHOUT")} tweaks ({preset.Name})"), ct);
+                var n = i;
+                await SettleAsync(t => _synthStatus.Text = $"Run {n + 1}/{plan.Count} ({what}): {t}", ct);
+                _synthStatus.Text = $"Run {i + 1}/{plan.Count} ({what}): running. Esc or Emergency stop to cancel.";
+                var at = DateTime.Now;
+                var r = await StressScene.RunAsync(new SceneOptions(_synthIntensity, _synthDuration, _synthRes.w, _synthRes.h, $"Run {i + 1}/{plan.Count} · {what.ToUpperInvariant()} ({preset.Name})"), ct);
                 if (!r.Completed) throw new OperationCanceledException(r.StopReason);
-                runs.Add((plan[i], r));
+                runs.Add((step, at, r));
             }
         }
         catch (OperationCanceledException) { error = "Stopped. Completed runs were kept."; }
@@ -156,10 +176,13 @@ public sealed partial class BenchmarkView
         _synthStatus.Text = (error is null ? "Finished. " : error + " ") + restoreText;
         if (restoreProblems.Count > 0) Dialog.Show("Some settings were not restored", restoreText, DialogKind.Error);
         else if (error is not null && runs.Count == 0) Dialog.Show("Benchmark stopped", error + "\n\n" + restoreText, error.StartsWith("Stopped") ? DialogKind.Info : DialogKind.Error);
-        if (runs.Count > 0) SaveSynthetic(preset.Name, runs);
+        if (runs.Count == 0) return;
+        if (_synthMode != "each") { RenderSyntheticResult(SaveSynthetic(preset.Name, runs.Select(x => (x.step.On, x.at, x.r)).ToList())); return; }
+        var perTweak = runs.GroupBy(x => x.step.TweakId!).Select(g => (TweakCatalog.Find(g.Key)!, SaveSynthetic($"{preset.Name} → {TweakCatalog.Find(g.Key)!.Name}", g.Select(x => (x.step.On, x.at, x.r)).ToList()))).ToList();
+        RenderPerTweak(perTweak, unmeasurable);
     }
 
-    private void SaveSynthetic(string presetName, List<(string state, SceneResult r)> runs)
+    private (BenchmarkStudy s, List<BenchmarkRun> runs) SaveSynthetic(string presetName, List<(bool on, DateTime at, SceneResult r)> runs)
     {
         var scene = $"Synthetic 3D · intensity {_synthIntensity} · {_synthRes.w}×{_synthRes.h} · {_synthDuration} s · {runs[0].r.Objects} objects, {runs[0].r.Triangles:N0} triangles" + (runs[0].r.RefreshHz > 0 ? $" · display {runs[0].r.RefreshHz} Hz" : "");
         var s = new BenchmarkStudy
@@ -169,11 +192,11 @@ public sealed partial class BenchmarkView
         };
         _file.Studies.Add(s);
         var saved = new List<BenchmarkRun>();
-        foreach (var (state, r) in runs)
+        foreach (var (on, at, r) in runs)
         {
             var run = new BenchmarkRun
             {
-                StudyId = s.Id, Phase = state == "on" ? "After" : "Baseline", At = DateTime.Now,
+                StudyId = s.Id, Phase = on ? "After" : "Baseline", At = at,
                 Conditions = new TestConditions { DurationSec = _synthDuration, PowerPlan = BenchmarkSampler.ActivePowerPlan(), OnAcPower = BenchmarkSampler.OnAcPower(), OsBuild = OsInfo.Build, AppVersion = App.Version, Scene = scene },
                 CpuAvg = r.CpuAvg, GpuAvg = r.GpuAvg, RamUsedGb = r.RamGb, CpuTempC = r.CpuTemp, GpuTempC = r.GpuTemp, FpsSeries = r.FpsPerSecond,
             };
@@ -184,16 +207,84 @@ public sealed partial class BenchmarkView
         }
         Save();
         RenderHistory();
-        RenderSyntheticResult(s, saved);
+        return (s, saved);
     }
 
-    private void RenderSyntheticResult(BenchmarkStudy s, List<BenchmarkRun> runs)
+    private static async Task SettleAsync(Action<string> status, CancellationToken ct)
     {
+        // Switching tweaks starts processes (powercfg, PowerShell) and Windows reacts to setting changes. Wait at least 5 s,
+        // then until total CPU stays under 15% for 2 s (max 15 s more), so that work doesn't land inside a measured run.
+        status("settling 5 s…");
+        await Task.Delay(5000, ct);
+        using var hm = new HardwareMonitor();
+        for (int i = 0, calm = 0; i < 15 && calm < 2; i++)
+        {
+            await Task.Delay(1000, ct);
+            var cpu = await Task.Run(() => hm.Sample().CpuPercent, ct);
+            calm = cpu < 15 ? calm + 1 : 0;
+            status($"waiting for background activity to settle (CPU {cpu:0}%)…");
+        }
+    }
+
+    private void RenderPerTweak(List<(Core.Model.Tweak t, (BenchmarkStudy s, List<BenchmarkRun> runs) res)> results, List<string> unmeasurable)
+    {
+        _synthResult.Children.Clear();
+        _synthResult.Children.Add(new TextBlock { Text = "PER-TWEAK RESULTS · SYNTHETIC", Style = Ui.Res<Style>("Eyebrow"), Margin = new Thickness(0, 16, 0, 6) });
+        var g = new Grid();
+        string[] cols = ["Tweak", "Avg FPS off → on", "1% low off → on", "Frame time", "Verdict in this scene"];
+        foreach (var _ in cols) g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        void Cell(int r, int c, UIElement e) { Grid.SetRow(e, r); Grid.SetColumn(e, c); if (e is FrameworkElement fe) fe.Margin = new Thickness(0, 3, 20, 3); g.Children.Add(e); }
+        g.RowDefinitions.Add(new RowDefinition());
+        for (int c = 0; c < cols.Length; c++) Cell(0, c, new TextBlock { Text = cols[c], FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Ui.Brush("Subtle") });
+        int row = 1;
+        foreach (var (t, (_, runs)) in results)
+        {
+            var off = runs.Where(r => r.Phase == "Baseline").ToList(); var on = runs.Where(r => r.Phase == "After").ToList();
+            MetricComparison M(string k) => BenchmarkStats.Compare(BenchmarkStats.Metrics.First(m => m.Key == k), off, on);
+            var fps = M("fps"); var low = M("low1"); var ft = M("ft");
+            string P(MetricComparison c) => c.Before is null || c.After is null ? "–" : $"{BenchmarkStats.Fmt(c.Before.Mean)} → {BenchmarkStats.Fmt(c.After.Mean)}" + (c.Pct is { } p ? $" ({p:+0.0;-0.0}%)" : "");
+            var verdicts = new[] { fps.Verdict, low.Verdict, ft.Verdict };
+            var (txt, tone) = verdicts.Contains(Verdict.NotEnoughData) ? ("Needs 2+ runs each", "Muted")
+                : verdicts.Contains(Verdict.Worse) && !verdicts.Contains(Verdict.Better) ? ("Hurts", "Danger")
+                : verdicts.Contains(Verdict.Better) && !verdicts.Contains(Verdict.Worse) ? ("Helps", "Success")
+                : verdicts.All(v => v == Verdict.NoClearChange) ? ("No measurable effect", "Muted") : ("Mixed", "Gold");
+            g.RowDefinitions.Add(new RowDefinition());
+            Cell(row, 0, new TextBlock { Text = t.Name, FontSize = 12.5, FontWeight = FontWeights.SemiBold });
+            Cell(row, 1, new TextBlock { Text = P(fps), FontSize = 12.5 });
+            Cell(row, 2, new TextBlock { Text = P(low), FontSize = 12.5 });
+            Cell(row, 3, new TextBlock { Text = P(ft), FontSize = 12.5 });
+            var tag = Ui.Tag(txt, tone); tag.ToolTip = $"FPS: {fps.Explanation}\n1% low: {low.Explanation}\nFrame time: {ft.Explanation}";
+            Cell(row, 4, tag);
+            row++;
+            Log.Info($"Synthetic per-tweak {t.Id}: {txt} (fps {P(fps)}, 1% {P(low)})");
+        }
+        _synthResult.Children.Add(new ScrollViewer { Content = g, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        if (unmeasurable.Count > 0)
+            _synthResult.Children.Add(new TextBlock { Text = "Not testable with this scene (may still matter in games; test those in-game with a frame-time CSV):\n" + string.Join("\n", unmeasurable.Select(u => "• " + u)), Style = Ui.Res<Style>("MutedText"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) });
+        _synthResult.Children.Add(Ui.Muted("“Helps”/“Hurts” only when the change is larger than the variation between repeated runs. Synthetic scene only: games can react differently. Each tweak's runs are saved in History.", 11.5));
+    }
+
+    private void RenderSyntheticResult((BenchmarkStudy s, List<BenchmarkRun> runs) res)
+    {
+        var (s, runs) = res;
         _synthResult.Children.Clear();
         var without = runs.Where(r => r.Phase == "Baseline").ToList();
         var with = runs.Where(r => r.Phase == "After").ToList();
         _synthResult.Children.Add(new TextBlock { Text = "RESULTS · SYNTHETIC", Style = Ui.Res<Style>("Eyebrow"), Margin = new Thickness(0, 16, 0, 6) });
         _synthResult.Children.Add(Ui.Muted(s.Scene, 11.5));
+        if (without.Count > 0 && with.Count > 0)
+        {
+            var fpsC = BenchmarkStats.Compare(BenchmarkStats.Metrics.First(m => m.Key == "fps"), without, with);
+            var head = fpsC.Verdict switch
+            {
+                Verdict.Better => $"Measurably faster with tweaks: {BenchmarkStats.Fmt(fpsC.Before!.Mean)} → {BenchmarkStats.Fmt(fpsC.After!.Mean)} FPS ({fpsC.Pct:+0.0;-0.0}%).",
+                Verdict.Worse => $"Measurably slower with tweaks: {BenchmarkStats.Fmt(fpsC.Before!.Mean)} → {BenchmarkStats.Fmt(fpsC.After!.Mean)} FPS ({fpsC.Pct:+0.0;-0.0}%).",
+                Verdict.NoClearChange => $"No meaningful difference: {BenchmarkStats.Fmt(fpsC.Before!.Mean)} vs {BenchmarkStats.Fmt(fpsC.After!.Mean)} FPS ({fpsC.Pct:+0.0;-0.0}%). {fpsC.Explanation}",
+                _ => "Not conclusive: run at least 2 runs per state.",
+            };
+            _synthResult.Children.Add(new TextBlock { Text = head, FontSize = 14, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0),
+                Foreground = Ui.Brush(fpsC.Verdict == Verdict.Better ? "Success" : fpsC.Verdict == Verdict.Worse ? "Danger" : "Text") });
+        }
 
         string[] keys = ["fps", "low1", "low01", "ft", "ft99", "cpu", "gpu", "ram", "cputemp", "gputemp"];
         var g = new Grid { Margin = new Thickness(0, 8, 0, 0) };

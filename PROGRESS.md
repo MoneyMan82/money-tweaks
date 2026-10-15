@@ -130,3 +130,16 @@ Resume point for future sessions. Keep it short.
   nav tag "scanner"; screenshot mode waits for the scan and snaps scanner-results.
 - Tests: ScannerTests (healthy PC = no findings, detection with evidence, laptops not nagged, fix filter, real read-only collect). 85 pass.
 - Not verified by hand: clicking Fix/Undo in the UI (engine paths are the same ones covered by existing tests).
+
+## Session 2026-10-15 (later): benchmark audit ("1–2 FPS more without tweaks")
+- Evidence from the user's saved study (Competitive Fortnite, intensity 3, 2 runs/state, order off,on,off,on):
+  off 101.4 / 98.2, on 98.7 / 98.4 FPS. Runs 2–4 within 0.5 FPS; the gap came from the cold first run (always "off").
+  Diff −1.25 FPS vs ±3.2 FPS run-to-run threshold = no meaningful difference. Scene was CPU/WPF-bound (GPU ~31%).
+- Every switchable tweak in that preset targets something the scene does not use (SyntheticPlan.NotMeasurable), so the
+  synthetic test could not show an effect either way. No evidence that any of them hurt.
+- Core/Benchmarks/SyntheticPlan.cs (Abba, NotMeasurable); BenchmarkView.Synthetic: Step plan, priming run, SettleAsync,
+  "each" mode + RenderPerTweak, headline verdict, real run timestamps; StressScene: GPU temp only after the window.
+- TweakAudit.Harmful: adv.large-system-cache disabled (DisabledReason), Risky note on gen.min-processor-state.
+- Tests: SyntheticPlanTests (ABBA balance, preset not measurable, user data = NoClearChange, large cache disabled). 89 pass.
+- NOT run: a new per-tweak A/B on the user's PC (long GPU stress + temporary setting changes; needs the user's go-ahead and
+  admin for HKLM tweaks). No per-tweak "helps/hurts" result exists yet.

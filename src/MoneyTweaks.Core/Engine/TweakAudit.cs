@@ -29,6 +29,12 @@ public static class TweakAudit
         ["adv.vbs-hvci"] = "Disabled in Money Tweaks: it turns off a Windows security protection (Memory Integrity). Money Tweaks does not trade security for FPS. If it's on, use Undo to turn the protection back on.",
     };
 
+    /// <summary>Tweaks no longer applied because they can hurt gaming performance with no documented benefit. Undo stays available.</summary>
+    private static readonly Dictionary<string, string> Harmful = new()
+    {
+        ["adv.large-system-cache"] = "Disabled in Money Tweaks: LargeSystemCache is a file-server setting that lets the file cache take memory from applications. It has no gaming benefit. If it's on, use Undo.",
+    };
+
     private static readonly Dictionary<string, AuditIssue[]> Notes = new()
     {
         ["net.nagle"] = [new(AuditKind.Ineffective, "Only changes TCP. Fortnite and most shooters send gameplay over UDP, so in-match ping is not affected.")],
@@ -37,7 +43,7 @@ public static class TweakAudit
         ["net.default-ttl"] = [new(AuditKind.Ineffective, "TTL only limits hop count. It does not change speed or ping.")],
         ["net.throttling-index"] = [new(AuditKind.Ineffective, "Only matters while the multimedia scheduler throttles network processing (media playing). Expect no ping change otherwise.")],
         ["adv.prefetch"] = [new(AuditKind.Obsolete, "Windows 10/11 control Superfetch through the SysMain service; the EnableSuperfetch value is generally ignored. EnablePrefetcher still applies.")],
-        ["adv.large-system-cache"] = [new(AuditKind.Risky, "Meant for file servers. On gaming PCs it can leave less RAM for games.")],
+        ["gen.min-processor-state"] = [new(AuditKind.Risky, "Keeps clocks high even at idle: more heat. On laptops or modest coolers that can lower boost clocks under load.")],
         ["adv.timer-hpet"] = [new(AuditKind.OneWay, "Removes an override; Undo cannot put back a value that was removed. Most PCs never had the override, so this reads as already applied.")],
         ["adv.svchost-split"] = [new(AuditKind.Ineffective, "Reduces the number of svchost.exe processes; no measurable FPS effect is expected.")],
         ["gen.hibernate-off"] = [new(AuditKind.Conflict, "Also turns off Fast Startup, which overlaps with 'Disable Fast Startup'.", "gen.fast-startup-off")],
@@ -47,12 +53,13 @@ public static class TweakAudit
 
     private static readonly Lazy<Dictionary<string, List<AuditIssue>>> Computed = new(Compute);
 
-    public static string? DisabledReason(Tweak t) => Disabled.GetValueOrDefault(t.Id);
+    public static string? DisabledReason(Tweak t) => Disabled.GetValueOrDefault(t.Id) ?? Harmful.GetValueOrDefault(t.Id);
 
     public static IReadOnlyList<AuditIssue> IssuesFor(Tweak t)
     {
         var list = new List<AuditIssue>();
         if (Disabled.TryGetValue(t.Id, out var why)) list.Add(new(AuditKind.Security, why));
+        if (Harmful.TryGetValue(t.Id, out var harm)) list.Add(new(AuditKind.Risky, harm));
         if (Notes.TryGetValue(t.Id, out var n)) list.AddRange(n);
         if (t.Ops.OfType<PowerCfgOp>().Any()) list.Add(new(AuditKind.Conflict, "Changes the active power plan only. Switching plans later (e.g. Ultimate Performance) does not carry this setting over.", "gen.ultimate-plan"));
         if (Computed.Value.TryGetValue(t.Id, out var c)) list.AddRange(c);

@@ -1,6 +1,15 @@
 # Changelog
 
 ## 1.8.0 – unreleased
+- **Synthetic benchmark audit fixes**: counterbalanced A/B order (off,on,on,off…) plus a 10 s unmeasured priming run (the old
+  off,on,off,on order always gave "without" the cold-GPU first run); waits for CPU to settle after switching tweaks; no nvidia-smi
+  launches during measured frames (GPU temp read once at the end); each run stores its real start time; headline verdict
+  ("No meaningful difference … within run-to-run variation") above the table.
+- New "Each tweak separately" mode: A/B per tweak with Helps / No measurable effect / Hurts / Mixed verdicts on FPS, 1% lows and
+  frame time. Tweaks that cannot affect a windowed synthetic scene (game-specific, input, network, Game Mode/DVR, MMCSS games
+  task, fullscreen optimizations, privacy/background) are listed with the reason instead of being "tested".
+- "Large system cache" can no longer be applied (file-server setting, no gaming benefit; Undo kept). Risk note on "Minimum
+  processor state 100%".
 - **Smart Optimization Scanner** (new page): read-only scan of hardware (CPU/GPU/RAM speed), power plan and battery, RAM use and
   largest apps, busy background processes (1 s CPU sample), startup apps, network adapters (Wi-Fi vs Ethernet, link speed),
   system drive space, HAGS, candidate tweak states, reverted tweaks and restarts pending. Findings have severity, evidence,

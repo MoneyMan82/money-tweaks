@@ -126,19 +126,12 @@ public static class StressScene
             _ = Task.Run(async () =>
             {
                 using var hm = new HardwareMonitor();
-                var gpuSmi = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "nvidia-smi.exe");
-                int n = 0;
                 while (!_hwStop.IsCancellationRequested)
                 {
                     try { await Task.Delay(1000, _hwStop.Token); } catch { break; }
                     var s = hm.Sample();
                     _lastHw = s;
                     if (_clock.Elapsed.TotalSeconds >= WarmupSec) lock (_hw) _hw.Add(s);
-                    if (n++ % 5 == 2 && File.Exists(gpuSmi) && _clock.Elapsed.TotalSeconds >= WarmupSec)
-                    {
-                        var gt = Core.Benchmarks.BenchmarkSampler.GpuTemp();
-                        if (gt is not null) lock (_gpuTemps) _gpuTemps.Add(gt.Value);
-                    }
                 }
             });
             _clock.Start();
@@ -189,6 +182,8 @@ public static class StressScene
             _hudTimer.Stop();
             _hwStop.Cancel();
             List<HardwareSnapshot> hw; lock (_hw) hw = [.. _hw];
+            // GPU temperature is read once, after the measured window: starting nvidia-smi mid-run can cause frame-time spikes.
+            if (reason is null && Core.Benchmarks.BenchmarkSampler.GpuTemp() is { } endTemp) lock (_gpuTemps) _gpuTemps.Add(endTemp);
             List<double> gt; lock (_gpuTemps) gt = [.. _gpuTemps];
             double? Avg(IEnumerable<double?> v) { var l = v.Where(x => x.HasValue).Select(x => x!.Value).ToList(); return l.Count == 0 ? null : Math.Round(l.Average(), 2); }
             _done(new SceneResult(reason is null, reason, _frames, _fpsSeconds,
