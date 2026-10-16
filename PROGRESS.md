@@ -208,3 +208,11 @@ Resume point for future sessions. Keep it short.
   2 misses before revert, refused-once-per-launch toast, PendingTemporaryDevice for crash recovery), started in MainWindow.Loaded.
 - FortniteStretchedView.BuildAuto: size, monitor, live driver check, state, toggle (CDS_TEST before enabling), Save size, Try it for 10 s.
 - Dev PC: 2288x1440 listed @240 Hz on DISPLAY1 (user created it), CDS_TEST Ok. Not verified with a real Fortnite launch.
+
+## Session 2026-10-17 (evening): Start with Windows + single instance (in v1.15.0)
+- Core/Features/AutoStart.cs (HKCU Run "MoneyTweaks" = "<exe>" --background; KeyPath overridable for tests); App: BackgroundStart,
+  ClaimSingleInstance (Local\MoneyTweaks.SingleInstance mutex + Local\MoneyTweaks.Show event, --restarted waits 15 s),
+  EnsurePath on start. MainWindow: minimized + OnFirstRestore (dashboard + ambient), BringToFront, update check delayed 2 min.
+- --restarted added to Admin.RestartElevated, installer [Run] entries, portable UpdateService.Install.
+- Verified for real: --background start 450 ms to first frame; second launch handed off ("already running") and the window
+  built the dashboard on first open; one instance remained; closed cleanly. AutoStartTests on a scratch key. 113 pass.

@@ -207,6 +207,21 @@ public sealed class AboutView : UserControl, IPageLifecycle
         up.Children.Add(auto);
         body.Children.Add(Ui.Card(up));
 
+        var sw = Ui.Section("Start with Windows", "Starts Money Tweaks minimized after you sign in, so Gaming Profiles auto-switch and the Fortnite resolution switch work without opening it. It skips the dashboard and animations until you open the window, and checks for updates 2 minutes later, so sign-in isn't slowed down.");
+        var startBox = new CheckBox { Content = "Start Money Tweaks with Windows (minimized)", IsChecked = AutoStart.IsEnabled, Margin = new Thickness(0, 4, 0, 0) };
+        startBox.Click += (_, _) =>
+        {
+            try
+            {
+                if (startBox.IsChecked == true && Environment.ProcessPath is { } exe) AutoStart.Enable(exe); else AutoStart.Disable();
+                MainWindow.Current?.ShowToast(startBox.IsChecked == true ? "Money Tweaks will start with Windows (minimized)." : "Money Tweaks won't start with Windows.", "Success");
+            }
+            catch (Exception ex) { startBox.IsChecked = AutoStart.IsEnabled; Dialog.Show("Couldn't change the startup setting", ex.Message, DialogKind.Error); }
+        };
+        sw.Children.Add(startBox);
+        sw.Children.Add(Ui.Muted("Uses your user account's Run entry (no administrator rights, no service). You can also turn it off in Task Manager → Startup apps or on the Startup Apps page.", 11.5));
+        body.Children.Add(Ui.Card(sw));
+
         var counts = string.Join("  ·  ", Enum.GetValues<Core.Model.TweakCategory>().Select(c => $"{Core.Model.CategoryInfo.DisplayName(c)} {TweakCatalog.InCategory(c).Count()}"));
         var ab = Ui.Section("About");
         ab.Children.Add(Ui.Muted($"{TweakCatalog.All.Count} tweaks: {counts}", 12.5));

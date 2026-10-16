@@ -275,6 +275,13 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
         }, "BaseButton", new Thickness(0, 10, 8, 0));
         tryIt.ToolTip = "Switches now for 10 seconds, then always goes back";
         sec.Children.Add(Ui.Row(save, tryIt));
+        var withWin = new CheckBox { Content = "Start Money Tweaks with Windows (minimized) so this works right after sign-in", IsChecked = Core.Features.AutoStart.IsEnabled, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 10, 0, 0) };
+        withWin.Click += (_, _) =>
+        {
+            try { if (withWin.IsChecked == true && Environment.ProcessPath is { } exe) Core.Features.AutoStart.Enable(exe); else Core.Features.AutoStart.Disable(); }
+            catch (Exception ex) { withWin.IsChecked = Core.Features.AutoStart.IsEnabled; Status("Couldn't change the startup setting: " + ex.Message, "Danger"); }
+        };
+        sec.Children.Add(withWin);
         sec.Children.Add(Ui.Muted("Works while Money Tweaks is running (it can stay minimized). Scaling is set to Fullscreen (stretched); your GPU's own scaling setting can override it. Closing Money Tweaks also puts your normal resolution back.", 11.5));
         _auto.Children.Add(sec);
     }

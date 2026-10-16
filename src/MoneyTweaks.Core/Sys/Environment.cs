@@ -37,7 +37,8 @@ public static class Admin
         if (exe is null) return false;
         try
         {
-            Process.Start(new ProcessStartInfo(exe, args ?? "") { UseShellExecute = true, Verb = "runas" });
+            // --restarted: the new instance waits for this one to exit instead of treating it as "already running".
+            Process.Start(new ProcessStartInfo(exe, ((args ?? "") + " --restarted").Trim()) { UseShellExecute = true, Verb = "runas" });
             return true;
         }
         catch (System.ComponentModel.Win32Exception) { return false; }

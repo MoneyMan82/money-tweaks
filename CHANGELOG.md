@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.15.0 – unreleased
+## 1.15.0 – 2026-10-17
+- **Start with Windows** (Settings, and on the Fortnite auto-switch card): per-user Run entry with --background. Opens
+  minimized, builds the dashboard and animations only when first opened, checks for updates 2 minutes after sign-in
+  (measured 450 ms to first frame vs 540-720 ms for a normal start). The entry follows the exe if it moves.
+- **Single instance**: launching Money Tweaks again brings the running window to the front instead of starting a second
+  copy (two copies would both run the watchers). Elevation restarts, the installer and portable updates pass --restarted
+  so the new copy waits for the old one to close.
 - **Auto-switch resolution for Fortnite** (Fortnite Stretched tab): when FortniteClient-Win64-Shipping.exe starts, the chosen
   monitor switches to the stretched resolution (default 2288×1440, Fullscreen scaling); about 4 s after Fortnite closes it goes
   back to the saved Windows resolution. The switch is temporary (never saved), checked with the driver first, reverted when

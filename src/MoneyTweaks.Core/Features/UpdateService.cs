@@ -154,7 +154,8 @@ public static class UpdateService
         File.Move(current, old);
         try { File.Copy(downloadedPath, current); }
         catch { File.Move(old, current); throw; }
-        Process.Start(new ProcessStartInfo(current) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(current)! });
+        // --restarted: the new copy waits for this one to close instead of handing off to it (single instance).
+        Process.Start(new ProcessStartInfo(current, "--restarted") { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(current)! });
         Log.Info("Portable update swapped in; restarting");
     }
 

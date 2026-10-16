@@ -9,6 +9,11 @@ public partial class App : Application
 {
     public static AppSettings Settings { get; private set; } = new();
     public static bool ScreenshotMode { get; private set; }
+    /// <summary>Started by Windows at sign-in (--background): open minimized and defer heavy work until shown.</summary>
+    public static bool BackgroundStart { get; private set; }
+    private static Mutex? _single;
+    private static EventWaitHandle? _showSignal;
+    private const string MutexName = @"Local\MoneyTweaks.SingleInstance", ShowName = @"Local\MoneyTweaks.Show";
 
     /// <summary>Fewer animations/effects: user setting, else Windows' "Animation effects" off or a GPU below render tier 2.</summary>
     public static bool ReduceMotion => Settings.ReduceMotion ?? (!SystemParameters.ClientAreaAnimation || (System.Windows.Media.RenderCapability.Tier >> 16) < 2);
@@ -41,10 +46,50 @@ public partial class App : Application
         UpdateService.CleanupAfterUpdate();
         var shotIdx = Array.IndexOf(e.Args, "--screenshots");
         ScreenshotMode = shotIdx >= 0;
+        BackgroundStart = e.Args.Contains(AutoStart.BackgroundArg, StringComparer.OrdinalIgnoreCase) && !ScreenshotMode;
+        if (!ScreenshotMode && !ClaimSingleInstance(e.Args.Contains("--restarted", StringComparer.OrdinalIgnoreCase))) { Shutdown(); return; }
+        if (!ScreenshotMode) AutoStart.EnsurePath(Environment.ProcessPath);
         var win = new MainWindow();
         MainWindow = win;
         win.Show();
         if (shotIdx >= 0 && shotIdx + 1 < e.Args.Length) _ = win.CaptureScreenshotsAsync(e.Args[shotIdx + 1]);
+    }
+
+    /// <summary>
+    /// One Money Tweaks at a time (two copies would both run the Fortnite/profile watchers). A second launch brings the
+    /// running window to the front and exits. Restarts (--restarted) wait for the old copy to finish closing.
+    /// </summary>
+    private static bool ClaimSingleInstance(bool restarted)
+    {
+        try
+        {
+            _single = new Mutex(true, MutexName, out bool created);
+            if (!created)
+            {
+                try { created = _single.WaitOne(restarted ? TimeSpan.FromSeconds(15) : TimeSpan.Zero); }
+                catch (AbandonedMutexException) { created = true; } // previous copy crashed
+            }
+            if (!created)
+            {
+                try { using var ev = EventWaitHandle.OpenExisting(ShowName); ev.Set(); } catch { /* other copy can't be signalled */ }
+                Log.Info("Money Tweaks is already running; brought the existing window to the front");
+                return false;
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Another copy runs as administrator and this one isn't: it can't be signalled across that boundary.
+            Dialog.Show("Money Tweaks is already running", "Another copy of Money Tweaks is running as administrator. Switch to it from the taskbar.", DialogKind.Info);
+            return false;
+        }
+        _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowName);
+        var t = new Thread(() =>
+        {
+            while (_showSignal.WaitOne())
+                Current?.Dispatcher.BeginInvoke(() => (Current.MainWindow as MainWindow)?.BringToFront());
+        }) { IsBackground = true, Name = "SingleInstanceSignal" };
+        t.Start();
+        return true;
     }
 
     private void OnUiException(object sender, DispatcherUnhandledExceptionEventArgs e)

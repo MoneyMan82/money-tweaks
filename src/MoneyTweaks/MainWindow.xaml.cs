@@ -72,13 +72,20 @@ public partial class MainWindow : Window
         StateChanged += (_, _) => MaxButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
 
         TweakService.Changed += () => _ = RefreshAppliedSummaryAsync();
-        Navigate("dashboard");
+        if (App.BackgroundStart)
+        {
+            // Started with Windows: stay minimized and build the dashboard only when the window is first opened.
+            WindowState = WindowState.Minimized;
+            ShowActivated = false;
+            StateChanged += OnFirstRestore;
+        }
+        else Navigate("dashboard");
         Loaded += async (_, _) =>
         {
             Log.Info($"[perf] startup to first frame: {App.StartupClock.ElapsedMilliseconds} ms");
             StartStallDetector();
             MacroService.Init(this);
-            StartAmbient();
+            if (!App.BackgroundStart) StartAmbient();
             Activated += (_, _) => _ambient?.Resume(Ambient);
             Deactivated += (_, _) => _ambient?.Pause(Ambient);
             await RefreshAppliedSummaryAsync();
@@ -87,7 +94,11 @@ public partial class MainWindow : Window
             if (!App.ScreenshotMode) await ProfileService.CheckPendingAsync();
             if (!App.ScreenshotMode) DisplayService.CheckPending();
             if (!App.ScreenshotMode) DisplayService.StartAutoSwitch();
-            if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode) await Updater.CheckAsync(manual: false);
+            if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode)
+            {
+                if (App.BackgroundStart) await Task.Delay(TimeSpan.FromMinutes(2)); // don't compete with sign-in
+                await Updater.CheckAsync(manual: false);
+            }
         };
         SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
     }
@@ -383,6 +394,25 @@ public partial class MainWindow : Window
     private void Min_Click(object s, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Max_Click(object s, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void Close_Click(object s, RoutedEventArgs e) => Close();
+
+    private void OnFirstRestore(object? sender, EventArgs e)
+    {
+        if (WindowState == WindowState.Minimized) return;
+        StateChanged -= OnFirstRestore;
+        if (Host.Content is null) Navigate("dashboard");
+        StartAmbient();
+        Log.Info("Opened from background start; dashboard built now");
+    }
+
+    /// <summary>Called when a second launch asks this copy to show itself.</summary>
+    public void BringToFront()
+    {
+        if (!IsVisible) Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        Topmost = true; Topmost = false; // reliably raise above the launching app
+        Focus();
+    }
 
     protected override void OnStateChanged(EventArgs e)
     {

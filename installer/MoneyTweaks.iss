@@ -55,9 +55,9 @@ Name: "{group}\Uninstall Money Tweaks"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Money Tweaks"; Filename: "{app}\MoneyTweaks.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\MoneyTweaks.exe"; Description: "{cm:LaunchProgram,Money Tweaks}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MoneyTweaks.exe"; Parameters: "--restarted"; Description: "{cm:LaunchProgram,Money Tweaks}"; Flags: nowait postinstall skipifsilent
 ; In-app updates run the installer silently; start the new version afterwards.
-Filename: "{app}\MoneyTweaks.exe"; Flags: nowait; Check: WizardSilent
+Filename: "{app}\MoneyTweaks.exe"; Parameters: "--restarted"; Flags: nowait; Check: WizardSilent
 
 [UninstallDelete]
 ; Tweaks stay applied after uninstall; backups in %LOCALAPPDATA%\MoneyTweaks are kept on purpose so you can
