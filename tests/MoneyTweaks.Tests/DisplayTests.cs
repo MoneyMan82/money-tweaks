@@ -120,6 +120,21 @@ public class FortniteIniTests : IDisposable
     }
 
     [Fact]
+    public void Stretched_2288x1440_matches_all_resolution_keys_and_locks()
+    {
+        FortniteResolution.Apply(2288, 1440, FortniteWindowMode.WindowedFullscreen, lockFile: true);
+        var text = File.ReadAllText(_ini);
+        var lines = File.ReadAllLines(_ini);
+        foreach (var k in new[] { "ResolutionSizeX", "LastUserConfirmedResolutionSizeX", "DesiredScreenWidth", "LastUserConfirmedDesiredScreenWidth" }) Assert.Contains(k + "=2288", lines);
+        foreach (var k in new[] { "ResolutionSizeY", "LastUserConfirmedResolutionSizeY", "DesiredScreenHeight", "LastUserConfirmedDesiredScreenHeight" }) Assert.Contains(k + "=1440", lines);
+        Assert.Contains("LastConfirmedFullscreenMode=1", lines);
+        Assert.Contains("PreferredFullscreenMode=1", lines);
+        Assert.True(new FileInfo(_ini).IsReadOnly);
+        Assert.Equal("≈16:10 (143:90)", DisplayManager.AspectLabel(2288, 1440));
+        Assert.Contains(DisplayState.BuiltIns, p => p.Width == 2288 && p.Height == 1440);
+    }
+
+    [Fact]
     public void Reset_keeps_window_mode_and_unlocks()
     {
         FortniteResolution.Apply(1440, 1080, FortniteWindowMode.Fullscreen, lockFile: true);

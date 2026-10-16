@@ -22,6 +22,8 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
     private readonly StackPanel _fileInfo = new();
     private readonly TextBlock _status = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
     private FortniteWindowMode _mode = FortniteWindowMode.Fullscreen;
+    private readonly StackPanel _gpuSteps = new();
+    private string _vendor = "";
     private bool _lock = true;
 
     public FortniteStretchedView()
@@ -55,7 +57,7 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
 
         res.Children.Add(Label("Common stretched resolutions"));
         var presets = new WrapPanel();
-        foreach (var (w, h) in new[] { (1920, 1080), (1750, 1080), (1720, 1080), (1680, 1050), (1600, 1080), (1440, 1080), (1280, 1024), (1280, 960), (1154, 864), (1080, 1080) })
+        foreach (var (w, h) in new[] { (2288, 1440), (1920, 1080), (1750, 1080), (1720, 1080), (1680, 1050), (1600, 1080), (1440, 1080), (1280, 1024), (1280, 960), (1154, 864), (1080, 1080) })
         {
             var b = Ui.Btn($"{w}×{h}", (_, _) => { _w.Text = w.ToString(CultureInfo.InvariantCulture); _h.Text = h.ToString(CultureInfo.InvariantCulture); }, "GhostButton", new Thickness(0, 0, 6, 6));
             b.ToolTip = DisplayManager.AspectLabel(w, h);
@@ -94,12 +96,16 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
         res.Children.Add(Ui.Row(apply, restore, reset));
         res.Children.Add(_status);
         body.Children.Add(Ui.Card(res));
+        body.Children.Add(Ui.Card(_gpuSteps));
         body.Children.Add(Ui.Card(HowTo()));
+        _w.TextChanged += (_, _) => BuildGpuSteps();
+        _h.TextChanged += (_, _) => BuildGpuSteps();
 
         var fn = FortniteResolution.Current();
         _w.Text = (fn?.w ?? 1440).ToString(CultureInfo.InvariantCulture);
         _h.Text = (fn?.h ?? 1080).ToString(CultureInfo.InvariantCulture);
         ShowFile();
+        BuildGpuSteps();
     }
 
     public void OnShown() => ShowFile();
@@ -130,6 +136,60 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
         })
             sp.Children.Add(new TextBlock { Text = line, Style = Ui.Res<Style>("MutedText"), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
         return sp;
+    }
+
+    /// <summary>Step-by-step custom resolution guide for NVIDIA and AMD, filled in with the chosen size and the monitor's refresh rate.</summary>
+    private void BuildGpuSteps()
+    {
+        _gpuSteps.Children.Clear();
+        int w = int.TryParse(_w.Text.Trim(), out var a) ? a : 0, h = int.TryParse(_h.Text.Trim(), out var b) ? b : 0;
+        var primary = SafePrimary();
+        var hz = primary?.Current.Hz ?? 60;
+        if (_vendor.Length == 0)
+            _vendor = primary?.AdapterName.Contains("AMD", StringComparison.OrdinalIgnoreCase) == true || primary?.AdapterName.Contains("Radeon", StringComparison.OrdinalIgnoreCase) == true ? "AMD" : "NVIDIA";
+        var res = w > 0 && h > 0 ? $"{w}×{h}" : "your resolution";
+        var sec = Ui.Section("Make the custom resolution in your GPU software",
+            $"Fortnite can only show {res} if your graphics driver offers it. Do this once, then use Apply above.{(primary is null ? "" : $" Your main display runs on: {primary.AdapterName}, {hz} Hz.")}");
+        var tabs = new WrapPanel();
+        foreach (var v in new[] { "NVIDIA", "AMD" })
+        {
+            var rb = new RadioButton { Content = v == "NVIDIA" ? "NVIDIA Control Panel" : "AMD Software: Adrenalin", Style = Ui.Res<Style>("Chip"), GroupName = "gpuv" + GetHashCode(), IsChecked = v == _vendor, Margin = new Thickness(0, 0, 6, 6) };
+            rb.Checked += (_, _) => { _vendor = v; BuildGpuSteps(); };
+            tabs.Children.Add(rb);
+        }
+        sec.Children.Add(tabs);
+        string W = w > 0 ? w.ToString(CultureInfo.InvariantCulture) : "your width", H = h > 0 ? h.ToString(CultureInfo.InvariantCulture) : "your height";
+        string[] steps = _vendor == "AMD"
+            ?
+            [
+                "Right-click the desktop and open AMD Software: Adrenalin Edition.",
+                "Click Gaming → Display (or the gear icon → Display).",
+                "Turn on GPU Scaling and set Scaling Mode to Full Panel. This is what stretches the image.",
+                $"Find Custom Resolutions and click Create New (accept the notice the first time).",
+                $"Enter Horizontal Resolution {W}, Vertical Resolution {H} and Refresh Rate {hz} Hz. Leave the timing settings as they are, then click Create/Save.",
+                $"Open Windows Settings → System → Display, and set Display resolution to {res} (or use the Stretched Resolution tab in Money Tweaks, which reverts automatically if something goes wrong).",
+                $"Back here: Apply {res} to Fortnite with read-only on, then start Fortnite.",
+            ]
+            :
+            [
+                "Right-click the desktop and open NVIDIA Control Panel.",
+                "Go to Display → Adjust desktop size and position. Set Scaling to Full-screen, Perform scaling on: GPU, tick 'Override the scaling mode set by games and programs', then click Apply.",
+                "Go to Display → Change resolution and pick your monitor, then click Customize…",
+                "Tick 'Enable resolutions not exposed by the display', then click Create Custom Resolution…",
+                $"Enter Horizontal pixels {W}, Vertical lines {H} and Refresh rate {hz} Hz. Leave Timing on Automatic, then click Test and confirm with Yes.",
+                $"Back in Change resolution, select {res} under Custom and click Apply (or use the Stretched Resolution tab in Money Tweaks, which reverts automatically if something goes wrong).",
+                $"Back here: Apply {res} to Fortnite with read-only on, then start Fortnite.",
+            ];
+        for (int i = 0; i < steps.Length; i++)
+            sec.Children.Add(new TextBlock { Text = $"{i + 1}. {steps[i]}", FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 7), Foreground = Ui.Brush("Text") });
+        sec.Children.Add(Ui.Muted("If the driver refuses the resolution, try the monitor's 60 Hz first, or a size closer to your native resolution. Menu names can differ slightly between driver versions.", 11.5));
+        _gpuSteps.Children.Add(sec);
+    }
+
+    private static DisplayInfo? SafePrimary()
+    {
+        try { return DisplayManager.Displays().FirstOrDefault(d => d.Primary); }
+        catch { return null; }
     }
 
     private static UIElement HowTo()
@@ -217,7 +277,7 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
             if (!Dialog.Confirm($"Apply {w}×{h} to Fortnite?", PlanText(w, h, _mode, _lock) +
                     $"\n\nThe original file is backed up first{(FortniteResolution.HasBackup ? " (a backup already exists and is kept)" : "")}. Fortnite or its rendering mode may still override these values.", "Apply", DialogKind.Confirm)) return;
             var (changed, missing) = FortniteResolution.Apply(w, h, _mode, _lock);
-            Status($"Written and read back: {changed} value(s){(missing.Count > 0 ? $", {missing.Count} key(s) not in your file (skipped)" : "")}. Start Fortnite to use {w}×{h}. If it doesn't look stretched, see the steps below.", "Success");
+            Status($"Written and read back: {changed} value(s){(missing.Count > 0 ? $", {missing.Count} key(s) not in your file (skipped)" : "")}. Next: create {w}×{h} as a custom resolution in your GPU software (steps below), then start Fortnite.", "Success");
         }
         catch (Exception ex) { Log.Warn("Fortnite stretched apply failed: " + ex.Message); Status(ex.Message, "Danger"); }
         ShowFile();

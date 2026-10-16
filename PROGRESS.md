@@ -200,3 +200,5 @@ Resume point for future sessions. Keep it short.
 - docs/index.html: version 1.13.0 in JSON-LD, 340 tweaks (hero/meta/facts/categories), 6 new tool cards, Potato/Ping cards updated,
   16-entry screenshot gallery, recent-releases changelog card. docs/sitemap.xml lastmod 2026-10-17. README count 340.
 - Screenshots from screenshot mode, reviewed for personal data: Fortnite path masked; macros page left out (user's own macros).
+- 2026-10-17: 2288x1440 preset; FortniteStretchedView.BuildGpuSteps (NVIDIA/AMD steps, vendor from primary display adapter);
+  test Stretched_2288x1440_matches_all_resolution_keys_and_locks (all 8 size keys + window mode + read-only). 111 pass.

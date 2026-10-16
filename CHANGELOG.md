@@ -1,6 +1,9 @@
 # Changelog
 
 ## 1.14.0 – unreleased
+- Fortnite Stretched: 2288×1440 preset (also in Stretched Resolution); step-by-step guide for creating the custom resolution
+  in NVIDIA Control Panel or AMD Software: Adrenalin, filled in with the chosen size and the monitor's refresh rate and
+  pre-selected from the main display's GPU. After Apply, the status points to those steps.
 - Screenshot mode (used for website images) shows the Fortnite settings path as %LOCALAPPDATA%, hiding the Windows user name.
 - Website: new screenshots, tool cards for Profiles, Scanner, Test & Benchmark, Stretched Resolution, Fortnite Stretched and Macros, 340-tweak counts, recent-release changelog.
 

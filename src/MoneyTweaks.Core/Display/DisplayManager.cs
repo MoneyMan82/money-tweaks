@@ -247,6 +247,7 @@ public sealed class DisplayState
         new() { Name = "1720×1080 (stretched)", Width = 1720, Height = 1080, BuiltIn = true },
         new() { Name = "1680×1050 (16:10)", Width = 1680, Height = 1050, BuiltIn = true },
         new() { Name = "1600×1080 (stretched)", Width = 1600, Height = 1080, BuiltIn = true },
+        new() { Name = "2288×1440 (16:10 stretched, 1440p)", Width = 2288, Height = 1440, BuiltIn = true },
         new() { Name = "1440×1080 (4:3 stretched)", Width = 1440, Height = 1080, BuiltIn = true },
         new() { Name = "1280×1024 (5:4)", Width = 1280, Height = 1024, BuiltIn = true },
         new() { Name = "1280×960 (4:3)", Width = 1280, Height = 960, BuiltIn = true },

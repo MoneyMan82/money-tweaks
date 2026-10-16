@@ -441,6 +441,13 @@ public partial class MainWindow : Window
                 }
                 ssv.ScrollToVerticalOffset(0);
             }
+            if (tag == "fnstretch" && Host.Content is FortniteStretchedView fsv && fsv.Content is ScrollViewer fsc)
+            {
+                fsc.ScrollToVerticalOffset(1250);
+                await Task.Delay(700);
+                await Snap(dir, "fnstretch-gpu");
+                fsc.ScrollToVerticalOffset(0);
+            }
             if (tag == "scanner" && Host.Content is ScannerView scv)
             {
                 for (int i = 0; i < 150 && scv.IsScanning; i++) await Task.Delay(200);
