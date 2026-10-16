@@ -72,17 +72,21 @@ public partial class MainWindow : Window
         StateChanged += (_, _) => MaxButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
 
         TweakService.Changed += () => _ = RefreshAppliedSummaryAsync();
-        if (App.BackgroundStart)
+        // Started with Windows: no page is built until the window is first opened (see EnsureOpened).
+        if (!App.BackgroundStart) Navigate("dashboard");
+        Loaded += async (_, _) => await StartupTasksAsync();
+        SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
+    }
+
+    private bool _startupDone, _opened;
+
+    /// <summary>Runs once: on Loaded for a normal start, or right away (window hidden) for a background start.</summary>
+    public async Task StartupTasksAsync()
+    {
+        if (_startupDone) return;
+        _startupDone = true;
         {
-            // Started with Windows: stay minimized and build the dashboard only when the window is first opened.
-            WindowState = WindowState.Minimized;
-            ShowActivated = false;
-            StateChanged += OnFirstRestore;
-        }
-        else Navigate("dashboard");
-        Loaded += async (_, _) =>
-        {
-            Log.Info($"[perf] startup to first frame: {App.StartupClock.ElapsedMilliseconds} ms");
+            Log.Info($"[perf] startup to {(App.BackgroundStart ? "background ready" : "first frame")}: {App.StartupClock.ElapsedMilliseconds} ms");
             StartStallDetector();
             MacroService.Init(this);
             if (!App.BackgroundStart) StartAmbient();
@@ -99,8 +103,7 @@ public partial class MainWindow : Window
                 if (App.BackgroundStart) await Task.Delay(TimeSpan.FromMinutes(2)); // don't compete with sign-in
                 await Updater.CheckAsync(manual: false);
             }
-        };
-        SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
+        }
     }
 
     /// <summary>Slow "breathing" of the cached ambient layer (opacity only). Off with reduced motion.</summary>
@@ -247,6 +250,7 @@ public partial class MainWindow : Window
     /// <summary>Stacked notification. <paramref name="tone"/>: Accent, Success, Gold, Danger.</summary>
     public void ShowToast(string text, string tone = "Accent")
     {
+        if (!IsVisible && TrayIcon.Exists) { TrayIcon.Notify(text, tone); return; } // background mode
         var icon = tone switch { "Success" => "\uE73E", "Gold" => "\uE7BA", "Danger" => "\uE783", _ => "\uE946" };
         var row = new DockPanel();
         row.Children.Add(new Border
@@ -395,13 +399,27 @@ public partial class MainWindow : Window
     private void Max_Click(object s, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void Close_Click(object s, RoutedEventArgs e) => Close();
 
-    private void OnFirstRestore(object? sender, EventArgs e)
+    /// <summary>First time the window is shown after a background start: build the dashboard and animations now.</summary>
+    private void EnsureOpened()
     {
-        if (WindowState == WindowState.Minimized) return;
-        StateChanged -= OnFirstRestore;
+        if (_opened || !App.BackgroundStart) return;
+        _opened = true;
         if (Host.Content is null) Navigate("dashboard");
         StartAmbient();
         Log.Info("Opened from background start; dashboard built now");
+    }
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        // Started in the background: closing hides the window so the background features keep running.
+        if (App.BackgroundStart && !App.ExitRequested)
+        {
+            e.Cancel = true;
+            Hide();
+            TrayIcon.Notify("Still running in the background. Right-click the tray icon to exit.", "Accent");
+            return;
+        }
+        base.OnClosing(e);
     }
 
     /// <summary>Called when a second launch asks this copy to show itself.</summary>
@@ -409,6 +427,7 @@ public partial class MainWindow : Window
     {
         if (!IsVisible) Show();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        EnsureOpened();
         Activate();
         Topmost = true; Topmost = false; // reliably raise above the launching app
         Focus();

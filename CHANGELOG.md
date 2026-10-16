@@ -1,9 +1,11 @@
 # Changelog
 
 ## 1.16.0 – 2026-10-17
-- **Start with Windows** (Settings, and on the Fortnite auto-switch card): per-user Run entry with --background. Opens
-  minimized, builds the dashboard and animations only when first opened, checks for updates 2 minutes after sign-in
-  (measured 450 ms to first frame vs 540-720 ms for a normal start). The entry follows the exe if it moves.
+- **Start with Windows as a background process** (Settings, and on the Fortnite auto-switch card): per-user Run entry with
+  --background. No window opens, only a tray icon (Open / Exit); Fortnite auto-resolution, Gaming Profiles auto-switch and the
+  macro emergency stop keep working, and their messages appear as Windows notifications. The dashboard is built only when
+  opened from the tray; closing the window hides it again. Update check waits 2 minutes after sign-in. Measured: ready in
+  578 ms, no visible window, 142 MB. The entry follows the exe if it moves.
 - **Single instance**: launching Money Tweaks again brings the running window to the front instead of starting a second
   copy (two copies would both run the watchers). Elevation restarts, the installer and portable updates pass --restarted
   so the new copy waits for the old one to close.

@@ -11,6 +11,8 @@ public partial class App : Application
     public static bool ScreenshotMode { get; private set; }
     /// <summary>Started by Windows at sign-in (--background): open minimized and defer heavy work until shown.</summary>
     public static bool BackgroundStart { get; private set; }
+    /// <summary>Set by the tray menu's Exit; otherwise closing the window in background mode only hides it.</summary>
+    public static bool ExitRequested { get; set; }
     private static Mutex? _single;
     private static EventWaitHandle? _showSignal;
     private const string MutexName = @"Local\MoneyTweaks.SingleInstance", ShowName = @"Local\MoneyTweaks.Show";
@@ -51,7 +53,16 @@ public partial class App : Application
         if (!ScreenshotMode) AutoStart.EnsurePath(Environment.ProcessPath);
         var win = new MainWindow();
         MainWindow = win;
-        win.Show();
+        if (BackgroundStart)
+        {
+            // Background process: no window, just a tray icon. The window gets a handle (for the emergency-stop
+            // hotkey) and runs its startup tasks, so every watcher works without being shown.
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            new System.Windows.Interop.WindowInteropHelper(win).EnsureHandle();
+            TrayIcon.Create();
+            _ = win.StartupTasksAsync();
+        }
+        else win.Show();
         if (shotIdx >= 0 && shotIdx + 1 < e.Args.Length) _ = win.CaptureScreenshotsAsync(e.Args[shotIdx + 1]);
     }
 
@@ -105,6 +116,7 @@ public partial class App : Application
         MacroService.Shutdown(); // releases any keys a macro is holding
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile
         DisplayService.Shutdown(); // drops an unconfirmed test resolution
+        TrayIcon.Dispose();
         Settings.Save();
         base.OnExit(e);
     }
