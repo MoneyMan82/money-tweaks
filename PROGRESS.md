@@ -219,3 +219,10 @@ Resume point for future sessions. Keep it short.
 - Background process (v1.17.0; the v1.16.0 tag was cut before it): TrayIcon.cs (WinForms NotifyIcon via alias; implicit WinForms usings removed),
   App: OnExplicitShutdown + EnsureHandle + StartupTasksAsync without showing; ExitRequested; MainWindow.OnClosing hides in background
   mode, EnsureOpened builds dashboard, ShowToast -> tray notification when hidden. Verified: no window, single instance, hide on close.
+- 1.18.0 Health Center: Core/Health (HealthModel, HealthChecks, SystemFileCheck, SafeRepairs); MonitorView partial + HealthCenterView.cs.
+  ProcessRunner.RunStreamingAsync (UTF-16 detection for sfc), MemoryInfo.Commit, scanner Processes() internal for reuse.
+  Real run on this PC: 24 results, found the 5 Oct DRIVER_POWER_STATE_FAILURE blue screen; UI rendered off-screen (game running).
+- 1.18.0 NVIDIA: Features/NvidiaProfile.cs (NvApi DRS via nvapi_QueryInterface, raw struct buffers, versions checked by driver),
+  NvidiaFortnite.cs (whitelist + driver name/value checks, backup, verify, rollback), PotatoNvidiaView.cs. Probe on driver
+  617.14: trilinear ON = 1 (not 0xFFFFFFFF), LOD bias range +-128 = 1/8 steps, OGL 0x20403F79 unknown to driver.
+  DRS save worked without admin. Write tests opt-in (MT_NVIDIA_WRITE_TESTS=1), use throwaway profiles only.

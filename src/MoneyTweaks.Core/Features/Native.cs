@@ -94,6 +94,14 @@ public static class MemoryInfo
         return (m.ullTotalPhys, m.ullAvailPhys, m.dwMemoryLoad);
     }
 
+    /// <summary>Commit limit (RAM + page file) and how much of it is still available, in bytes.</summary>
+    public static (ulong limit, ulong available) Commit()
+    {
+        var m = new Native.MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<Native.MEMORYSTATUSEX>() };
+        Native.GlobalMemoryStatusEx(ref m);
+        return (m.ullTotalPageFile, m.ullAvailPageFile);
+    }
+
     /// <summary>Empties the standby (cached) memory list, like RAMMap's "Empty Standby List". Needs admin.</summary>
     public static (bool ok, string message) PurgeStandbyList()
     {

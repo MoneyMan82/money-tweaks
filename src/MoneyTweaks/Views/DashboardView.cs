@@ -307,7 +307,8 @@ public sealed class DashboardView : UserControl, IPageLifecycle
     public void OnHidden() => LiveStats.Unsubscribe(OnSample);
 }
 
-public sealed class MonitorView : UserControl, IPageLifecycle
+/// <summary>Live hardware monitor plus the Driver &amp; Windows Health Center (HealthCenterView.cs).</summary>
+public sealed partial class MonitorView : UserControl, IPageLifecycle
 {
     private readonly RingGauge _cpu = new("CPU usage", 150, 12), _gpu = new("GPU 3D usage", 150, 12), _ram = new("Memory in use", 150, 12);
     private readonly StatTile _net = new("Network", "\uE968"), _disk = new("Disk active time", "\uEDA2"), _temp = new("CPU temperature", "\uE706");
@@ -316,8 +317,9 @@ public sealed class MonitorView : UserControl, IPageLifecycle
 
     public MonitorView()
     {
-        var (root, body) = Ui.Page("Hardware Monitor", "Live readings from Windows performance counters, updated every second. No drivers are installed. Temperatures only appear if your firmware exposes an ACPI thermal zone; for full sensor data use a dedicated tool such as HWiNFO.",
-            eyebrow: "Tools", icon: "\uE9D9");
+        var (root, body) = Ui.Page("Hardware Monitor & Health Center", "Live readings from Windows performance counters, updated every second. No drivers are installed. Temperatures only appear if your firmware exposes an ACPI thermal zone; for full sensor data use a dedicated tool such as HWiNFO. Below: driver, Windows and stability health checks.",
+            HealthScanButton(), eyebrow: "Tools", icon: "\uE9D9");
+        body.Children.Add(Ui.Section("Live hardware monitor"));
         foreach (var r in new[] { _cpu, _gpu, _ram }) r.HorizontalAlignment = HorizontalAlignment.Center;
         var rings = (ResponsiveGrid)Ui.Grid(3, _cpu, _gpu, _ram);
         rings.MinItemWidth = 180;
@@ -327,6 +329,7 @@ public sealed class MonitorView : UserControl, IPageLifecycle
         info.Children.Add(_uptime);
         info.Children.Add(_timer);
         body.Children.Add(Ui.Card(info, new Thickness(0, 0, 14, 14)));
+        BuildHealth(body);
         Content = root;
     }
 

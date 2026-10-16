@@ -125,7 +125,8 @@ public static class OptimizationScanner
         catch { return false; }
     }
 
-    private static (List<(string, double)> mem, List<(string, double)> cpu) Processes()
+    // Internal: the Health Center reuses this 1 s CPU/memory sample.
+    internal static (List<(string, double)> mem, List<(string, double)> cpu) Processes()
     {
         var self = Environment.ProcessId;
         var first = new Dictionary<int, (string name, TimeSpan cpu, long ws)>();

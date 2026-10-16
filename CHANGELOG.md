@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.18.0 – 2026-10-17
+- **Driver & Windows Health Center** (Hardware Monitor tab, now "Hardware & Health"; the live monitor is unchanged above it):
+  Scan now runs ten read-only checks in parallel with live progress, then shows Passed / Warning / Problem detected /
+  Unable to check per result, with severity, timestamp, uncertainty notes and technical details. Results are saved.
+  - Drivers: GPU (NVIDIA version decoded, e.g. 617.14; Microsoft Basic Display = missing driver), chipset (AMD 3D V-Cache
+    driver check on dual-CCD X3D CPUs), network, audio, storage, Device Manager error codes, newer drivers offered by
+    Windows Update. Driver age alone is never reported as "outdated"; official NVIDIA/AMD/Intel links, nothing installed.
+  - Windows: edition/version/build with Microsoft's servicing dates, update services and policies (paused, disabled, WSUS),
+    pending restart, update history (failed updates not installed since, with error meanings; Store app installs ignored),
+    available updates from the Windows Update agent (search only; offline/service problems become "Unable to check").
+  - Stability (last 14 days): blue screens with stop codes, unexpected restarts, GPU driver resets (Display 4101,
+    nvlddmkm/amdkmdag), app/game crashes (incl. crashes in GPU driver modules), WHEA hardware errors, disk errors,
+    CPU/GPU load, throttling (CPU performance limit, firmware limit events, nvidia-smi thermal flags), memory/commit
+    pressure, page file, free space and drive health (Storage API).
+  - SFC/DISM: CheckHealth, ScanHealth, SFC verify-only (read-only) with progress and cancel; results read language-
+    independently (DISM /English, SFC from CBS.log [SR] lines), admin status shown.
+  - Safe repairs, each confirmed with risk/admin/restart/undo: DISM RestoreHealth, sfc /scannow, re-enable disabled update
+    services (start types backed up, verified, Roll back), scan for hardware changes. Restore point first where useful.
+- **NVIDIA texture filtering for Fortnite** (Potato Graphics): real NVIDIA driver profile integration (NVAPI DRS, the
+  database NVIDIA Control Panel and Profile Inspector use). Texture filtering Quality, Anisotropic sample optimization,
+  Trilinear optimization, Negative LOD bias, Texture LOD bias (DX) +0.375/+0.5 (Driver Controlled LOD Bias turned off
+  with it, otherwise the driver ignores it); OGL LOD bias shown as +0.0000, never written, no effect on DirectX Fortnite.
+  Presets Default / Mild Potato / Extreme Potato. Each setting ID must match the driver's own name and each value must be
+  in Money Tweaks' list and the driver's list/range; anything else, including 0x00000020 (+4.0 LOD bias), is refused.
+  Originals backed up before the first change; every value read back in a fresh session, rolled back on mismatch;
+  Restore original values / Reset to NVIDIA defaults. Explains texture detail vs filtering vs geometry; no guarantee about
+  how skins look. Verified on an RTX 4070 SUPER (driver 617.14): write/read-back/restore on throwaway profiles, including
+  an existing profile holding 0x00000020, which came back exactly; Fortnite's own profile was not touched.
+
 ## 1.17.0 – 2026-10-17
 - **Start with Windows now runs as a background process** (Settings, and on the Fortnite auto-switch card): per-user Run entry with
   --background. No window opens, only a tray icon (Open / Exit); Fortnite auto-resolution, Gaming Profiles auto-switch and the

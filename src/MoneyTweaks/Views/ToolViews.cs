@@ -65,7 +65,7 @@ public sealed class TweakBundle : StackPanel
     }
 }
 
-public sealed class PotatoView : UserControl, IPageLifecycle
+public sealed partial class PotatoView : UserControl, IPageLifecycle
 {
     private readonly FortnitePotatoSettings _s = App.Settings.FortnitePotato;
     private readonly PotatoPreview _preview = new() { Height = 400 };
@@ -129,7 +129,8 @@ public sealed class PotatoView : UserControl, IPageLifecycle
         body.Children.Add(Ui.Card(studio));
 
         body.Children.Add(Ui.Card(Honesty()));
-        var drv = Ui.Section("Graphics driver tweaks (optional, manual)", "These settings live in your GPU driver, which Money Tweaks doesn't change for you. They don't change models; they trim texture-filtering cost and input latency.");
+        body.Children.Add(BuildNvidiaCard());
+        var drv = Ui.Section("Graphics driver tweaks (optional, manual)", "Manual steps in your GPU control panel. On NVIDIA, the texture-filtering part can be applied for you in the card above; the rest (low latency, power, V-Sync, scaling) stays manual. They don't change models; they trim texture-filtering cost and input latency.");
         drv.Children.Add(_driver);
         body.Children.Add(Ui.Card(drv));
 

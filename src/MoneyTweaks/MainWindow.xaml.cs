@@ -41,7 +41,7 @@ public partial class MainWindow : Window
         ("ping", "\uE701", "Ping Stabilizer"),
         ("crosshair", "\uE710", "Custom Crosshair"),
         ("startup", "\uE7E8", "Startup Apps"),
-        ("monitor", "\uE9D9", "Hardware Monitor"),
+        ("monitor", "\uE9D9", "Hardware & Health"),
         ("restore", "\uE777", "Backup & Restore"),
         ("logs", "\uE81C", "Activity Log"),
         ("about", "\uE713", "Settings & About"),
