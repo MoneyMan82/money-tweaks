@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.10.0 – unreleased
+- **Gaming Profiles** (new page): built-in Fortnite Competitive, Fortnite Performance Mode, Geometry Dash and General Gaming;
+  create, edit/rename, duplicate, export/import (money-tweaks-profiles), delete. A profile combines instant reversible tweaks,
+  a temporary power plan, a timer-resolution request (Input Delay Reducer mechanism) and game priority. One-click activate/
+  switch off; optional auto-switch when a listed game .exe starts and restore when it closes (2 s poll, only while Money
+  Tweaks runs; system-wide profiles need admin). Preview shows every change; conflicts are detected. The session is saved
+  before any change; switch-off restores tweaks (read back), timer and power plan; restored on app exit, offered at next start
+  after a crash. No FPS/ping promises.
+
 ## 1.9.0 – 2026-10-15 (also covers the untracked 1.8.0 / 1.8.1 tags)
 - Benchmark verdicts: changes under 1% of the baseline are never called meaningful (fixes a false "better" on frame time).
 - **Synthetic benchmark audit fixes**: counterbalanced A/B order (off,on,on,off…) plus a 10 s unmeasured priming run (the old

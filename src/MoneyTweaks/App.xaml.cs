@@ -58,6 +58,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         MacroService.Shutdown(); // releases any keys a macro is holding
+        ProfileService.Shutdown(); // restores settings changed by an active gaming profile
         Settings.Save();
         base.OnExit(e);
     }

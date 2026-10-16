@@ -28,6 +28,7 @@ public partial class MainWindow : Window
 
     internal static readonly (string tag, string icon, string label)[] Tools =
     [
+        ("profiles", "\uE7FC", "Gaming Profiles"),
         ("scanner", "\uE721", "Smart Scanner"),
         ("presets", "\uE8F1", "Presets"),
         ("benchmark", "\uE9D2", "Test & Benchmark"),
@@ -81,6 +82,7 @@ public partial class MainWindow : Window
             await RefreshAppliedSummaryAsync();
             if (!App.ScreenshotMode) Updater.VerifyPendingUpdate();
             if (!App.ScreenshotMode) await BenchmarkView.CheckPendingSyntheticRestoreAsync();
+            if (!App.ScreenshotMode) await ProfileService.CheckPendingAsync();
             if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode) await Updater.CheckAsync(manual: false);
         };
         SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
@@ -181,6 +183,7 @@ public partial class MainWindow : Window
                 "macros" => new GamingMacrosView(),
                 "benchmark" => new BenchmarkView(),
                 "scanner" => new ScannerView(),
+                "profiles" => new ProfilesView(),
                 "potato" => new PotatoView(),
                 "booster" => new BoosterView(),
                 "input" => new InputDelayView(),
@@ -402,7 +405,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(dir);
         string[] tags = ["dashboard", "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
-            "scanner", "presets", "benchmark", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
+            "profiles", "scanner", "presets", "benchmark", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
         foreach (var tag in tags)
         {
             Navigate(tag);

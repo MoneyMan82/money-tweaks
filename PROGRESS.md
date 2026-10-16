@@ -145,3 +145,16 @@ Resume point for future sessions. Keep it short.
   admin for HKLM tweaks). No per-tweak "helps/hurts" result exists yet.
 - 2026-10-16: verdict threshold now also has a 1% relative floor (BenchmarkStats.RelativeFloor); the user's intensity-5 run
   showed avg frame time 34.9 -> 34.7 ms (-0.6%) as 'better' while FPS (+0.6%) was within noise. Tagged v1.9.0.
+
+## Session 2026-10-16: Gaming Profile Manager (v1.10.0, not tagged)
+- Core/Profiles/GamingProfiles.cs: GamingProfile, ProfileSession, ProfileFile (profiles.json: custom profiles, AutoSwitch ids,
+  Active session), ProfileStore (BuiltIns, Validate, Usable = TweakStateGuard.Eligible, Export/Import), ProfileEngine
+  (Preview, Conflicts, NeedsAdmin, Activate: persist -> power plan -> capture tweak states -> SetAll -> timer/priority;
+  Deactivate: Restore tweaks -> release timer -> restore plan; RunningGame).
+- Order matters: tweak states are captured after the plan switch, because power-plan settings belong to a plan
+  (found by a test: capturing first could have changed the user's High performance plan on restore).
+- App/ProfileService.cs: Activate/Deactivate, auto-switch watcher (manual sessions never replaced; manual switch-off
+  suppresses re-trigger until the game exits), CheckPendingAsync at startup, Shutdown restore in App.OnExit.
+- App/Views/ProfilesView.cs: active banner, profile cards, auto-switch toggle (confirms with full preview), editor.
+- Tests: ProfileTests (built-ins valid, validation, import/export, conflicts, session persisted + timer released, process detection). 96 pass.
+- Not verified by hand: auto-switch with a real game launch, activating the built-ins (needs admin; changes real settings).
