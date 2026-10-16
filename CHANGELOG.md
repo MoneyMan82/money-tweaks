@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.10.0 – unreleased
+## 1.11.0 – unreleased
 - **6 new verified tweaks** (340 catalog entries): Optimizations for windowed games (DirectX SwapEffectUpgradeEnable, only that
   entry of the settings string), Fortnite on the high-performance GPU (per-app GPU preference, found via Epic manifests; two-GPU
   PCs only), Energy-Efficient Ethernet off (supporting adapters only), PCI Express link power saving off, never turn off hard
@@ -10,6 +10,8 @@
 - **Network diagnostic** (Ping Stabilizer): router + Cloudflare + Google in parallel for 20 s, DNS timing, and a plain-language
   verdict (home network vs ISP/route). Labelled as generic ping; Fortnite's real ping is in Net Debug Stats.
 - Dashboard gauge renamed from "Tuning score" to "Recommended active" (it was always a checklist, not a performance rating).
+
+## 1.10.0 – 2026-10-16
 - **Gaming Profiles** (new page): built-in Fortnite Competitive, Fortnite Performance Mode, Geometry Dash and General Gaming;
   create, edit/rename, duplicate, export/import (money-tweaks-profiles), delete. A profile combines instant reversible tweaks,
   a temporary power plan, a timer-resolution request (Input Delay Reducer mechanism) and game priority. One-click activate/

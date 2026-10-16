@@ -171,3 +171,4 @@ Resume point for future sessions. Keep it short.
   63 unverifiable. Startup to first frame 0.54-0.72 s. Tests: 102 pass.
 - Not verified this session: real install/upgrade via the installer (would modify the installed app), new tweaks' Apply on
   HKLM (needs admin; the HKCU string-flag path is covered by a round-trip test).
+- v1.10.0 was already tagged by the user (c5423e4, Gaming Profiles); this session's work ships as 1.11.0.
