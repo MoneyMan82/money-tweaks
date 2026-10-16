@@ -216,6 +216,6 @@ Resume point for future sessions. Keep it short.
 - --restarted added to Admin.RestartElevated, installer [Run] entries, portable UpdateService.Install.
 - Verified for real: --background start 450 ms to first frame; second launch handed off ("already running") and the window
   built the dashboard on first open; one instance remained; closed cleanly. AutoStartTests on a scratch key. 113 pass.
-- Background process (still v1.16.0): TrayIcon.cs (WinForms NotifyIcon via alias; implicit WinForms usings removed),
+- Background process (v1.17.0; the v1.16.0 tag was cut before it): TrayIcon.cs (WinForms NotifyIcon via alias; implicit WinForms usings removed),
   App: OnExplicitShutdown + EnsureHandle + StartupTasksAsync without showing; ExitRequested; MainWindow.OnClosing hides in background
   mode, EnsureOpened builds dashboard, ShowToast -> tray notification when hidden. Verified: no window, single instance, hide on close.
