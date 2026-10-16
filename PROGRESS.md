@@ -195,3 +195,8 @@ Resume point for future sessions. Keep it short.
   fields + presets, window mode, lock, Apply / Restore backup / Reset, honest notice and troubleshooting steps.
 - Tests: FortniteIniTests on a temp copy (apply + preserve + backup + lock, read-only input, restore, reset, invalid/missing). 110 pass.
 - The real Fortnite file was not modified (timestamp unchanged; no backup in the real profile).
+
+## Session 2026-10-17 (website): v1.13.0 tagged; site updated; next version 1.14.0
+- docs/index.html: version 1.13.0 in JSON-LD, 340 tweaks (hero/meta/facts/categories), 6 new tool cards, Potato/Ping cards updated,
+  16-entry screenshot gallery, recent-releases changelog card. docs/sitemap.xml lastmod 2026-10-17. README count 340.
+- Screenshots from screenshot mode, reviewed for personal data: Fortnite path masked; macros page left out (user's own macros).

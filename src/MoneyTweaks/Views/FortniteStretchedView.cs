@@ -173,7 +173,9 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
         if (Core.Features.PotatoGraphics.IsRunning(FortniteResolution.Game)) tags.Children.Add(Ui.Tag("Fortnite is running: close it before applying", "Danger"));
         _fileInfo.Children.Add(tags);
         var pathRow = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-        pathRow.Children.Add(new TextBlock { Text = path, FontFamily = Ui.Res<FontFamily>("MonoFont"), FontSize = 11.5, Foreground = Ui.Brush("Muted"), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 10, 0) });
+        // Screenshot mode (website images) hides the Windows user name in the path.
+        var shownPath = App.ScreenshotMode ? path.Replace(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "%LOCALAPPDATA%", StringComparison.OrdinalIgnoreCase) : path;
+        pathRow.Children.Add(new TextBlock { Text = shownPath, FontFamily = Ui.Res<FontFamily>("MonoFont"), FontSize = 11.5, Foreground = Ui.Brush("Muted"), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 10, 0) });
         pathRow.Children.Add(Ui.Btn("Open folder", (_, _) =>
         {
             try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }); }

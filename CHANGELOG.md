@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.0 – unreleased
+- Screenshot mode (used for website images) shows the Fortnite settings path as %LOCALAPPDATA%, hiding the Windows user name.
+- Website: new screenshots, tool cards for Profiles, Scanner, Test & Benchmark, Stretched Resolution, Fortnite Stretched and Macros, 340-tweak counts, recent-release changelog.
+
 ## 1.13.0 – unreleased
 - **Fortnite Stretched** (new tab, INI method): finds Fortnite's GameUserSettings.ini automatically, any custom width × height
   with live aspect ratio and common stretched presets, window mode, optional read-only lock. Apply (preview of every key,

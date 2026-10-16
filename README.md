@@ -1,6 +1,6 @@
 # Money Tweaks
 
-Free, open-source Windows 10/11 tweaker for gamers. It has 334 reversible tweaks, gaming tools and a clean dark UI.
+Free, open-source Windows 10/11 tweaker for gamers. It has 340 reversible tweaks, gaming tools and a clean dark UI.
 No accounts, no ads, no telemetry, no paid tiers.
 
 ![Money Tweaks dashboard](docs/assets/screenshots/dashboard.png)
