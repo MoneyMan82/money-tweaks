@@ -226,3 +226,9 @@ Resume point for future sessions. Keep it short.
   NvidiaFortnite.cs (whitelist + driver name/value checks, backup, verify, rollback), PotatoNvidiaView.cs. Probe on driver
   617.14: trilinear ON = 1 (not 0xFFFFFFFF), LOD bias range +-128 = 1/8 steps, OGL 0x20403F79 unknown to driver.
   DRS save worked without admin. Write tests opt-in (MT_NVIDIA_WRITE_TESTS=1), use throwaway profiles only.
+- 1.19.0 Legacy Potato: NvidiaProfilePresets.cs (presets, snapshot backup JSON+.nip, .nip build/parse/import via NVAPI,
+  Inspector run, verify/rollback, rendering-mode and display checks), InspectorMetadata.cs (PEReader resource read),
+  NvApi: SettingIdFromName, EnumSettings, SetString, IsGlobalOrBase. PotatoLegacyNvidiaView.cs. Inspector found in
+  Downloads (requireAdministrator, interactive .nip import dialog, no silent switch): Inspector import path built but not
+  run here (would need UAC + dialog while a game was running). Lesson: render harness must not construct MoneyTweaks.App
+  (its startup hands off to / opens the real app); use a plain Application + Theme.xaml.

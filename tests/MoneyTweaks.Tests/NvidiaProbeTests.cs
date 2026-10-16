@@ -144,6 +144,26 @@ public class NvidiaWriteTests : IDisposable
 public class NvidiaProbeTests(ITestOutputHelper output)
 {
     [Fact]
+    public void Probe_legacy_guide_settings_read_only()
+    {
+        if (!NvApi.DriverPresent) { output.WriteLine("No NVIDIA driver; skipped."); return; }
+        foreach (var name in new[] { "Antialiasing - Transparency Supersampling", "Texture filtering - LOD Bias", "Texture filtering - LOD Bias (DX)", "Texture filtering - Driver Controlled LOD Bias",
+                     "Texture filtering - Quality", "Texture filtering - Anisotropic filter optimization", "Texture filtering - Anisotropic sample optimization",
+                     "Anisotropic filtering setting", "Anisotropic filtering mode", "Threaded optimization", "Power management mode", "Multi-display/mixed-GPU acceleration" })
+        {
+            var id = NvApi.SettingIdFromName(name);
+            var (def, vals) = id is { } i ? NvApi.SettingValues(i) : (null, []);
+            output.WriteLine($"'{name}' -> {(id is { } x ? "0x" + x.ToString("X8") : "UNKNOWN")} default={(def is { } d ? "0x" + d.ToString("X8") : "-")} values=[{string.Join(", ", vals.Select(v => "0x" + v.ToString("X8")))}]");
+        }
+        using var s = new NvApi.Session();
+        var p = s.FindProfileForApp("FortniteClient-Win64-Shipping.exe");
+        if (p == IntPtr.Zero) { output.WriteLine("no Fortnite profile"); return; }
+        output.WriteLine($"Fortnite profile '{s.ProfileName(p)}' globalOrBase={s.IsGlobalOrBase(p)}");
+        foreach (var x in s.EnumSettings(p))
+            output.WriteLine($"  0x{x.Id:X8} type={x.Type} loc={x.Location} predef={x.IsCurrentPredefined} value=0x{x.Value:X8}{(x.Text is null ? "" : " '" + x.Text + "'")} {x.Name}");
+    }
+
+    [Fact]
     public void Probe_driver_settings_read_only()
     {
         if (!NvApi.DriverPresent) { output.WriteLine("No NVIDIA driver; skipped."); return; }

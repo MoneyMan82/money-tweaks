@@ -23,7 +23,9 @@ public sealed partial class PotatoView
     {
         _nvSel = _nv.Values.Count > 0 ? new(_nv.Values) : NvidiaFortnite.Preset("Default");
         var sec = Ui.Section("NVIDIA texture filtering for Fortnite",
-            "Real NVIDIA driver settings, written to Fortnite's profile in the driver (the same database NVIDIA Control Panel and NVIDIA Profile Inspector edit). Only settings this driver itself reports, with documented values, can be written. The originals are backed up and can be restored.");
+            "Real NVIDIA driver settings, written to Fortnite's profile in the driver (the same database NVIDIA Control Panel and NVIDIA Profile Inspector edit). Only settings this driver itself reports can be written. The originals are backed up and can be restored.");
+        sec.Children.Add(BuildLegacySection());
+        sec.Children.Add(new TextBlock { Text = "Custom texture filtering (earlier Money Tweaks controls, for comparison)", Style = Ui.Res<Style>("H2"), FontSize = 15, Margin = new Thickness(0, 22, 0, 6) });
         sec.Children.Add(_nvBody);
         _nvBody.Children.Add(Ui.Loading("Reading the NVIDIA driver profile…"));
         _ = RefreshNvidiaAsync();
@@ -92,7 +94,7 @@ public sealed partial class PotatoView
                        "• Texture filtering: Quality, anisotropic sample optimization, trilinear optimization and negative LOD bias change how textures are sampled (sharpness at angles, shimmer, small FPS cost). They don't change what a texture shows.\n" +
                        "• Geometry: none of these driver settings change models, builds or terrain shapes. The rounded low-poly look comes from Fortnite's own Performance mode with Meshes: Low (the studio above).\n" +
                        "• No guarantee about skins: how a skin looks with a LOD bias depends on its textures and materials. Some may look washed out or differently coloured; Fortnite can also change its rendering in any update. Take a before/after screenshot and restore if you don't like it.\n" +
-                       "• Undocumented flags are never written. Values like 0x00000020 (a +4.0 LOD bias, which made skins look green and flat) are refused even if typed into a profile elsewhere.\n" +
+                       "• These custom controls only offer small documented values. 0x00000020 (a +4.0 LOD bias, which made skins look green and flat before) is written only by the Legacy Potato preset above, which you choose explicitly.\n" +
                        "• Takes effect the next time Fortnite starts. Driver LOD bias works in DirectX 11 (Performance mode); DirectX 12 may ignore it.",
             },
         };

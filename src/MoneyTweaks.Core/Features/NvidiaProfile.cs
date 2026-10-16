@@ -23,6 +23,7 @@ public static unsafe class NvApi
     public const int ProfileNotFound = -163;
     public const int ExecutableNotFound = -166;
     public const int InvalidUserPrivilege = -137;
+    public const int EndEnumeration = -7;
 
     private const int UnicodeBytes = 2048 * 2;                    // NvAPI_UnicodeString = NvU16[2048]
     private const int UnionBytes = 4 + 4096;                     // largest member: NVDRS_BINARY_SETTING
@@ -96,6 +97,20 @@ public static unsafe class NvApi
         Initialize();
         var buf = (byte*)NativeMemory.AllocZeroed(UnicodeBytes);
         try { return ((delegate* unmanaged[Cdecl]<uint, byte*, int>)F(0xD61CBE6E))(id, buf) == Ok ? GetString(buf) : null; }
+        finally { NativeMemory.Free(buf); }
+    }
+
+    /// <summary>The driver's ID for a setting name ("Texture filtering - LOD Bias"), or null if the driver doesn't know the name.</summary>
+    public static uint? SettingIdFromName(string name)
+    {
+        Initialize();
+        var buf = (byte*)NativeMemory.AllocZeroed(UnicodeBytes);
+        try
+        {
+            PutString(buf, name);
+            uint id;
+            return ((delegate* unmanaged[Cdecl]<byte*, uint*, int>)F(0xCB7309CD))(buf, &id) == Ok ? id : null;
+        }
         finally { NativeMemory.Free(buf); }
     }
 
@@ -200,6 +215,62 @@ public static unsafe class NvApi
             finally { NativeMemory.Free(prof); NativeMemory.Free(app); }
         }
 
+        /// <summary>True if this handle is the global or the base profile (so it must never be the Fortnite target).</summary>
+        public bool IsGlobalOrBase(IntPtr profile)
+        {
+            IntPtr g, b;
+            bool isGlobal = ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr*, int>)F(0x617BFF9F))(_h, &g) == Ok && g == profile;
+            bool isBase = ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr*, int>)F(0xDA8466A0))(_h, &b) == Ok && b == profile;
+            return isGlobal || isBase;
+        }
+
+        /// <summary>Every setting stored in a profile (user-set and NVIDIA-predefined), with names and values.</summary>
+        public List<NvProfileSetting> EnumSettings(IntPtr profile)
+        {
+            const int batch = 64;
+            var list = new List<NvProfileSetting>();
+            var buf = (byte*)NativeMemory.AllocZeroed((nuint)(SettingSize * batch));
+            try
+            {
+                for (uint start = 0; ; )
+                {
+                    NativeMemory.Clear(buf, (nuint)(SettingSize * batch));
+                    for (int i = 0; i < batch; i++) *(uint*)(buf + i * SettingSize) = Ver(SettingSize, 1);
+                    uint count = batch;
+                    var st = ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr, uint, uint*, byte*, int>)F(0xAE3039DA))(_h, profile, start, &count, buf);
+                    if (st == EndEnumeration || (st == Ok && count == 0)) break;
+                    Check(st, "List profile settings");
+                    for (int i = 0; i < count; i++)
+                    {
+                        var s = buf + i * SettingSize;
+                        var type = *(uint*)(s + SettingTypeOff);
+                        list.Add(new NvProfileSetting(*(uint*)(s + SettingIdOff), GetString(s + 4), type, *(uint*)(s + LocationOff),
+                            *(uint*)(s + IsCurrentPredefinedOff) != 0, *(uint*)(s + CurrentOff),
+                            type is 2 or 3 ? GetString(s + CurrentOff) : null));
+                    }
+                    start += count;
+                    if (count < batch) break;
+                }
+            }
+            finally { NativeMemory.Free(buf); }
+            return list;
+        }
+
+        /// <summary>Writes a string setting (type 3, NVDRS_WSTRING_TYPE).</summary>
+        public void SetString(IntPtr profile, uint id, string value)
+        {
+            var buf = (byte*)NativeMemory.AllocZeroed(SettingSize);
+            try
+            {
+                *(uint*)buf = Ver(SettingSize, 1);
+                *(uint*)(buf + SettingIdOff) = id;
+                *(uint*)(buf + SettingTypeOff) = 3;
+                PutString(buf + CurrentOff, value);
+                Check(((delegate* unmanaged[Cdecl]<IntPtr, IntPtr, byte*, int>)F(0x577DD202))(_h, profile, buf), $"Set setting 0x{id:X8}");
+            }
+            finally { NativeMemory.Free(buf); }
+        }
+
         public void DeleteProfile(IntPtr profile) => Check(((delegate* unmanaged[Cdecl]<IntPtr, IntPtr, int>)F(0x17093206))(_h, profile), "Delete profile");
 
         /// <summary>The setting as this profile resolves it, or null if neither the profile nor its parents define it.</summary>
@@ -251,6 +322,9 @@ public static unsafe class NvApi
         }
     }
 }
+
+/// <summary>A setting as stored in a profile. Type: 0 DWORD, 1 binary, 2/3 string. Text is set for string settings.</summary>
+public sealed record NvProfileSetting(uint Id, string Name, uint Type, uint Location, bool IsCurrentPredefined, uint Value, string? Text);
 
 /// <summary>Location: 0 = this profile, 1 = global profile, 2 = base profile, 3 = driver default.</summary>
 public sealed record NvSettingState(uint Id, uint Type, uint Location, bool IsCurrentPredefined, bool IsPredefinedValid, uint Predefined, uint Current)

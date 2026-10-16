@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.19.0 – 2026-10-17
+- **Legacy Potato — LOD Bias 0x20** (Potato Graphics › NVIDIA texture filtering), from the NVIDIA Inspector low-spec
+  guide (Steam guide 1884111121): Transparency Supersampling = AA_MODE_REPLAY_MODE_ALL (0x00000008), Texture Filtering
+  LOD Bias (DX) = 0x00000020 exactly (mandatory), Driver Controlled LOD Bias = On, Quality = High performance,
+  Anisotropic filter and sample optimization = On, Anisotropic filtering = Off [Point] (with mode User-defined so it
+  applies), Threaded optimization = On (OpenGL only), Power management = Prefer maximum performance. Fortnite profile only.
+- **Why the 1.18 NVIDIA preset looked like it did nothing:** it was saved correctly (the driver showed +0.5 LOD bias), but
+  +0.5 is a subtle blur, 0x20 was refused, and Driver Controlled LOD Bias was Off where the guide turns it On.
+- New apply process: each field's ID is resolved from the driver's own setting name and cross-checked with NVIDIA Profile
+  Inspector's metadata (its embedded CustomSettingNames.xml and Reference.xml, when Inspector is installed); the whole
+  Fortnite profile is backed up (JSON + .nip); the preset is imported as a .nip (through Inspector if you choose it,
+  otherwise through NVAPI, the API Inspector uses); everything is read back in a fresh session. Unsupported, rejected and
+  unapplied fields are listed; if the mandatory field or anything unrelated (or the Windows display mode) changes, the
+  backup is imported again automatically. The report shows whether Fortnite's renderer can honour the override
+  (Performance mode / DirectX 11: yes; DirectX 12: likely ignored) separately from "saved".
+- Controls: Apply, Verify, Restore Previous Profile (exact restore of the backup), Reset (only Money Tweaks' preset
+  settings back to NVIDIA's values), Open backup folder. Mild/Extreme kept as comparison presets; custom controls kept.
+- Verified on this PC (RTX 4070 SUPER, driver 617.14): import, verify, restore and reset on a throwaway profile; then
+  Legacy applied to the real Fortnite profile: 8 written, 2 already set, LOD bias 0x00000004 → 0x00000020 read back,
+  unrelated settings (V-Sync, pre-rendered frames, NVIDIA predefined) and Windows 2560×1440 @ 240 Hz unchanged.
+
 ## 1.18.0 – 2026-10-17
 - **Driver & Windows Health Center** (Hardware Monitor tab, now "Hardware & Health"; the live monitor is unchanged above it):
   Scan now runs ten read-only checks in parallel with live progress, then shows Passed / Warning / Problem detected /
