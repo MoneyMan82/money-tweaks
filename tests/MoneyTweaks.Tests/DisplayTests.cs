@@ -41,7 +41,7 @@ public class DisplayTests(ITestOutputHelper output)
             // The current mode must pass the driver test; a nonsense mode must not.
             Assert.Equal(ChangeResult.Ok, DisplayManager.Test(d.DeviceName, d.Current.Width, d.Current.Height, d.Current.Hz));
             Assert.NotEqual(ChangeResult.Ok, DisplayManager.Test(d.DeviceName, 7680, 4320, 999));
-            output.WriteLine($"  CDS_TEST 1720x1080: {DisplayManager.Test(d.DeviceName, 1720, 1080, 0)}, 1440x1080: {DisplayManager.Test(d.DeviceName, 1440, 1080, 0)}");
+            output.WriteLine($"  CDS_TEST 1720x1080: {DisplayManager.Test(d.DeviceName, 1720, 1080, 0)}, 1440x1080: {DisplayManager.Test(d.DeviceName, 1440, 1080, 0)}, 2288x1440 stretch: {DisplayManager.Test(d.DeviceName, 2288, 1440, 0, ScalingMode.Stretch)}; listed: {d.Reports(2288, 1440)} {string.Join("/", d.RatesFor(2288, 1440))}");
         }
         // Nothing changed.
         var again = DisplayManager.Displays();
@@ -132,6 +132,19 @@ public class FortniteIniTests : IDisposable
         Assert.True(new FileInfo(_ini).IsReadOnly);
         Assert.Equal("≈16:10 (143:90)", DisplayManager.AspectLabel(2288, 1440));
         Assert.Contains(DisplayState.BuiltIns, p => p.Width == 2288 && p.Height == 1440);
+    }
+
+    [Fact]
+    public void Auto_switch_defaults_and_persistence()
+    {
+        var st = new DisplayState();
+        Assert.False(st.AutoFortnite.Enabled);                 // never on unless the user turns it on
+        Assert.Equal((2288, 1440, ScalingMode.Stretch), (st.AutoFortnite.Width, st.AutoFortnite.Height, st.AutoFortnite.Scaling));
+        st.AutoFortnite.Enabled = true; st.AutoFortnite.Width = 1720; st.AutoFortnite.Height = 1080;
+        st.Save();
+        var back = DisplayState.Load();
+        Assert.True(back.AutoFortnite.Enabled);
+        Assert.Equal(1720, back.AutoFortnite.Width);
     }
 
     [Fact]

@@ -71,9 +71,108 @@ public static class DisplayService
         ClearPending();
     }
 
+    // ---- automatic switching while Fortnite runs -------------------------------------------------------------------
+    public const string FortniteExe = "FortniteClient-Win64-Shipping.exe";
+    private static CancellationTokenSource? _auto;
+    private static string? _autoDevice;      // display currently switched by the watcher
+    private static int _misses;
+    private static bool _refusedThisLaunch;
+    public static bool AutoActive => _autoDevice is not null;
+    public static event Action? AutoChanged;
+
+    public static DisplayInfo? AutoTarget(List<DisplayInfo>? displays = null)
+    {
+        displays ??= DisplayManager.Displays();
+        var dev = State.AutoFortnite.Device;
+        return displays.FirstOrDefault(d => d.DeviceName == dev) ?? displays.FirstOrDefault(d => d.Primary);
+    }
+
+    /// <summary>Refresh rate to use: the configured one, else the highest the driver lists for the size, else driver default.</summary>
+    public static int AutoHz(DisplayInfo d)
+    {
+        var a = State.AutoFortnite;
+        if (a.Hz > 0) return a.Hz;
+        return d.RatesFor(a.Width, a.Height).FirstOrDefault();
+    }
+
+    public static void StartAutoSwitch()
+    {
+        if (_auto is not null || !State.AutoFortnite.Enabled) return;
+        _auto = new CancellationTokenSource();
+        var ct = _auto.Token;
+        var ui = Application.Current.Dispatcher;
+        _ = Task.Run(async () =>
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try { await Task.Delay(2000, ct); } catch { break; }
+                try { PollAuto(ui); } catch (Exception ex) { Log.Debug("auto resolution: " + ex.Message); }
+            }
+        });
+        Log.Info($"Fortnite auto-resolution watcher started ({State.AutoFortnite.Width}×{State.AutoFortnite.Height})");
+    }
+
+    public static void StopAutoSwitch()
+    {
+        _auto?.Cancel();
+        _auto = null;
+        if (_autoDevice is { } dev) { DisplayManager.RevertToSaved(dev); _autoDevice = null; ClearPending(); AutoChanged?.Invoke(); }
+    }
+
+    private static void Toast(System.Windows.Threading.Dispatcher ui, string text, string tone) =>
+        ui.BeginInvoke(() => MainWindow.Current?.ShowToast(text, tone));
+
+    private static void PollAuto(System.Windows.Threading.Dispatcher ui)
+    {
+        var a = State.AutoFortnite;
+        bool running = Core.Profiles.ProfileEngine.RunningGame([FortniteExe]) is not null;
+        if (running && _autoDevice is null)
+        {
+            if (_refusedThisLaunch || !a.Enabled) return;
+            var d = AutoTarget();
+            if (d is null) return;
+            if (d.Current.Width == a.Width && d.Current.Height == a.Height) return; // already there (e.g. set by hand)
+            var hz = AutoHz(d);
+            var test = DisplayManager.Test(d.DeviceName, a.Width, a.Height, hz, a.Scaling);
+            if (test != ChangeResult.Ok)
+            {
+                _refusedThisLaunch = true;
+                Log.Warn($"Fortnite auto-resolution: driver refused {a.Width}×{a.Height}@{hz}: {test}");
+                Toast(ui, $"Fortnite started, but your driver refused {a.Width}×{a.Height}. Create it as a custom resolution in NVIDIA/AMD first (Fortnite Stretched tab).", "Gold");
+                return;
+            }
+            State.RememberOriginal(d);
+            State.PendingTemporaryDevice = d.DeviceName; // crash recovery, written before the change
+            Save();
+            var r = DisplayManager.ApplyTemporary(d.DeviceName, a.Width, a.Height, hz, a.Scaling);
+            if (r != ChangeResult.Ok) { ClearPending(); _refusedThisLaunch = true; Toast(ui, "Couldn't switch resolution for Fortnite: " + DisplayManager.Explain(r, a.Width, a.Height, hz), "Gold"); return; }
+            _autoDevice = d.DeviceName;
+            _misses = 0;
+            Log.Info($"Fortnite started: {d.DeviceName} switched to {a.Width}×{a.Height}@{hz} (temporary)");
+            Toast(ui, $"Fortnite detected: {d.MonitorName} switched to {a.Width}×{a.Height}. It goes back to {d.Registry.Width}×{d.Registry.Height} when Fortnite closes.", "Success");
+            ui.BeginInvoke(() => AutoChanged?.Invoke());
+        }
+        else if (!running)
+        {
+            _refusedThisLaunch = false;
+            if (_autoDevice is not { } dev) return;
+            if (++_misses < 2) return; // ~4 s without Fortnite (ignores the launcher's brief restarts)
+            var back = DisplayManager.RevertToSaved(dev);
+            _autoDevice = null;
+            ClearPending();
+            var d = DisplayManager.Find(dev);
+            Log.Info($"Fortnite closed: {dev} reverted to saved mode -> {back}");
+            Toast(ui, back == ChangeResult.Ok ? $"Fortnite closed: back to {d?.Current.Width}×{d?.Current.Height} @ {d?.Current.Hz} Hz." : "Fortnite closed, but the resolution couldn't be restored automatically. Use 'Restore original' in Stretched Resolution.", back == ChangeResult.Ok ? "Success" : "Danger");
+            ui.BeginInvoke(() => AutoChanged?.Invoke());
+        }
+        else _misses = 0;
+    }
+
     /// <summary>On exit: drop any unconfirmed temporary mode.</summary>
     public static void Shutdown()
     {
+        _auto?.Cancel();
+        _autoDevice = null;
         if (State.PendingTemporaryDevice is { } dev) { DisplayManager.RevertToSaved(dev); ClearPending(); }
     }
 }

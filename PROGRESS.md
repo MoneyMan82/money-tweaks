@@ -202,3 +202,9 @@ Resume point for future sessions. Keep it short.
 - Screenshots from screenshot mode, reviewed for personal data: Fortnite path masked; macros page left out (user's own macros).
 - 2026-10-17: 2288x1440 preset; FortniteStretchedView.BuildGpuSteps (NVIDIA/AMD steps, vendor from primary display adapter);
   test Stretched_2288x1440_matches_all_resolution_keys_and_locks (all 8 size keys + window mode + read-only). 111 pass.
+
+## Session 2026-10-17 (later): Fortnite auto resolution (v1.15.0); v1.14.0 released
+- DisplayState.AutoFortnite (Enabled/Device/Width/Height/Hz/Scaling); DisplayService.StartAutoSwitch/StopAutoSwitch/PollAuto (2 s poll,
+  2 misses before revert, refused-once-per-launch toast, PendingTemporaryDevice for crash recovery), started in MainWindow.Loaded.
+- FortniteStretchedView.BuildAuto: size, monitor, live driver check, state, toggle (CDS_TEST before enabling), Save size, Try it for 10 s.
+- Dev PC: 2288x1440 listed @240 Hz on DISPLAY1 (user created it), CDS_TEST Ok. Not verified with a real Fortnite launch.

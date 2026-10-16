@@ -86,6 +86,7 @@ public partial class MainWindow : Window
             if (!App.ScreenshotMode) await BenchmarkView.CheckPendingSyntheticRestoreAsync();
             if (!App.ScreenshotMode) await ProfileService.CheckPendingAsync();
             if (!App.ScreenshotMode) DisplayService.CheckPending();
+            if (!App.ScreenshotMode) DisplayService.StartAutoSwitch();
             if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode) await Updater.CheckAsync(manual: false);
         };
         SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);

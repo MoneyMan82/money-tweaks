@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.14.0 – unreleased
+## 1.15.0 – unreleased
+- **Auto-switch resolution for Fortnite** (Fortnite Stretched tab): when FortniteClient-Win64-Shipping.exe starts, the chosen
+  monitor switches to the stretched resolution (default 2288×1440, Fullscreen scaling); about 4 s after Fortnite closes it goes
+  back to the saved Windows resolution. The switch is temporary (never saved), checked with the driver first, reverted when
+  Money Tweaks closes and offered for revert after a crash. Off by default; turning it on checks the driver accepts the size.
+
+## 1.14.0 – 2026-10-17
 - Fortnite Stretched: 2288×1440 preset (also in Stretched Resolution); step-by-step guide for creating the custom resolution
   in NVIDIA Control Panel or AMD Software: Adrenalin, filled in with the chosen size and the monitor's refresh rate and
   pre-selected from the main display's GPU. After Apply, the status points to those steps.

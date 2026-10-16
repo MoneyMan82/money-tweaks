@@ -228,6 +228,20 @@ public sealed class DisplayState
     public Dictionary<string, OriginalMode> Originals { get; set; } = [];
     public string? PendingTemporaryDevice { get; set; }
     public List<ResolutionPreset> Presets { get; set; } = [];
+    /// <summary>Switch the desktop to a stretched resolution while Fortnite runs, and back when it closes.</summary>
+    public AutoSwitchSettings AutoFortnite { get; set; } = new();
+
+    public sealed class AutoSwitchSettings
+    {
+        public bool Enabled { get; set; }
+        /// <summary>Display device (e.g. \\.\DISPLAY1); null = the primary display.</summary>
+        public string? Device { get; set; }
+        public int Width { get; set; } = 2288;
+        public int Height { get; set; } = 1440;
+        /// <summary>0 = highest refresh rate the driver lists for this resolution.</summary>
+        public int Hz { get; set; }
+        public ScalingMode Scaling { get; set; } = ScalingMode.Stretch;
+    }
 
     public sealed class OriginalMode
     {

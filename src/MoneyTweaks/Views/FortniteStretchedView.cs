@@ -23,6 +23,7 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
     private readonly TextBlock _status = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
     private FortniteWindowMode _mode = FortniteWindowMode.Fullscreen;
     private readonly StackPanel _gpuSteps = new();
+    private readonly StackPanel _auto = new();
     private string _vendor = "";
     private bool _lock = true;
 
@@ -36,6 +37,8 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
         Content = root;
 
         body.Children.Add(Ui.Card(Notice()));
+        body.Children.Add(Ui.Card(_auto));
+        DisplayService.AutoChanged += () => Dispatcher.BeginInvoke(BuildAuto);
 
         var file = Ui.Section("Fortnite settings file", "Found automatically in your Windows user profile.");
         file.Children.Add(_fileInfo);
@@ -106,9 +109,10 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
         _h.Text = (fn?.h ?? 1080).ToString(CultureInfo.InvariantCulture);
         ShowFile();
         BuildGpuSteps();
+        BuildAuto();
     }
 
-    public void OnShown() => ShowFile();
+    public void OnShown() { ShowFile(); BuildAuto(); }
     public void OnHidden() { }
 
     private static TextBlock Label(string t) => new() { Text = t.ToUpperInvariant(), Style = Ui.Res<Style>("Eyebrow"), Margin = new Thickness(0, 14, 0, 6) };
@@ -184,6 +188,95 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
             sec.Children.Add(new TextBlock { Text = $"{i + 1}. {steps[i]}", FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 7), Foreground = Ui.Brush("Text") });
         sec.Children.Add(Ui.Muted("If the driver refuses the resolution, try the monitor's 60 Hz first, or a size closer to your native resolution. Menu names can differ slightly between driver versions.", 11.5));
         _gpuSteps.Children.Add(sec);
+    }
+
+    /// <summary>Desktop auto-switch while Fortnite runs: setup, driver check, quick test, live state.</summary>
+    private void BuildAuto()
+    {
+        _auto.Children.Clear();
+        var a = DisplayService.State.AutoFortnite;
+        var sec = Ui.Section("Auto-switch desktop resolution while Fortnite runs",
+            "When Fortnite starts, your monitor switches to the stretched resolution; when Fortnite closes, it goes back to your normal resolution. The switch is temporary and never saved as your Windows setting.");
+        List<DisplayInfo> displays;
+        try { displays = DisplayManager.Displays(); } catch { displays = []; }
+        var target = DisplayService.AutoTarget(displays);
+        if (target is null) { sec.Children.Add(Ui.Muted("Windows reported no display.")); _auto.Children.Add(sec); return; }
+
+        var wBox = new TextBox { Text = a.Width.ToString(CultureInfo.InvariantCulture), Width = 100, MaxLength = 4, FontSize = 15 };
+        var hBox = new TextBox { Text = a.Height.ToString(CultureInfo.InvariantCulture), Width = 100, MaxLength = 4, FontSize = 15 };
+        var row = new WrapPanel();
+        row.Children.Add(Field("Width while Fortnite runs", wBox));
+        row.Children.Add(new TextBlock { Text = "×", FontSize = 18, Margin = new Thickness(8, 22, 8, 0), Foreground = Ui.Brush("Muted") });
+        row.Children.Add(Field("Height", hBox));
+        sec.Children.Add(row);
+
+        if (displays.Count > 1)
+        {
+            sec.Children.Add(Label("Monitor"));
+            var mons = new WrapPanel();
+            foreach (var d in displays)
+            {
+                var rb = new RadioButton { Content = d.Label, Style = Ui.Res<Style>("Chip"), GroupName = "automon" + GetHashCode(), IsChecked = d.DeviceName == target.DeviceName, Margin = new Thickness(0, 0, 6, 6) };
+                var dd = d;
+                rb.Checked += (_, _) => { a.Device = dd.DeviceName; DisplayService.Save(); BuildAuto(); };
+                mons.Children.Add(rb);
+            }
+            sec.Children.Add(mons);
+        }
+
+        int.TryParse(wBox.Text, out var w); int.TryParse(hBox.Text, out var h);
+        var hz = DisplayService.AutoHz(target);
+        var test = DisplayManager.Validate(w, h).Count == 0 ? DisplayManager.Test(target.DeviceName, w, h, hz, a.Scaling) : ChangeResult.BadParam;
+        var ok = test == ChangeResult.Ok;
+        sec.Children.Add(new TextBlock
+        {
+            Text = ok ? $"✓ Your driver accepts {w}×{h}{(hz > 0 ? $" @ {hz} Hz" : "")} on {target.MonitorName}. Back to: {target.Registry.Width}×{target.Registry.Height} @ {target.Registry.Hz} Hz when Fortnite closes."
+                      : $"✗ Your driver doesn't accept {w}×{h} on {target.MonitorName} yet. Create it as a custom resolution first (steps further down this page), then come back.",
+            Foreground = Ui.Brush(ok ? "Success" : "Gold"), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0),
+        });
+
+        var state = DisplayService.AutoActive ? $"Active now: {target.Current.Width}×{target.Current.Height} while Fortnite runs."
+            : a.Enabled ? "On. Waiting for Fortnite to start." : "Off.";
+        sec.Children.Add(Ui.Muted(state, 12.5));
+
+        var toggle = new CheckBox { Content = "Switch automatically when Fortnite starts", IsChecked = a.Enabled, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 10, 0, 0), FontWeight = FontWeights.SemiBold };
+        toggle.Click += (_, _) =>
+        {
+            if (toggle.IsChecked == true)
+            {
+                if (!int.TryParse(wBox.Text, out var nw) || !int.TryParse(hBox.Text, out var nh) || DisplayManager.Validate(nw, nh).Count > 0) { toggle.IsChecked = false; Status("Enter a valid width and height first.", "Danger"); return; }
+                a.Width = nw; a.Height = nh;
+                var t = DisplayManager.Test(target.DeviceName, nw, nh, DisplayService.AutoHz(target), a.Scaling);
+                if (t != ChangeResult.Ok) { toggle.IsChecked = false; Dialog.Show("Create the resolution first", DisplayManager.Explain(t, nw, nh, 0) + "\n\nThe step-by-step guide is further down this page.", DialogKind.Warning); BuildAuto(); return; }
+                a.Enabled = true;
+                DisplayService.Save();
+                DisplayService.StartAutoSwitch();
+                MainWindow.Current?.ShowToast($"Auto-switch on: {nw}×{nh} while Fortnite runs.", "Success");
+            }
+            else
+            {
+                a.Enabled = false;
+                DisplayService.Save();
+                DisplayService.StopAutoSwitch();
+                MainWindow.Current?.ShowToast("Auto-switch off. Your resolution is back to normal.", "Success");
+            }
+            BuildAuto();
+        };
+        sec.Children.Add(toggle);
+        var save = Ui.Btn("Save size", (_, _) =>
+        {
+            if (!int.TryParse(wBox.Text, out var nw) || !int.TryParse(hBox.Text, out var nh) || DisplayManager.Validate(nw, nh).Count > 0) { Status("Enter a valid width and height.", "Danger"); return; }
+            a.Width = nw; a.Height = nh; DisplayService.Save(); BuildAuto();
+        }, "GhostButton", new Thickness(0, 10, 8, 0));
+        var tryIt = Ui.Btn("Try it for 10 s", async (_, _) =>
+        {
+            var (_, msg) = await DisplayService.TryModeAsync(target, a.Width, a.Height, DisplayService.AutoHz(target), a.Scaling, previewOnly: true);
+            Status(msg, msg.StartsWith("Test finished", StringComparison.Ordinal) ? "Success" : "Danger");
+        }, "BaseButton", new Thickness(0, 10, 8, 0));
+        tryIt.ToolTip = "Switches now for 10 seconds, then always goes back";
+        sec.Children.Add(Ui.Row(save, tryIt));
+        sec.Children.Add(Ui.Muted("Works while Money Tweaks is running (it can stay minimized). Scaling is set to Fullscreen (stretched); your GPU's own scaling setting can override it. Closing Money Tweaks also puts your normal resolution back.", 11.5));
+        _auto.Children.Add(sec);
     }
 
     private static DisplayInfo? SafePrimary()
