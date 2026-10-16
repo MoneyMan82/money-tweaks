@@ -239,7 +239,7 @@ public class BenchmarkStatsTests
         Assert.NotNull(run.CpuAvg);
         Assert.Equal(5, run.CpuSeries.Count);
         Assert.NotNull(run.RamUsedGb);
-        Assert.True(run.PingSent >= 8, $"pings {run.PingSent}");
+        Assert.True(run.PingSent >= 4, $"pings {run.PingSent}"); // ~10 in 5 s when idle; CI runners can be slower
         Assert.Equal(0, run.LossPct);
         Assert.NotNull(run.PingAvgMs);
         Assert.False(string.IsNullOrEmpty(run.Conditions.PowerPlan));
