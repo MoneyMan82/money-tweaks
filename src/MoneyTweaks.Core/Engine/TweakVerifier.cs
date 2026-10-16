@@ -143,6 +143,12 @@ public static class TweakVerifier
                     var st = r.Check();
                     return new(st, $"{r.Hive}\\{r.Path}\\{(r.Name.Length == 0 ? "(Default)" : r.Name)}: reads {cur}, target {RegValueOp.FormatValue(r.Value, r.ValueKind)} → {Word(st)}", true);
                 }
+                case RegStringFlagOp f:
+                {
+                    var st = f.Check();
+                    var cur = RegStringFlagOp.Parse(f.Capture().Data.GetValueOrDefault("value")).GetValueOrDefault(f.Flag) ?? "(not set)";
+                    return new(st, $@"{f.Hive}\{f.Path}\{f.Name}: {f.Flag} reads {cur}, target {f.Value} → {Word(st)}", true);
+                }
                 case DynamicRegOp d:
                 {
                     var targets = d.Resolve();

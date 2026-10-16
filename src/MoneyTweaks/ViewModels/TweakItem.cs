@@ -17,7 +17,7 @@ public sealed class TweakItem(Tweak tweak) : Observable
     public bool NeedsAdmin => Tweak.RequiresAdmin;
     public bool NeedsReboot => Tweak.RequiresReboot;
     public bool IsRecommended => Tweak.Recommended;
-    public string Details => (IsGuide
+    public string Details => TweakInfo.For(Tweak).ToText() + Environment.NewLine + Environment.NewLine + (IsGuide
         ? string.Join("\n", Tweak.GuideSteps.Select((s, i) => $"{i + 1}. {s}"))
         : string.Join("\n", Tweak.Ops.Select(o => "• " + o.Describe())))
         + (_verify is null ? "" : $"\n\nTEST {_verify.At:T}: {_verify.StatusLabel}. {_verify.Summary}" + string.Concat(_verify.Evidence.Select(e => "\n  – " + e)))
