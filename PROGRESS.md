@@ -209,7 +209,7 @@ Resume point for future sessions. Keep it short.
 - FortniteStretchedView.BuildAuto: size, monitor, live driver check, state, toggle (CDS_TEST before enabling), Save size, Try it for 10 s.
 - Dev PC: 2288x1440 listed @240 Hz on DISPLAY1 (user created it), CDS_TEST Ok. Not verified with a real Fortnite launch.
 
-## Session 2026-10-17 (evening): Start with Windows + single instance (in v1.15.0)
+## Session 2026-10-17 (evening): Start with Windows + single instance (v1.16.0; v1.15.0 = auto resolution, released by the user)
 - Core/Features/AutoStart.cs (HKCU Run "MoneyTweaks" = "<exe>" --background; KeyPath overridable for tests); App: BackgroundStart,
   ClaimSingleInstance (Local\MoneyTweaks.SingleInstance mutex + Local\MoneyTweaks.Show event, --restarted waits 15 s),
   EnsurePath on start. MainWindow: minimized + OnFirstRestore (dashboard + ambient), BringToFront, update check delayed 2 min.
