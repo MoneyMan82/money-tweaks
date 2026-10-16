@@ -51,3 +51,20 @@ public class SyntheticPlanTests
         Assert.DoesNotContain(PresetStore.BuiltIns, p => p.TweakIds.Contains(t.Id));
     }
 }
+
+public class RelativeNoiseFloorTests
+{
+    private static BenchmarkRun R(string phase, double fps, double ft) => new() { Phase = phase, Frames = new FrameStats { AvgFps = fps, FrameTimeAvgMs = ft } };
+
+    [Fact]
+    public void Tiny_frame_time_change_is_not_meaningful_when_fps_is_not()
+    {
+        // User's 2026-10-16 run (intensity 5): 34.9 ± 0.12 ms vs 34.7 ± 0.05 ms was wrongly reported as "better".
+        var off = new[] { R("Baseline", 28.6, 34.95), R("Baseline", 28.7, 34.85), R("Baseline", 28.8, 34.75) };
+        var on = new[] { R("After", 28.85, 34.68), R("After", 28.9, 34.72), R("After", 28.95, 34.7) };
+        var ft = BenchmarkStats.Compare(BenchmarkStats.Metrics.First(m => m.Key == "ft"), off, on);
+        var fps = BenchmarkStats.Compare(BenchmarkStats.Metrics.First(m => m.Key == "fps"), off, on);
+        Assert.Equal(Verdict.NoClearChange, ft.Verdict);
+        Assert.Equal(Verdict.NoClearChange, fps.Verdict);
+    }
+}

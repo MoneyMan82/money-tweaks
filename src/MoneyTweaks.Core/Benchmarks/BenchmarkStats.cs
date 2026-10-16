@@ -37,6 +37,9 @@ public static class BenchmarkStats
         new("gputemp", "GPU temperature", "°C", false, r => r.GpuTempC, 1.0, "nvidia-smi (NVIDIA only)"),
     ];
 
+    /// <summary>Changes smaller than this fraction of the baseline are never called meaningful.</summary>
+    public const double RelativeFloor = 0.01;
+
     public static Summary? Summarize(IEnumerable<double?> values)
     {
         var v = values.Where(x => x.HasValue && !double.IsNaN(x.Value)).Select(x => x!.Value).ToList();
@@ -59,7 +62,8 @@ public static class BenchmarkStats
         double? pct = b.Mean == 0 ? null : diff / Math.Abs(b.Mean) * 100;
         if (b.N < 2 || a.N < 2) return new(m, b, a, diff, pct, Verdict.NotEnoughData, "Needs at least 2 runs before and 2 after to judge.");
         var se = Math.Sqrt(b.Sd * b.Sd / b.N + a.Sd * a.Sd / a.N);
-        var threshold = Math.Max(m.NoiseFloor, 2 * se);
+        // Absolute floor, a 1% relative floor (so e.g. frame time at 30 FPS needs the same % change as FPS), and 2 x SE.
+        var threshold = Math.Max(Math.Max(m.NoiseFloor, RelativeFloor * Math.Abs(b.Mean)), 2 * se);
         if (Math.Abs(diff) <= threshold)
             return new(m, b, a, diff, pct, Verdict.NoClearChange, $"Difference {Fmt(Math.Abs(diff))} {m.Unit} is within run-to-run variation (±{Fmt(threshold)} {m.Unit}).");
         bool better = m.HigherIsBetter ? diff > 0 : diff < 0;

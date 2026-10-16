@@ -143,3 +143,5 @@ Resume point for future sessions. Keep it short.
 - Tests: SyntheticPlanTests (ABBA balance, preset not measurable, user data = NoClearChange, large cache disabled). 89 pass.
 - NOT run: a new per-tweak A/B on the user's PC (long GPU stress + temporary setting changes; needs the user's go-ahead and
   admin for HKLM tweaks). No per-tweak "helps/hurts" result exists yet.
+- 2026-10-16: verdict threshold now also has a 1% relative floor (BenchmarkStats.RelativeFloor); the user's intensity-5 run
+  showed avg frame time 34.9 -> 34.7 ms (-0.6%) as 'better' while FPS (+0.6%) was within noise. Tagged v1.9.0.
