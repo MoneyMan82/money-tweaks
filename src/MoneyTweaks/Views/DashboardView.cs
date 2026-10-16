@@ -74,7 +74,7 @@ public static class LiveStats
 
 public sealed class DashboardView : UserControl, IPageLifecycle
 {
-    private readonly RingGauge _score = new("Tuning score", 168, 14);
+    private readonly RingGauge _score = new("Recommended active", 168, 14);
     private readonly RingGauge _cpu = new("CPU"), _gpu = new("GPU"), _ram = new("Memory");
     private readonly StatTile _net = new("Network", "\uE968"), _disk = new("Disk", "\uEDA2"), _temp = new("CPU temp", "\uE706");
     private readonly TextBlock _greeting = new() { Style = Ui.Res<Style>("H1"), FontSize = 32 };
@@ -234,7 +234,7 @@ public sealed class DashboardView : UserControl, IPageLifecycle
         var on = relevant.Count(i => i.State == TweakState.Applied);
         var pct = relevant.Count == 0 ? 0 : 100.0 * on / relevant.Count;
         _score.Set(pct, $"{pct:0}", "%");
-        _scoreNote.Text = $"{on} of {relevant.Count} recommended tweaks are active on this PC";
+        _scoreNote.Text = $"{on} of {relevant.Count} recommended tweaks are active on this PC. A checklist, not a performance rating.";
         var left = relevant.Count - on;
         _recommend.Content = left == 0 ? "✓  All recommended applied" : $"★  Apply recommended ({left})";
         _recommend.IsEnabled = left > 0;

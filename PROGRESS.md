@@ -158,3 +158,16 @@ Resume point for future sessions. Keep it short.
 - App/Views/ProfilesView.cs: active banner, profile cards, auto-switch toggle (confirms with full preview), editor.
 - Tests: ProfileTests (built-ins valid, validation, import/export, conflicts, session persisted + timer released, process detection). 96 pass.
 - Not verified by hand: auto-switch with a real game launch, activating the built-ins (needs admin; changes real settings).
+
+## Session 2026-10-16 (later): library, details, diagnostics
+- No reference image arrived with the "million-dollar" request; potato preview left as is (already original toy-like scene,
+  labelled illustration, screenshot compare, honest "can't do" list). Resend the image to match it more closely.
+- Core/Ops/RegStringFlagOp.cs; Core/Catalog/TweakCatalog.Extra.cs (FortniteExePath, NicKeysWith, Extra());
+  Core/Engine/TweakInfo.cs (TweakFacts shown in TweakItem.Details); TweakVerifier case for RegStringFlagOp.
+- Bug caught by verification: the PCIe ASPM subgroup GUID was wrong (read as "not present"); now uses SUB_PCIEXPRESS/ASPM aliases.
+- Core/Features/NetworkDiagnostics.cs (RunAsync, pure Diagnose); PingView.DiagnosticSection.
+- Updater: numeric System.Version comparison confirmed for 1.10.0 vs 1.9.0 (test added).
+- Real read-only audit (non-admin): 340 audited, 262 pass, 12 warning, 3 fail (applied 2026-10-11, reverted outside MT),
+  63 unverifiable. Startup to first frame 0.54-0.72 s. Tests: 102 pass.
+- Not verified this session: real install/upgrade via the installer (would modify the installed app), new tweaks' Apply on
+  HKLM (needs admin; the HKCU string-flag path is covered by a round-trip test).
