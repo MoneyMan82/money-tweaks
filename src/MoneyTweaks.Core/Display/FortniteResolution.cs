@@ -14,7 +14,9 @@ public enum FortniteWindowMode { Fullscreen = 0, WindowedFullscreen = 1, Windowe
 /// </summary>
 public static class FortniteResolution
 {
-    public static PotatoGame Game => FortnitePotato.Game;
+    /// <summary>Tests point this at a copy of the file so the real Fortnite settings are never touched.</summary>
+    internal static string? ConfigOverride { get; set; }
+    public static PotatoGame Game => ConfigOverride is { } p ? FortnitePotato.Game with { ConfigPath = p } : FortnitePotato.Game;
     public static string BackupPath => Path.Combine(AppPaths.FileBackups, "stretched-fortnite-GameUserSettings.ini");
     public static bool HasBackup => File.Exists(BackupPath);
     public static bool IsLocked => Game.Installed && new FileInfo(Game.ConfigPath).IsReadOnly;
@@ -56,7 +58,7 @@ public static class FortniteResolution
         if (errors.Count > 0) throw new ArgumentException(string.Join(" ", errors));
         var plan = Plan(w, h, mode);
         if (!HasBackup) File.Copy(g.ConfigPath, BackupPath);
-        PotatoGraphics.ClearReadOnly(g.ConfigPath);
+        Writable();
         var values = plan.Where(p => !p.Missing).GroupBy(p => p.Key).ToDictionary(x => x.Key, x => x.First().New);
         var (text, changed) = PotatoGraphics.ApplyValues(File.ReadAllText(g.ConfigPath), values, true);
         File.WriteAllText(g.ConfigPath, text);
@@ -75,12 +77,38 @@ public static class FortniteResolution
     {
         if (!HasBackup) return "No backup from the Stretched Resolution tab exists, so there's nothing to restore.";
         if (PotatoGraphics.IsRunning(Game)) throw new InvalidOperationException("Close Fortnite first.");
-        PotatoGraphics.ClearReadOnly(Game.ConfigPath);
+        Writable();
         File.Copy(BackupPath, Game.ConfigPath, true);
-        PotatoGraphics.ClearReadOnly(Game.ConfigPath);
+        Writable();
         Log.Info("Fortnite settings file restored from the Stretched Resolution backup");
         return "Fortnite's settings file is back to how it was before the first change from this tab (backup kept).";
     }
 
-    public static void Unlock() => PotatoGraphics.ClearReadOnly(Game.ConfigPath);
+    public static void Unlock() => Writable();
+
+    public static string ConfigPath => Game.ConfigPath;
+
+    /// <summary>Window mode currently stored in the file, or null.</summary>
+    public static FortniteWindowMode? CurrentMode()
+    {
+        if (!Game.Installed) return null;
+        return PotatoGraphics.ReadValue(File.ReadAllText(Game.ConfigPath), "FullscreenMode", true) switch
+        {
+            "0" => FortniteWindowMode.Fullscreen, "1" => FortniteWindowMode.WindowedFullscreen, "2" => FortniteWindowMode.Windowed, _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Writes a normal (non-stretched) resolution, keeping Fortnite's current window mode, and removes the read-only
+    /// lock so Fortnite can save its own settings again. Only the INI file changes; Windows display settings don't.
+    /// </summary>
+    public static (int changed, List<SettingChange> missing) Reset(int w, int h) =>
+        Apply(w, h, CurrentMode() ?? FortniteWindowMode.WindowedFullscreen, lockFile: false);
+
+    /// <summary>Removes the read-only attribute, with a clear error if Windows refuses.</summary>
+    private static void Writable()
+    {
+        try { PotatoGraphics.ClearReadOnly(Game.ConfigPath); }
+        catch (UnauthorizedAccessException ex) { throw new UnauthorizedAccessException($"Windows refused to make {Game.ConfigPath} writable (it may be locked by another program or by file permissions). {ex.Message}", ex); }
+    }
 }

@@ -187,3 +187,11 @@ Resume point for future sessions. Keep it short.
 - Tests: DisplayTests (aspect labels, validation, real enumeration + CDS_TEST only, Fortnite plan read-only). 106 pass.
 - NOT done automatically: an actual resolution switch, the countdown, and writing Fortnite's file (they change the user's
   screen/game settings; the code paths are built on the same verified calls). Please try Test resolution once by hand.
+
+## Session 2026-10-17 (later): Fortnite Stretched tab (v1.13.0, not tagged; v1.12.0 released)
+- Core/Display/FortniteResolution.cs: ConfigOverride (tests only), ConfigPath, CurrentMode, Reset, Writable (clear error on
+  access denied); Apply/Restore use it.
+- App/Views/FortniteStretchedView.cs (nav "fnstretch"): file card (path, read-only/backup tags, Open folder), resolution
+  fields + presets, window mode, lock, Apply / Restore backup / Reset, honest notice and troubleshooting steps.
+- Tests: FortniteIniTests on a temp copy (apply + preserve + backup + lock, read-only input, restore, reset, invalid/missing). 110 pass.
+- The real Fortnite file was not modified (timestamp unchanged; no backup in the real profile).

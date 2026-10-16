@@ -321,39 +321,14 @@ public sealed class StretchedView : UserControl, IPageLifecycle
 
     private void BuildFortnite()
     {
+        // Fortnite's in-game resolution has its own page (INI method, Fortnite only, desktop untouched).
         _fortnite.Children.Clear();
-        var sec = Ui.Section("Fortnite in-game resolution", "Writes the resolution and window mode into Fortnite's own GameUserSettings.ini (backed up first; only existing keys are changed; no game files are touched).");
+        var sec = Ui.Section("Fortnite in-game resolution", "Set Fortnite's own resolution (GameUserSettings.ini) without changing your desktop.");
+        var cur = FortniteResolution.Game.Installed ? FortniteResolution.Current() : null;
+        sec.Children.Add(Ui.Muted(FortniteResolution.Game.Installed ? $"Fortnite now: {(cur is { } c ? $"{c.w}×{c.h}, {c.mode}" : "unknown")}" : "Fortnite's settings file wasn't found.", 12.5));
+        var open = Ui.Btn("Open Fortnite Stretched", (_, _) => MainWindow.Current?.Navigate("fnstretch"), "PrimaryButton", new Thickness(0, 10, 8, 0));
+        sec.Children.Add(open);
         _fortnite.Children.Add(sec);
-        var g = FortniteResolution.Game;
-        if (!g.Installed) { sec.Children.Add(Ui.Muted("Fortnite's settings file wasn't found. Launch Fortnite once, then click Refresh.")); return; }
-        var cur = FortniteResolution.Current();
-        sec.Children.Add(Ui.Muted($"Fortnite now: {(cur is { } c ? $"{c.w}×{c.h}, {c.mode}" : "unknown")}{(FortniteResolution.IsLocked ? " · file is read-only (locked)" : "")}{(FortniteResolution.HasBackup ? " · original backed up" : "")}", 12.5));
-        sec.Children.Add(Ui.Muted("Uses the Width × Height from the Desktop section above.", 12));
-        sec.Children.Add(Label("Window mode"));
-        var modes = new WrapPanel();
-        var group = "fnm" + Guid.NewGuid().ToString("N");
-        foreach (var (m, label, tip) in new[]
-        {
-            (FortniteWindowMode.Fullscreen, "Fullscreen", "Needed for a true stretched look: the game switches the display to this resolution and the GPU stretches it."),
-            (FortniteWindowMode.WindowedFullscreen, "Windowed fullscreen", "Uses your desktop resolution: only stretched if the desktop itself is set to the stretched resolution."),
-            (FortniteWindowMode.Windowed, "Windowed", "A normal window; not stretched."),
-        })
-        {
-            var rb = new RadioButton { Content = label, Style = Ui.Res<Style>("Chip"), GroupName = group, IsChecked = m == _fnMode, Margin = new Thickness(0, 0, 6, 6), ToolTip = tip };
-            rb.Checked += (_, _) => _fnMode = m;
-            modes.Children.Add(rb);
-        }
-        sec.Children.Add(modes);
-        var lockBox = new CheckBox { Content = "Lock the file (read-only) so Fortnite keeps a custom resolution", IsChecked = _fnLock, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 8, 0, 0),
-            ToolTip = "Fortnite resets resolutions it doesn't list on launch unless the file is read-only. While locked, other in-game setting changes won't be saved; use Unlock to allow that again." };
-        lockBox.Click += (_, _) => _fnLock = lockBox.IsChecked == true;
-        sec.Children.Add(lockBox);
-        sec.Children.Add(Ui.Row(
-            Ui.Btn("Preview changes", (_, _) => FnPreview(), "BaseButton", new Thickness(0, 12, 8, 0)),
-            Ui.Btn("Write to Fortnite", (_, _) => FnApply(), "PrimaryButton", new Thickness(0, 12, 8, 0)),
-            Ui.Btn("Restore Fortnite file", (_, _) => FnRestore(), "GoldButton", new Thickness(0, 12, 8, 0)),
-            Ui.Btn("Unlock", (_, _) => { try { FortniteResolution.Unlock(); BuildFortnite(); MainWindow.Current?.ShowToast("Fortnite's settings file is writable again.", "Success"); } catch (Exception ex) { Dialog.Show("Couldn't unlock", ex.Message, DialogKind.Error); } }, "GhostButton", new Thickness(0, 12, 8, 0))));
-        sec.Children.Add(Ui.Muted("For stretched: set the same resolution on the desktop above (with Fullscreen scaling), choose Fullscreen here, and start Fortnite. Money Tweaks never edits Fortnite's game files or anti-cheat.", 11.5));
     }
 
     private string? FnPlanText(out int w, out int h)

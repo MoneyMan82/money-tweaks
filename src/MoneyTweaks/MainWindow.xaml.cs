@@ -35,6 +35,7 @@ public partial class MainWindow : Window
         ("macros", "\uE765", "Gaming Macros"),
         ("potato", "\uE790", "Potato Graphics"),
         ("stretched", "\uE7F4", "Stretched Resolution"),
+        ("fnstretch", "\uE740", "Fortnite Stretched"),
         ("booster", "\uE945", "Game Booster"),
         ("input", "\uE962", "Input Delay Reducer"),
         ("ping", "\uE701", "Ping Stabilizer"),
@@ -188,6 +189,7 @@ public partial class MainWindow : Window
                 "profiles" => new ProfilesView(),
                 "potato" => new PotatoView(),
                 "stretched" => new StretchedView(),
+                "fnstretch" => new FortniteStretchedView(),
                 "booster" => new BoosterView(),
                 "input" => new InputDelayView(),
                 "ping" => new PingView(),
@@ -408,7 +410,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(dir);
         string[] tags = ["dashboard", "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
-            "profiles", "scanner", "presets", "benchmark", "macros", "potato", "stretched", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
+            "profiles", "scanner", "presets", "benchmark", "macros", "potato", "stretched", "fnstretch", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
         foreach (var tag in tags)
         {
             Navigate(tag);

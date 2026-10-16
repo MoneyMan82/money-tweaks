@@ -65,3 +65,77 @@ public class DisplayTests(ITestOutputHelper output)
         }
     }
 }
+
+/// <summary>Works on a temporary copy of a GameUserSettings.ini; the real Fortnite file is never touched.</summary>
+[Collection("registry")]
+public class FortniteIniTests : IDisposable
+{
+    private readonly string _tmp = Path.Combine(Path.GetTempPath(), "mt-fn-" + Guid.NewGuid().ToString("N"));
+    private readonly string _ini;
+    private const string Sample = "[/Script/FortniteGame.FortGameUserSettings]\r\nResolutionSizeX=2560\r\nResolutionSizeY=1440\r\nLastUserConfirmedResolutionSizeX=2560\r\nLastUserConfirmedResolutionSizeY=1440\r\nDesiredScreenWidth=2560\r\nDesiredScreenHeight=1440\r\nLastUserConfirmedDesiredScreenWidth=2560\r\nLastUserConfirmedDesiredScreenHeight=1440\r\nFullscreenMode=1\r\nLastConfirmedFullscreenMode=1\r\nPreferredFullscreenMode=1\r\nFrameRateLimit=240.000000\r\nbUseVSync=False\r\n\r\n[ScalabilityGroups]\r\nsg.ResolutionQuality=100.000000\r\n";
+
+    public FortniteIniTests()
+    {
+        Directory.CreateDirectory(_tmp);
+        MoneyTweaks.Core.Sys.AppPaths.OverrideRoot(Path.Combine(_tmp, "app"));
+        _ini = Path.Combine(_tmp, "GameUserSettings.ini");
+        File.WriteAllText(_ini, Sample);
+        FortniteResolution.ConfigOverride = _ini;
+    }
+
+    public void Dispose()
+    {
+        FortniteResolution.ConfigOverride = null;
+        try { File.SetAttributes(_ini, FileAttributes.Normal); Directory.Delete(_tmp, true); } catch { }
+    }
+
+    [Fact]
+    public void Apply_writes_only_resolution_keys_backs_up_and_locks()
+    {
+        var (changed, missing) = FortniteResolution.Apply(1720, 1080, FortniteWindowMode.Fullscreen, lockFile: true);
+        Assert.Equal(11, changed);                      // 8 size keys + 3 window-mode keys
+        Assert.Equal(2, missing.Count);                 // letterbox keys aren't in this file: skipped, not added
+        var text = File.ReadAllText(_ini);
+        Assert.Contains("ResolutionSizeX=1720", text);
+        Assert.Contains("LastUserConfirmedDesiredScreenHeight=1080", text);
+        Assert.Contains("FullscreenMode=0", text);
+        Assert.Contains("FrameRateLimit=240.000000", text);       // unrelated settings preserved
+        Assert.Contains("sg.ResolutionQuality=100.000000", text);
+        Assert.DoesNotContain("bShouldLetterbox", text);
+        Assert.True(new FileInfo(_ini).IsReadOnly);
+        Assert.Equal(Sample, File.ReadAllText(FortniteResolution.BackupPath)); // original backed up
+        Assert.Equal((1720, 1080, "Fullscreen"), FortniteResolution.Current());
+    }
+
+    [Fact]
+    public void Read_only_file_is_handled_and_backup_is_kept_from_the_first_apply()
+    {
+        File.SetAttributes(_ini, FileAttributes.ReadOnly);
+        FortniteResolution.Apply(1440, 1080, FortniteWindowMode.Fullscreen, lockFile: false);
+        Assert.False(new FileInfo(_ini).IsReadOnly);
+        FortniteResolution.Apply(1600, 1080, FortniteWindowMode.Fullscreen, lockFile: false);
+        Assert.Equal(Sample, File.ReadAllText(FortniteResolution.BackupPath)); // still the true original
+        Assert.Contains("back to how it was", FortniteResolution.Restore());
+        Assert.Equal(Sample, File.ReadAllText(_ini));
+    }
+
+    [Fact]
+    public void Reset_keeps_window_mode_and_unlocks()
+    {
+        FortniteResolution.Apply(1440, 1080, FortniteWindowMode.Fullscreen, lockFile: true);
+        FortniteResolution.Reset(2560, 1440);
+        Assert.Equal((2560, 1440, "Fullscreen"), FortniteResolution.Current());
+        Assert.False(new FileInfo(_ini).IsReadOnly);
+    }
+
+    [Fact]
+    public void Invalid_input_and_missing_file_give_clear_errors()
+    {
+        Assert.Throws<ArgumentException>(() => FortniteResolution.Apply(100, 99999, FortniteWindowMode.Fullscreen, false));
+        Assert.Equal(Sample, File.ReadAllText(_ini));   // nothing written
+        File.Delete(_ini);
+        var ex = Assert.Throws<FileNotFoundException>(() => FortniteResolution.Apply(1440, 1080, FortniteWindowMode.Fullscreen, false));
+        Assert.Contains("Launch Fortnite once", ex.Message);
+        Assert.Null(FortniteResolution.Current());
+    }
+}

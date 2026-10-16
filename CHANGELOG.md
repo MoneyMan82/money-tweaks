@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.13.0 – unreleased
+- **Fortnite Stretched** (new tab, INI method): finds Fortnite's GameUserSettings.ini automatically, any custom width × height
+  with live aspect ratio and common stretched presets, window mode, optional read-only lock. Apply (preview of every key,
+  original backed up once, unrelated settings preserved, values read back), Restore backup, Reset (writes the monitor's
+  current resolution, keeps the window mode, removes the lock). Handles read-only files, missing file, invalid input and
+  Fortnite running. Never changes Windows desktop/monitor resolution or refresh rate, and says that Fortnite, its rendering
+  mode and GPU scaling can override the file, so stretched visuals aren't guaranteed.
+- Stretched Resolution tab: its Fortnite section now opens the Fortnite Stretched tab.
+
 ## 1.12.0 – unreleased
 - **Stretched Resolution** (new tab): lists real monitors (EnumDisplayDevices) with active/saved/native mode, scaling and every
   driver-reported mode; width/height editor with live aspect ratio; aspect buttons (4:3, 5:4, 16:10, 16:9, 21:9); built-in and
