@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.12.0 – unreleased
+- **Stretched Resolution** (new tab): lists real monitors (EnumDisplayDevices) with active/saved/native mode, scaling and every
+  driver-reported mode; width/height editor with live aspect ratio; aspect buttons (4:3, 5:4, 16:10, 16:9, 21:9); built-in and
+  saved presets (unlisted ones dimmed); refresh rates from the driver; scaling request (Fullscreen/Aspect=default/No scaling).
+  Every change is checked with CDS_TEST first and applied temporarily: Test reverts after 10 s, Apply asks "Keep" within
+  15 s or reverts; Esc/close = revert. Original mode saved before the first change ("Restore original"); unconfirmed modes
+  are dropped on exit and offered for revert after a crash. No admin needed. Unsupported modes get the driver's answer and
+  where to create a custom resolution (NVIDIA/AMD/Intel).
+- Fortnite in-game resolution: writes only resolution, window-mode and letterbox keys in GameUserSettings.ini (own backup,
+  read-back check, optional read-only lock, restore, unlock). Requires Fortnite closed; no game files touched.
+
 ## 1.11.0 – unreleased
 - **6 new verified tweaks** (340 catalog entries): Optimizations for windowed games (DirectX SwapEffectUpgradeEnable, only that
   entry of the settings string), Fortnite on the high-performance GPU (per-app GPU preference, found via Epic manifests; two-GPU

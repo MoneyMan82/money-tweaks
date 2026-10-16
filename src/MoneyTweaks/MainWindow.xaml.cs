@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         ("benchmark", "\uE9D2", "Test & Benchmark"),
         ("macros", "\uE765", "Gaming Macros"),
         ("potato", "\uE790", "Potato Graphics"),
+        ("stretched", "\uE7F4", "Stretched Resolution"),
         ("booster", "\uE945", "Game Booster"),
         ("input", "\uE962", "Input Delay Reducer"),
         ("ping", "\uE701", "Ping Stabilizer"),
@@ -83,6 +84,7 @@ public partial class MainWindow : Window
             if (!App.ScreenshotMode) Updater.VerifyPendingUpdate();
             if (!App.ScreenshotMode) await BenchmarkView.CheckPendingSyntheticRestoreAsync();
             if (!App.ScreenshotMode) await ProfileService.CheckPendingAsync();
+            if (!App.ScreenshotMode) DisplayService.CheckPending();
             if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode) await Updater.CheckAsync(manual: false);
         };
         SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
@@ -185,6 +187,7 @@ public partial class MainWindow : Window
                 "scanner" => new ScannerView(),
                 "profiles" => new ProfilesView(),
                 "potato" => new PotatoView(),
+                "stretched" => new StretchedView(),
                 "booster" => new BoosterView(),
                 "input" => new InputDelayView(),
                 "ping" => new PingView(),
@@ -405,7 +408,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(dir);
         string[] tags = ["dashboard", "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
-            "profiles", "scanner", "presets", "benchmark", "macros", "potato", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
+            "profiles", "scanner", "presets", "benchmark", "macros", "potato", "stretched", "booster", "input", "ping", "crosshair", "startup", "monitor", "restore", "about"];
         foreach (var tag in tags)
         {
             Navigate(tag);
@@ -425,6 +428,16 @@ public partial class MainWindow : Window
                 await Task.Delay(1200);
                 await Snap(dir, "macros-editor");
                 mv.CloseEditorForScreenshot();
+            }
+            if (tag == "stretched" && Host.Content is StretchedView stv && stv.Content is ScrollViewer ssv)
+            {
+                foreach (var (off, name) in new[] { (640.0, "stretched-desktop"), (1500.0, "stretched-fortnite") })
+                {
+                    ssv.ScrollToVerticalOffset(off);
+                    await Task.Delay(700);
+                    await Snap(dir, name);
+                }
+                ssv.ScrollToVerticalOffset(0);
             }
             if (tag == "scanner" && Host.Content is ScannerView scv)
             {

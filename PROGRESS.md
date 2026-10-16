@@ -172,3 +172,18 @@ Resume point for future sessions. Keep it short.
 - Not verified this session: real install/upgrade via the installer (would modify the installed app), new tweaks' Apply on
   HKLM (needs admin; the HKCU string-flag path is covered by a round-trip test).
 - v1.10.0 was already tagged by the user (c5423e4, Gaming Profiles); this session's work ships as 1.11.0.
+
+## Session 2026-10-17: Stretched Resolution tab (v1.12.0, not tagged; v1.11.0 released)
+- Core/Display/DisplayManager.cs: DEVMODE/DISPLAY_DEVICE P/Invoke, Displays(), Test (CDS_TEST), ApplyTemporary (no registry),
+  Commit (CDS_UPDATEREGISTRY of the current mode), RevertToSaved (ChangeDisplaySettingsEx(dev, null)), ApplyAndSave,
+  AspectLabel (common ratios sorted; a test caught "between 5:4 and 3:2"), Validate; DisplayState (display-state.json:
+  Originals, PendingTemporaryDevice, Presets, BuiltIns).
+- Core/Display/FortniteResolution.cs: Values/Plan/Current/Apply/Restore/Unlock; backup file-backups/stretched-fortnite-GameUserSettings.ini.
+- App/DisplayService.cs: TryModeAsync (test -> remember original -> pending -> temporary -> Countdown -> commit or revert),
+  RestoreOriginal, CheckPending (startup, asks), Shutdown (App.OnExit). Countdown dialog (Esc/close/timeout = revert).
+- App/Views/StretchedView.cs; nav tag "stretched"; screenshot mode snaps stretched, stretched-desktop, stretched-fortnite.
+- Real data on the dev PC: DISPLAY1 Generic PnP 2560x1440@240 (155 modes), DISPLAY2 Lenovo P27q-20 2560x1440@59;
+  CDS_TEST 1440x1080 = Ok, 1720x1080 = BadMode on both (needs a custom resolution). Fortnite file at 2560x1440 Fullscreen.
+- Tests: DisplayTests (aspect labels, validation, real enumeration + CDS_TEST only, Fortnite plan read-only). 106 pass.
+- NOT done automatically: an actual resolution switch, the countdown, and writing Fortnite's file (they change the user's
+  screen/game settings; the code paths are built on the same verified calls). Please try Test resolution once by hand.

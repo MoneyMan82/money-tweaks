@@ -59,6 +59,7 @@ public partial class App : Application
     {
         MacroService.Shutdown(); // releases any keys a macro is holding
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile
+        DisplayService.Shutdown(); // drops an unconfirmed test resolution
         Settings.Save();
         base.OnExit(e);
     }
