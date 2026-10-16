@@ -110,7 +110,8 @@ public class ColorTriggerTests
         mgr.Stopped += (_, r, _) => stopped.TrySetResult(r);
         w.Start([m]);
         screen.A = (0, 255, 0);
-        await Task.Delay(300);
+        // Poll with a generous timeout: other test classes may keep the thread pool busy.
+        for (int i = 0; i < 60 && mgr.Running is null; i++) await Task.Delay(50);
         Assert.Same(m, mgr.Running);
         screen.A = (0, 0, 0);
         Assert.Equal(StopReason.TriggerReleased, await stopped.Task.WaitAsync(TimeSpan.FromSeconds(3)));

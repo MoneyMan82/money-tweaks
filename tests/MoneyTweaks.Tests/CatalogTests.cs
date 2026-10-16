@@ -8,6 +8,8 @@ using Xunit.Abstractions;
 
 namespace MoneyTweaks.Tests;
 
+// GetState reads backups under AppPaths, which other registry-collection tests point at temporary folders.
+[Collection("registry")]
 public class CatalogTests(ITestOutputHelper output)
 {
     [Fact]
