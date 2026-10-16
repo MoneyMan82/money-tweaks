@@ -725,6 +725,7 @@ public sealed class PingView : UserControl, IPageLifecycle
         _chart.Children.Add(_line);
         ms.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(6), Child = _chart });
         body.Children.Add(Ui.Card(ms));
+        body.Children.Add(Ui.Card(DiagnosticSection()));
         var bs = Ui.Section("Stabilize", "Apply the network tweaks most associated with lag spikes. Each is reversible.");
         bs.Children.Add(_bundle);
         bs.Children.Add(Ui.Row(Ui.Btn("Apply all", async (_, _) => await _bundle.ApplyAllAsync(), "PrimaryButton", new Thickness(0, 10, 0, 0))));
@@ -770,4 +771,53 @@ public sealed class PingView : UserControl, IPageLifecycle
 
     public void OnShown() => _ = _bundle.RefreshAsync();
     public void OnHidden() { }
+
+    /// <summary>One-click diagnostic: router + two public endpoints at once, DNS timing, plain-language findings.</summary>
+    private UIElement DiagnosticSection()
+    {
+        var sp = Ui.Section("Network diagnostic", "Pings your router, Cloudflare and Google at the same time for 20 seconds and tells you whether lag comes from your home network or beyond it. Generic ping, not Fortnite's ping.");
+        var bar = new ProgressBar { Height = 6, Maximum = 100, Margin = new Thickness(0, 8, 0, 4), Visibility = Visibility.Collapsed };
+        var result = new StackPanel();
+        Button? run = null;
+        run = Ui.Btn("Run 20 s diagnostic", async (_, _) =>
+        {
+            run!.IsEnabled = false; bar.Visibility = Visibility.Visible; result.Children.Clear();
+            try
+            {
+                var r = await NetworkDiagnostics.RunAsync(20, new Progress<int>(p => bar.Value = p), CancellationToken.None);
+                var g = new Grid { Margin = new Thickness(0, 6, 0, 0) };
+                string[] cols = ["Endpoint", "Avg", "Min / max", "Jitter", "Loss"];
+                foreach (var _ in cols) g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                void Cell(int row, int c, string text, bool head = false)
+                {
+                    var tb = new TextBlock { Text = text, FontSize = head ? 11 : 12.5, FontWeight = head ? FontWeights.Bold : FontWeights.Normal, Foreground = Ui.Brush(head ? "Subtle" : "Text"), Margin = new Thickness(0, 3, 22, 3) };
+                    Grid.SetRow(tb, row); Grid.SetColumn(tb, c); g.Children.Add(tb);
+                }
+                g.RowDefinitions.Add(new RowDefinition());
+                for (int c = 0; c < cols.Length; c++) Cell(0, c, cols[c], true);
+                int row = 1;
+                foreach (var e in r.Endpoints)
+                {
+                    g.RowDefinitions.Add(new RowDefinition());
+                    var ok = e.Stats.Sent > e.Stats.Lost;
+                    Cell(row, 0, $"{e.Label} ({e.Host})");
+                    Cell(row, 1, !ok ? "no reply" : e.Stats.AvgMs < 1 ? "<1 ms" : $"{e.Stats.AvgMs:0.0} ms"); // Windows reports sub-ms replies as 0
+                    Cell(row, 2, ok ? $"{e.Stats.MinMs:0} / {e.Stats.MaxMs:0} ms" : "–");
+                    Cell(row, 3, ok ? $"{e.Stats.JitterMs:0.0} ms" : "–");
+                    Cell(row, 4, $"{e.Stats.LossPercent:0.#}% of {e.Stats.Sent}");
+                    row++;
+                }
+                result.Children.Add(Ui.Muted($"{r.Connection} · DNS lookups: {string.Join(", ", r.Dns.Select(d => $"{d.Host} {(d.Ms is { } ms ? $"{ms:0} ms" : "failed")}"))} · {r.At:T}", 12));
+                result.Children.Add(g);
+                foreach (var f in r.Findings) result.Children.Add(new TextBlock { Text = "• " + f, FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0), Foreground = Ui.Brush(f.StartsWith("Connection is stable", StringComparison.Ordinal) ? "Success" : f.StartsWith("This is generic", StringComparison.Ordinal) ? "Muted" : "Text") });
+                Log.Info("Network diagnostic: " + string.Join(" | ", r.Endpoints.Select(e => $"{e.Label} {e.Stats.AvgMs:0.0}ms j{e.Stats.JitterMs:0.0} l{e.Stats.LossPercent:0.#}%")));
+            }
+            catch (Exception ex) { result.Children.Add(Ui.Muted("Diagnostic failed: " + ex.Message)); }
+            finally { run.IsEnabled = true; bar.Visibility = Visibility.Collapsed; }
+        }, "PrimaryButton");
+        sp.Children.Add(run);
+        sp.Children.Add(bar);
+        sp.Children.Add(result);
+        return sp;
+    }
 }
