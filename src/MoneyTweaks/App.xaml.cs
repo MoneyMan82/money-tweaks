@@ -57,6 +57,7 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (_, a) => { Log.Error("Background task failed", a.Exception); a.SetObserved(); };
 
         Settings = AppSettings.Load();
+        Controls.Motion.InstallSmoothScrolling(); // smooth wheel scrolling in every scrollable area (off with reduced motion)
         Log.Info($"Money Tweaks {Version} ({Environment.ProcessPath}) started on {OsInfo.ProductName} (admin: {Admin.IsElevated})");
 
         UpdateService.CleanupAfterUpdate();

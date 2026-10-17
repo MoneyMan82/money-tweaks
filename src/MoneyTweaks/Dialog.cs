@@ -60,6 +60,7 @@ public static class Dialog
             CornerRadius = new CornerRadius(14), Padding = new Thickness(22), Margin = new Thickness(12), Child = body,
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 0, Opacity = 0.6 }
         };
+        win.Loaded += (_, _) => Controls.Motion.PopIn((FrameworkElement)win.Content);
         win.MouseLeftButtonDown += (_, e) => { if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) win.DragMove(); };
         win.ShowDialog();
         return result;

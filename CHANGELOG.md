@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.23.0 – 2026-10-17
+- **Smoother everywhere.** Smooth wheel scrolling in every scrollable area (glides over ~250 ms instead of jumping; nested
+  lists scroll themselves first). Pages build in with a short staggered rise of their header and cards; the window fades
+  in when it opens (also when reopened from the tray). Sidebar groups slide open and closed with a rotating chevron, the
+  compact sidebar glides between widths, and the selection pill follows along. Dialogs pop in. Clickable cards lift on
+  hover. Tweak cards fade in as they appear.
+- Theme-wide control feedback: buttons fade their glow and sheen on hover and squeeze/spring back when pressed; sidebar
+  items, chips and window buttons fade their hover; checkbox ticks pop in; tooltips fade in.
+- Reduced motion (Settings › Appearance, or Windows' animation setting) turns off the movement (entrances, sliding,
+  smooth scrolling, pop-ins); hover feedback stays as short fades.
+- Checked on the real main window: every page's entrance finishes fully visible, groups collapse/expand to the exact
+  height, compact mode lands on 72/256 px, and a wheel step glides 33 → 78 → 100 → 108 px.
+
 ## 1.22.1 – 2026-10-17
 - **Run in the background** button in the title bar (next to Minimize), also in Settings › Start with Windows and in search:
   hides Money Tweaks to the tray without exiting. Gaming Profiles auto-switch, Fortnite auto resolution, the overlay

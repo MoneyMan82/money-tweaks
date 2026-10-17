@@ -179,7 +179,14 @@
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Template">
                         <Setter.Value>
-                            <ControlTemplate TargetType="ListBoxItem"><ContentPresenter/></ControlTemplate>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <ContentPresenter x:Name="cp"/>
+                                <ControlTemplate.Triggers>
+                                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                        <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="cp" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.22"/></Storyboard></BeginStoryboard>
+                                    </EventTrigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
                         </Setter.Value>
                     </Setter>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

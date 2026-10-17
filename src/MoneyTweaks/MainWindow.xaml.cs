@@ -49,7 +49,7 @@ public partial class MainWindow : Window
         TweakService.Changed += () => _ = RefreshAppliedSummaryAsync();
         // Started with Windows: no page is built until the window is first opened (see EnsureOpened).
         if (!App.BackgroundStart) Navigate("dashboard");
-        Loaded += async (_, _) => await StartupTasksAsync();
+        Loaded += async (_, _) => { if (!App.BackgroundStart) FadeInWindow(); await StartupTasksAsync(); };
         SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
     }
 
@@ -151,7 +151,8 @@ public partial class MainWindow : Window
     private UIElement GroupHeader(NavGroup g, StackPanel items, bool collapsed, bool compact)
     {
         if (compact) return new Border { Height = 1, Background = (Brush)FindResource("BorderBrush"), Margin = new Thickness(12, 10, 12, 8), ToolTip = g.Label };
-        var chevron = new TextBlock { Text = collapsed ? "\uE76C" : "\uE70D", Style = (Style)FindResource("Icon"), FontSize = 9, Foreground = (Brush)FindResource("Subtle"), VerticalAlignment = VerticalAlignment.Center };
+        var chevron = new TextBlock { Text = "\uE70D", Style = (Style)FindResource("Icon"), FontSize = 9, Foreground = (Brush)FindResource("Subtle"), VerticalAlignment = VerticalAlignment.Center,
+            RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new RotateTransform(collapsed ? -90 : 0) };
         var row = new DockPanel { Background = Brushes.Transparent, Margin = new Thickness(12, 14, 10, 6), Cursor = Cursors.Hand, ToolTip = collapsed ? $"Show {g.Label}" : $"Hide {g.Label}" };
         DockPanel.SetDock(chevron, Dock.Right);
         row.Children.Add(chevron);
@@ -161,14 +162,16 @@ public partial class MainWindow : Window
         row.MouseLeave += (_, _) => label.Foreground = (Brush)FindResource("Subtle");
         row.MouseLeftButtonUp += (_, _) =>
         {
-            bool nowCollapsed = items.Visibility == Visibility.Visible;
-            items.Visibility = nowCollapsed ? Visibility.Collapsed : Visibility.Visible;
-            chevron.Text = nowCollapsed ? "\uE76C" : "\uE70D";
+            bool nowCollapsed = !S.CollapsedNavGroups.Contains(g.Id); // state, not visibility: a second click mid-animation reverses it
+            if (nowCollapsed) Motion.Collapse(items); else Motion.Expand(items);
+            Motion.Rotate(chevron, nowCollapsed ? -90 : 0);
             row.ToolTip = nowCollapsed ? $"Show {g.Label}" : $"Hide {g.Label}";
             S.CollapsedNavGroups.Remove(g.Id);
             if (nowCollapsed) S.CollapsedNavGroups.Add(g.Id);
             App.SaveSettingsSoon();
             Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
+            // Follow the moving items while the group animates, then settle.
+            Motion.Tween(row, 0, 1, 240, _ => SnapIndicator(), () => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded));
         };
         return row;
     }
@@ -208,9 +211,21 @@ public partial class MainWindow : Window
 
     private void ToggleSidebar(object sender, RoutedEventArgs e)
     {
+        double from = SideCol.ActualWidth;
         S.SidebarCompact = !S.SidebarCompact;
         App.SaveSettingsSoon();
         BuildNav();
+        double to = SideCol.Width.Value;
+        SideCol.Width = new GridLength(from);
+        Motion.Tween(SideCol, from, to, 280, v => { SideCol.Width = new GridLength(v); SnapIndicator(); }, () => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded));
+    }
+
+    /// <summary>Content fades in when the window opens (skipped with reduced motion).</summary>
+    private void FadeInWindow()
+    {
+        if (!Motion.Enabled) return;
+        Root.Opacity = 0;
+        Root.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
     }
 
     private RadioButton NavItem(string tag, string icon, string label, string? count, bool compact, bool pin = false)
@@ -289,6 +304,15 @@ public partial class MainWindow : Window
         FavButton.ToolTip = fav ? "Remove this page from favourites" : "Add this page to favourites";
     }
 
+    private bool _snapIndicator;
+
+    /// <summary>Puts the selection pill on its item without its own glide (used while the sidebar itself is animating).</summary>
+    private void SnapIndicator()
+    {
+        _snapIndicator = true;
+        try { MoveIndicator(); } finally { _snapIndicator = false; }
+    }
+
     /// <summary>Glides the selection pill to the checked nav item.</summary>
     private void MoveIndicator()
     {
@@ -296,7 +320,7 @@ public partial class MainWindow : Window
         if (rb is null || !rb.IsVisible) { NavIndicator.Opacity = 0; return; } // selected page sits in a collapsed group
         var y = rb.TranslatePoint(new Point(0, 0), NavGrid).Y;
         NavIndicator.Width = Math.Max(0, rb.ActualWidth);
-        if (NavIndicator.Opacity < 1 || App.ReduceMotion)
+        if (NavIndicator.Opacity < 1 || App.ReduceMotion || _snapIndicator)
         {
             NavIndicator.BeginAnimation(Canvas.TopProperty, null);
             Canvas.SetTop(NavIndicator, y);
@@ -378,6 +402,8 @@ public partial class MainWindow : Window
                 shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(280)) { EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut } });
             }
             else { page.BeginAnimation(OpacityProperty, null); page.Opacity = 1; page.RenderTransform = null; }
+            if (page is UserControl { Content: ScrollViewer { Content: Panel body } }) Motion.Stagger(body);
+            else if (page is UserControl { Content: Panel panel }) Motion.Stagger(panel);
             if (page is IPageLifecycle lc) lc.OnShown();
         }
         if (nav?.Anchor is { } anchor && page is IAnchorTarget target)
@@ -642,6 +668,7 @@ public partial class MainWindow : Window
         if (_hiddenToTray)
         {
             _hiddenToTray = false;
+            FadeInWindow();
             if (Host.Content is IPageLifecycle lc) lc.OnShown();
             _ambient?.Resume(Ambient);
         }

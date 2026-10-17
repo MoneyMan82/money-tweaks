@@ -70,6 +70,7 @@ public static class Ui
         c.MouseEnter += (_, _) => { c.BorderBrush = Brush("CardRimHover"); c.Background = Brush("CardHover"); };
         c.MouseLeave += (_, _) => { c.BorderBrush = Brush("CardRim"); c.Background = Brush("CardFill"); };
         c.MouseLeftButtonUp += (_, _) => click();
+        Motion.HoverLift(c);
         return c;
     }
 
