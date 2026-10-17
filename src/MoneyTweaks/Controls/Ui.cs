@@ -130,6 +130,30 @@ public static class Ui
         return g;
     }
 
+    /// <summary>A shortcut drawn as keycaps: "Ctrl+Shift+F10" → [Ctrl] + [Shift] + [F10], each cap sized to its text.</summary>
+    public static StackPanel KeyCaps(string keys)
+    {
+        var sp = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        var parts = keys.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (i > 0) sp.Children.Add(new TextBlock { Text = "+", FontSize = 11, Foreground = Brush("Subtle"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 0, 5, 0) });
+            sp.Children.Add(new Border
+            {
+                // Slightly thicker bottom edge reads as a physical key.
+                CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1, 1, 1, 2),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x33, 0x46)), Background = new SolidColorBrush(Color.FromRgb(0x16, 0x1C, 0x28)),
+                Padding = new Thickness(8, 3, 8, 3), MinWidth = 28, VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = parts[i], FontFamily = Res<FontFamily>("MonoFont"), FontSize = 11.5, FontWeight = FontWeights.SemiBold,
+                    Foreground = Brush("Text"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                },
+            });
+        }
+        return sp;
+    }
+
     /// <summary>Friendly empty state with an icon.</summary>
     public static UIElement Empty(string icon, string title, string sub)
     {

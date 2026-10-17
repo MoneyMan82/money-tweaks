@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.42 – 2026-10-17
+- Settings › Hotkeys: shortcuts were drawn as one stretched box with the text stuck to its top edge, so they looked cut
+  off and had different widths. Each key is now its own keycap ([Ctrl] + [Shift] + [F10]), vertically centred, in a
+  shared column so the descriptions line up. The overlay row no longer repeats its hotkey in the description; it only
+  adds a status when the hotkey couldn't be registered.
+
 ## 1.41 – 2026-10-17
 - **Two Dashboards fixed**: the sidebar's Recent list showed every page except the open one, so Dashboard (always at the
   top) appeared a second time as soon as another page was open. The Recent list is removed from the sidebar (it also

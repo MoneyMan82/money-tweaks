@@ -216,20 +216,33 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
         body.Children.Add(apCard);
 
         var hk = Ui.Section("Hotkeys", "Global hotkeys work while a game has focus; the search shortcut works inside Money Tweaks.");
+        // One row per shortcut: keycaps in a shared-width column (so descriptions line up), description, optional link.
+        Grid.SetIsSharedSizeScope(hk, true);
         void Key(string keys, string what, string? link = null, string? linkTag = null)
         {
-            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
-            if (link is not null) { var b = Ui.Btn(link + " ›", (_, _) => MainWindow.Current?.Navigate(linkTag!), "GhostButton", new Thickness(8, 0, 0, 0)); DockPanel.SetDock(b, Dock.Right); row.Children.Add(b); }
-            var k = new Border { CornerRadius = new CornerRadius(6), Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)), Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0), MinWidth = 120,
-                Child = new TextBlock { Text = keys, FontFamily = Ui.Res<System.Windows.Media.FontFamily>("MonoFont"), FontSize = 12 } };
-            DockPanel.SetDock(k, Dock.Left);
-            row.Children.Add(k);
-            row.Children.Add(new TextBlock { Text = what, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+            var row = new Grid { Margin = new Thickness(0, 5, 0, 5) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "keys" });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var caps = Ui.KeyCaps(keys);
+            caps.Margin = new Thickness(0, 0, 16, 0);
+            row.Children.Add(caps);
+            var text = new TextBlock { Text = what, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
+            Grid.SetColumn(text, 1);
+            row.Children.Add(text);
+            if (link is not null)
+            {
+                var b = Ui.Btn(link + " ›", (_, _) => MainWindow.Current?.Navigate(linkTag!), "GhostButton", new Thickness(8, 0, 0, 0));
+                b.VerticalAlignment = VerticalAlignment.Center;
+                Grid.SetColumn(b, 2);
+                row.Children.Add(b);
+            }
             hk.Children.Add(row);
         }
         Key("Ctrl+K", "Search pages, tweaks, games and settings");
         Key(MacroService.EmergencyHotkeyText, "Emergency stop: releases every macro key and stops the synthetic benchmark", "Gaming Macros", "macros");
-        Key(App.Settings.Overlay.Hotkey, "Show/hide the Performance Overlay. " + OverlayService.HotkeyStatus, "Change", "overlay");
+        // The keys are already on the left; only add the status when the hotkey isn't working.
+        Key(App.Settings.Overlay.Hotkey, "Show/hide the Performance Overlay (works while a game has focus)" + (OverlayService.HotkeyRegistered ? "" : ". " + OverlayService.HotkeyStatus), "Change", "overlay");
         var hkCard = Ui.Card(hk);
         _sections["hotkeys"] = hkCard;
         body.Children.Add(hkCard);

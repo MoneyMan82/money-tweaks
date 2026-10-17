@@ -41,6 +41,7 @@ public static class OverlayService
 
     public static bool Visible => _win?.IsVisible == true;
     public static string HotkeyStatus { get; private set; } = "Not registered yet.";
+    public static bool HotkeyRegistered { get; private set; }
     public static OverlayFrame? LastFrame { get; private set; }
     public static event Action? Changed;
 
@@ -68,6 +69,7 @@ public static class OverlayService
         UnregisterHotKey(_hwnd, HotkeyId);
         if (!OverlayHotkey.TryParse(S.Hotkey, out var mods, out var vk)) { HotkeyStatus = $"\"{S.Hotkey}\" isn't a valid hotkey."; Changed?.Invoke(); return false; }
         var ok = RegisterHotKey(_hwnd, HotkeyId, mods | OverlayHotkey.ModNoRepeat, (uint)vk);
+        HotkeyRegistered = ok;
         HotkeyStatus = ok ? $"{S.Hotkey} shows/hides the overlay (works while a game has focus)." : $"{S.Hotkey} is already used by another app; choose another.";
         if (!ok) Log.Warn("Overlay hotkey not registered: " + HotkeyStatus);
         Changed?.Invoke();
