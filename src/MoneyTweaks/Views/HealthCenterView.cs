@@ -17,8 +17,16 @@ namespace MoneyTweaks.Views;
 /// change (SFC/DISM repair, update services, hardware rescan) needs an explicit confirmation that lists risk, admin and
 /// restart needs and the rollback options. Results are kept in health.json so the last scan shows with its timestamp.
 /// </summary>
-public sealed partial class MonitorView
+public sealed partial class MonitorView : IAnchorTarget
 {
+    private FrameworkElement? _healthAnchor;
+
+    /// <summary>"monitor#health" opens this page at the Health Center.</summary>
+    public void ShowSection(string anchor)
+    {
+        if (anchor == "health" && _healthAnchor is not null) Ui.ScrollTo(_healthAnchor);
+    }
+
     private readonly HealthState _health = HealthState.Load();
     private readonly StackPanel _hSummary = new(), _hDrivers = new(), _hWindows = new(), _hStability = new(), _fileChecks = new(), _repairs = new();
     private readonly TextBlock _hStatus = Ui.Muted("", 12);
@@ -42,6 +50,7 @@ public sealed partial class MonitorView
         var head = Ui.Section("Driver & Windows Health Center",
             "Checks drivers, Windows and Windows Update, and the logs that show crashes, restarts, throttling and hardware errors. Scanning only reads; nothing is changed unless you start a repair below and confirm it.");
         head.Margin = new Thickness(0, 10, 0, 0);
+        _healthAnchor = head;
         body.Children.Add(head);
         body.Children.Add(Ui.Card(_hSummary));
         body.Children.Add(_filters);

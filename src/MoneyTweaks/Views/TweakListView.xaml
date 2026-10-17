@@ -31,6 +31,9 @@
                             <Border Style="{StaticResource Badge}" Background="#14FFFFFF" Visibility="{Binding IsGuide, Converter={StaticResource B2V}}">
                                 <TextBlock Text="Guide" FontSize="10.5" Foreground="{StaticResource Muted}"/>
                             </Border>
+                            <Border Style="{StaticResource Badge}" Background="{StaticResource GoldSoft}" Visibility="{Binding HasNotes, Converter={StaticResource B2V}}" ToolTip="{Binding NotesText}">
+                                <TextBlock Text="{Binding NotesBadge}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource Gold}"/>
+                            </Border>
                         </WrapPanel>
                         <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" Margin="0,6,0,0" MaxWidth="820" HorizontalAlignment="Left"/>
                         <WrapPanel Margin="0,8,0,0">
@@ -53,7 +56,12 @@
                                     Click="Test_Click" ToolTip="Read every setting back from Windows and check Undo is ready. Changes nothing."/>
                             <Button Content="Benchmark" Style="{StaticResource GhostButton}" Padding="10,3" FontSize="11.5" Margin="4,0,0,0" VerticalAlignment="Center"
                                     Click="Benchmark_Click" ToolTip="Measure before and after applying this tweak"/>
+                            <Button Content="Undo" Style="{StaticResource GhostButton}" Padding="10,3" FontSize="11.5" Margin="4,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding CanUndo, Converter={StaticResource B2V}}" Click="Undo_Click"
+                                    ToolTip="Roll back: restore the original values backed up when this tweak was applied, and read them back"/>
                         </WrapPanel>
+                        <TextBlock Text="{Binding NotesText}" Visibility="{Binding HasNotes, Converter={StaticResource B2V}}" FontSize="11.5" Foreground="{StaticResource Gold}"
+                                   TextWrapping="Wrap" MaxWidth="820" HorizontalAlignment="Left" Margin="0,8,0,0" Opacity="0.85"/>
                         <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" Background="#FF0A0D13" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,10,0,0">
                             <TextBlock Text="{Binding Details}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
                         </Border>
@@ -110,7 +118,7 @@
                     <TextBlock x:Name="CatIcon" Style="{StaticResource Icon}" FontSize="20" Foreground="White" HorizontalAlignment="Center"/>
                 </Border>
                 <StackPanel MaxWidth="640">
-                    <TextBlock Text="TWEAK CATEGORY" Style="{StaticResource Eyebrow}"/>
+                    <TextBlock x:Name="EyebrowText" Text="TWEAK CATEGORY" Style="{StaticResource Eyebrow}"/>
                     <TextBlock x:Name="TitleText" Style="{StaticResource H1}"/>
                     <TextBlock x:Name="BlurbText" Style="{StaticResource MutedText}" FontSize="13.5" Margin="0,4,0,0"/>
                 </StackPanel>
@@ -141,8 +149,23 @@
                     <RadioButton Style="{StaticResource Chip}" Content="Not applied" GroupName="f" Tag="off" Checked="Filter_Changed" Margin="0,0,6,4"/>
                     <RadioButton Style="{StaticResource Chip}" Content="Safe" GroupName="f" Tag="safe" Checked="Filter_Changed" Margin="0,0,6,4"/>
                     <RadioButton Style="{StaticResource Chip}" Content="Caution" GroupName="f" Tag="caution" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Recommended" GroupName="f" Tag="rec" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Has notes" GroupName="f" Tag="notes" Checked="Filter_Changed" Margin="0,0,6,4"
+                                 ToolTip="Tweaks with known limitations, overlaps or conflicts with other tweaks"/>
                 </WrapPanel>
             </DockPanel>
+            <WrapPanel Margin="0,10,0,0">
+                <TextBlock x:Name="CategoryLabel" Text="Category" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <ComboBox x:Name="CategoryBox" Width="220" Margin="0,0,16,0" SelectionChanged="Category_Changed"/>
+                <TextBlock Text="Sort" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <ComboBox x:Name="SortBox" Width="220" SelectionChanged="Sort_Changed">
+                    <ComboBoxItem Content="Default order" Tag="default" IsSelected="True"/>
+                    <ComboBoxItem Content="Name (A–Z)" Tag="name"/>
+                    <ComboBoxItem Content="Risk (Caution first)" Tag="risk"/>
+                    <ComboBoxItem Content="Status (applied first)" Tag="status"/>
+                    <ComboBoxItem Content="Status (not applied first)" Tag="status-desc"/>
+                </ComboBox>
+            </WrapPanel>
             <DockPanel Margin="0,10,0,0">
                 <TextBlock x:Name="CountText" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center"/>
                 <ProgressBar x:Name="ScanBar" Width="220" HorizontalAlignment="Left" Visibility="Collapsed" Maximum="1"/>

@@ -23,6 +23,18 @@ public sealed class TweakItem(Tweak tweak) : Observable
         + (_verify is null ? "" : $"\n\nTEST {_verify.At:T}: {_verify.StatusLabel}. {_verify.Summary}" + string.Concat(_verify.Evidence.Select(e => "\n  – " + e)))
         + string.Concat(TweakAudit.IssuesFor(Tweak).Select(i => $"\n! {i.Label}: {i.Text}"));
 
+    public string CategoryName => CategoryInfo.DisplayName(Tweak.Category);
+    /// <summary>Known limitations, overlaps and conflicts (with the related tweak's name), from the catalogue audit.</summary>
+    public IReadOnlyList<AuditIssue> Issues { get; } = TweakAudit.IssuesFor(tweak);
+    public bool HasNotes => Issues.Count > 0;
+    public string NotesBadge => Issues.Count == 1 ? "1 note" : $"{Issues.Count} notes";
+    public string NotesText => string.Join("\n", Issues.Select(i => $"{i.Label}: {i.Text}" +
+        (i.Other is { } o && Core.Catalog.TweakCatalog.Find(o) is { } other ? $" (related: {other.Name})" : "")));
+    /// <summary>Sort order for "status": applied first, unavailable last.</summary>
+    public int StatusRank => State switch { TweakState.Applied => 0, TweakState.Partial => 1, TweakState.NotApplied => 2, TweakState.Unknown => 3, _ => 4 };
+    /// <summary>Undo is offered for applied (or partly applied) tweaks; it restores the backed-up values.</summary>
+    public bool CanUndo => !Busy && !IsGuide && State is TweakState.Applied or TweakState.Partial;
+
     private TweakState _state = TweakState.Unknown;
     public TweakState State
     {
@@ -30,7 +42,7 @@ public sealed class TweakItem(Tweak tweak) : Observable
         set
         {
             if (!Set(ref _state, value)) return;
-            Raise(nameof(IsOn)); Raise(nameof(StatusText)); Raise(nameof(CanToggle));
+            Raise(nameof(IsOn)); Raise(nameof(StatusText)); Raise(nameof(CanToggle)); Raise(nameof(CanUndo)); Raise(nameof(StatusRank));
         }
     }
 
@@ -42,7 +54,7 @@ public sealed class TweakItem(Tweak tweak) : Observable
     }
 
     private bool _busy;
-    public bool Busy { get => _busy; set { if (Set(ref _busy, value)) Raise(nameof(CanToggle)); } }
+    public bool Busy { get => _busy; set { if (Set(ref _busy, value)) { Raise(nameof(CanToggle)); Raise(nameof(CanUndo)); } } }
     public bool CanToggle => !Busy && State is not TweakState.NotApplicable and not TweakState.Unknown
         && (DisabledReason is null || State is TweakState.Applied or TweakState.Partial);
     public string? DisabledReason { get; } = TweakAudit.DisabledReason(tweak);

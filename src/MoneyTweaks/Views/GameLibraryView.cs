@@ -61,6 +61,14 @@ public sealed class GameLibraryView : UserControl, IPageLifecycle
     }
 
     public async void OnShown() { _refresh.Start(); await RefreshAsync(); }
+
+    /// <summary>Used by global search: show one game.</summary>
+    public void FocusGame(string name)
+    {
+        _search.Text = name;
+        _search.Focus();
+        _search.SelectAll();
+    }
     public void OnHidden() => _refresh.Stop();
 
     private void Save()

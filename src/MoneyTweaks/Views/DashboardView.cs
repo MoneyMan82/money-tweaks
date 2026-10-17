@@ -72,7 +72,7 @@ public static class LiveStats
     }
 }
 
-public sealed class DashboardView : UserControl, IPageLifecycle
+public sealed partial class DashboardView : UserControl, IPageLifecycle
 {
     private readonly RingGauge _score = new("Recommended active", 168, 14);
     private readonly RingGauge _cpu = new("CPU"), _gpu = new("GPU"), _ram = new("Memory");
@@ -154,6 +154,7 @@ public sealed class DashboardView : UserControl, IPageLifecycle
         right.Children.Add(_cats);
         body.Children.Add(Ui.Grid(2, Ui.Card(left, new Thickness(0, 0, 14, 14)), Ui.Card(right, new Thickness(0, 0, 14, 14))));
         ((ResponsiveGrid)body.Children[^1]).MinItemWidth = 360;
+        BuildExtras(body);
         Content = root;
 
         TweakService.Changed += () => Dispatcher.InvokeAsync(() => { _scoreLoaded = false; _ = LoadScoreAsync(); UpdateCategories(); UpdateTags(); });
@@ -303,7 +304,7 @@ public sealed class DashboardView : UserControl, IPageLifecycle
         LiveStats.Fill(s, _net, _disk, _temp);
     }
 
-    public void OnShown() { LiveStats.Subscribe(OnSample); UpdateGreeting(); UpdateTags(); UpdateCategories(); _ = LoadScoreAsync(); }
+    public void OnShown() { LiveStats.Subscribe(OnSample); UpdateGreeting(); UpdateTags(); UpdateCategories(); _ = LoadScoreAsync(); _ = RefreshExtrasAsync(); }
     public void OnHidden() => LiveStats.Unsubscribe(OnSample);
 }
 

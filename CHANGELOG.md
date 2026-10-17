@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.22.0 – 2026-10-17
+- **Reorganized app** (every feature kept; all earlier page links and saved data still work). The sidebar is grouped into
+  Dashboard, Optimization, Gaming, Monitoring & Benchmarks, Tools, Backup & Restore and Settings. Groups collapse with a
+  click, the whole sidebar can be compact (icons with tooltips), Favourites (☆ next to the page name) and Recent pages
+  sit at the top, and the breadcrumb shows Group › Page. "Driver & Windows Health" opens the Hardware Monitor at the
+  Health Center; Settings entries open their section.
+- **Global search (Ctrl+K)** now covers pages, sections, all tweaks, every Game Library game and in-page settings (hotkeys,
+  restore points, motion, updates, overlay, Fortnite auto resolution); an empty search shows favourites and recent pages.
+- **All Tweaks** library: every tweak in one list with search (name, description, id, group), category filter, sorting
+  (name, risk, status), Applied/Not applied/Safe/Caution/Recommended/Has-notes filters, the catalogue audit's known
+  limitations and conflicts (with the related tweak) on each card, and a per-tweak Undo that restores the backup and
+  reads it back. Category pages get the same sorting, filters, notes and Undo.
+- **Dashboard** keeps the overview, live rings, toolkit and PC/applied sections and adds Shortcuts (your favourites),
+  Active now (gaming profile, applied tweaks, overlay, Fortnite auto resolution, start with Windows, timer), Games
+  (running/installed from the Game Library detector), PC health (last Health Center scan), Recent activity (activity log)
+  and Backups (tweak backups, NVIDIA profile backups, latest restore point). Customize hides or shows any card.
+- **Settings**: new Appearance card (motion & effects moved here, compact sidebar, dashboard) and Hotkeys card (Ctrl+K,
+  emergency stop, overlay hotkey); "Not included" no longer says there's no FPS counter.
+- Verified with the real main window (not shown): all 34 navigation entries open the right page and breadcrumb, all 29
+  pre-reorganization page tags still create their page, favourites/recent/search work, and section links scroll to the
+  section. Fixed during testing: group labels overwritten by icons, and section links before a page's first layout.
+
 ## 1.21.0 – 2026-10-17
 - **Game Library** (new page, also linked from Gaming Profiles): an editable library of 42 catalogue games plus any game
   you add by its exe or installation folder, with search (name or exe), favourites, category filters and "hide not

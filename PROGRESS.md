@@ -243,3 +243,8 @@ Resume point for future sessions. Keep it short.
   identity-aware. Real data on this PC: MECCHA CHAMELEON = Steam 4704690 → PenguinHotel.exe; Fortnite Epic manifest
   launches FortniteBootstrapper.exe (game is FortniteClient-Win64-Shipping.exe); 10 Roblox version folders, one with
   Studio; Geode helper exes beside GeometryDash.exe. Off-screen render caught a Chip-style/ToggleButton crash (fixed).
+- 1.22.0 Reorganization: Core/Model/AppNavigation.cs (groups, pages, anchors, legacy tags; single source for sidebar, search,
+  breadcrumbs, dashboard shortcuts), MainWindow: BuildNav/GroupHeader/FillPins/compact chrome/SyncNav/ShowPage/CreatePage,
+  palette over pages+tweaks+games+settings, IAnchorTarget (MonitorView health, AboutView appearance/hotkeys/updates),
+  TweakListView all-mode + sort/category/notes/undo, DashboardExtras.cs, AppSettings nav/dashboard fields.
+  Harness NavCheck drives the real MainWindow without showing it.

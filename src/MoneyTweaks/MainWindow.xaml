@@ -57,27 +57,33 @@
 
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="256"/>
+                <ColumnDefinition x:Name="SideCol" Width="256"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- ═════ Sidebar ═════ -->
             <Border Background="#E60A0D13" BorderBrush="#FF141A25" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,16,0,14">
+                    <DockPanel x:Name="BrandBar" DockPanel.Dock="Top" Margin="15,16,10,12">
+                        <Button x:Name="SidebarToggle" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Click="ToggleSidebar" ToolTip="Collapse the sidebar to icons"
+                                VerticalAlignment="Center" HorizontalAlignment="Center" Padding="8,6">
+                            <TextBlock x:Name="SidebarToggleIcon" Style="{StaticResource Icon}" Text="&#xE76B;" FontSize="12"/>
+                        </Button>
+                        <StackPanel Orientation="Horizontal">
                         <Grid Width="38" Height="38">
                             <Border CornerRadius="12" Background="{StaticResource AccentGradient}" Opacity="0.25" Margin="-4"/>
                             <Image Source="Assets/logo.png" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
                         </Grid>
-                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <StackPanel x:Name="BrandText" Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock FontFamily="{StaticResource DisplayFont}" FontSize="17" FontWeight="Bold">
                                 <Run Text="Money "/><Run Text="Tweaks" Foreground="{StaticResource AccentGradientH}"/>
                             </TextBlock>
                             <TextBlock x:Name="VersionText" Text="v1.0.0" Foreground="{StaticResource Subtle}" FontSize="11"/>
                         </StackPanel>
-                    </StackPanel>
+                        </StackPanel>
+                    </DockPanel>
 
-                    <Border DockPanel.Dock="Bottom" Margin="14,10,14,14" Padding="14" CornerRadius="14" Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardRim}" BorderThickness="1">
+                    <Border x:Name="StatusCard" DockPanel.Dock="Bottom" Margin="14,10,14,14" Padding="14" CornerRadius="14" Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardRim}" BorderThickness="1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Grid Width="10" Height="10" Margin="0,0,9,0">
@@ -104,14 +110,8 @@
                                     <Border Width="3" CornerRadius="2" HorizontalAlignment="Left" Margin="0,8" Background="{StaticResource AccentGradient}"/>
                                 </Border>
                             </Canvas>
-                            <StackPanel x:Name="Nav">
-                                <TextBlock Text="OVERVIEW" Foreground="{StaticResource Subtle}" FontSize="10.5" FontWeight="Bold" Margin="12,6,0,6"/>
-                                <StackPanel x:Name="OverviewNav"/>
-                                <TextBlock Text="TWEAKS" Foreground="{StaticResource Subtle}" FontSize="10.5" FontWeight="Bold" Margin="12,16,0,6"/>
-                                <StackPanel x:Name="CategoryNav"/>
-                                <TextBlock Text="TOOLS" Foreground="{StaticResource Subtle}" FontSize="10.5" FontWeight="Bold" Margin="12,16,0,6"/>
-                                <StackPanel x:Name="ToolNav"/>
-                            </StackPanel>
+                            <!-- Built from AppNavigation: favourites, recent pages and the collapsible groups. -->
+                            <StackPanel x:Name="Nav"/>
                         </Grid>
                     </ScrollViewer>
                 </DockPanel>
@@ -130,10 +130,10 @@
                         <Button x:Name="MaxButton" Style="{StaticResource ChromeButton}" Content="&#xE922;" Click="Max_Click" ToolTip="Maximize"/>
                         <Button Style="{StaticResource CloseChromeButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Close"/>
                     </StackPanel>
-                    <Button DockPanel.Dock="Right" Click="OpenPalette" WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,0,16,0" VerticalAlignment="Center" Padding="12,7" ToolTip="Search everything (Ctrl+K)">
+                    <Button DockPanel.Dock="Right" Click="OpenPalette" WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,0,16,0" VerticalAlignment="Center" Padding="12,7" ToolTip="Search pages, tweaks, games and settings (Ctrl+K)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,10,0"/>
-                            <TextBlock Text="Search tweaks &amp; tools" Foreground="{StaticResource Muted}" FontWeight="Normal" Margin="0,0,22,0"/>
+                            <TextBlock Text="Search pages, tweaks, games &amp; settings" Foreground="{StaticResource Muted}" FontWeight="Normal" Margin="0,0,22,0"/>
                             <Border CornerRadius="5" Background="#14FFFFFF" Padding="6,1">
                                 <TextBlock Text="Ctrl K" FontSize="10.5" Foreground="{StaticResource Muted}"/>
                             </Border>
@@ -143,6 +143,10 @@
                         <TextBlock x:Name="CrumbRoot" Text="Overview" Foreground="{StaticResource Subtle}" FontSize="12"/>
                         <TextBlock Style="{StaticResource Icon}" Text="&#xE76C;" FontSize="9" Foreground="{StaticResource Subtle}" Margin="8,0"/>
                         <TextBlock x:Name="CrumbText" Text="Dashboard" Foreground="{StaticResource Text}" FontSize="12" FontWeight="SemiBold"/>
+                        <Button x:Name="FavButton" Style="{StaticResource GhostButton}" Click="ToggleFavourite" WindowChrome.IsHitTestVisibleInChrome="True"
+                                Margin="8,0,0,0" Padding="6,1" VerticalAlignment="Center" ToolTip="Add this page to favourites">
+                            <TextBlock x:Name="FavIcon" Text="☆" FontSize="14" Foreground="{StaticResource Muted}"/>
+                        </Button>
                     </StackPanel>
                 </DockPanel>
 

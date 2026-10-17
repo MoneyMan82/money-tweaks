@@ -48,6 +48,17 @@ public static class Ui
         return (new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, PanningMode = PanningMode.VerticalOnly }, body);
     }
 
+    /// <summary>Scrolls the page's ScrollViewer so the element sits at the top (used for "page#section" navigation).</summary>
+    public static void ScrollTo(FrameworkElement el)
+    {
+        DependencyObject? d = VisualTreeHelper.GetParent(el);
+        while (d is not null and not ScrollViewer) d = VisualTreeHelper.GetParent(d);
+        if (d is not ScrollViewer sv) { el.BringIntoView(); return; }
+        sv.UpdateLayout(); // a page opened by this same navigation may not have been measured yet
+        var p = el.TransformToAncestor(sv).Transform(new Point(0, 0));
+        sv.ScrollToVerticalOffset(Math.Max(0, sv.VerticalOffset + p.Y - 8));
+    }
+
     public static Border Card(UIElement child, Thickness? margin = null) =>
         new() { Style = Res<Style>("CardBorder"), Child = child, Margin = margin ?? new Thickness(0, 0, 0, 14) };
 

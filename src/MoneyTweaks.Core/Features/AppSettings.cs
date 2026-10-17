@@ -44,6 +44,16 @@ public sealed class AppSettings
     public string? PotatoAfterShot { get; set; }
     /// <summary>Live performance overlay: layout, hotkey and per-game profiles.</summary>
     public OverlaySettings Overlay { get; set; } = OverlaySettings.WithDefaults();
+    /// <summary>Sidebar shows icons only.</summary>
+    public bool SidebarCompact { get; set; }
+    /// <summary>Sidebar groups the user collapsed.</summary>
+    public List<string> CollapsedNavGroups { get; set; } = [];
+    /// <summary>Pages pinned to the top of the sidebar and the dashboard shortcuts.</summary>
+    public List<string> FavouritePages { get; set; } = [];
+    /// <summary>Most recently opened pages, newest first.</summary>
+    public List<string> RecentPages { get; set; } = [];
+    /// <summary>Dashboard cards the user hid.</summary>
+    public List<string> DashboardHidden { get; set; } = [];
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

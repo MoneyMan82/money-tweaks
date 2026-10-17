@@ -163,8 +163,16 @@ public sealed class LogView : UserControl, IPageLifecycle
     public void OnHidden() { }
 }
 
-public sealed class AboutView : UserControl, IPageLifecycle
+public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
 {
+    private readonly Dictionary<string, FrameworkElement> _sections = [];
+
+    /// <summary>"about#appearance", "about#hotkeys", "about#updates".</summary>
+    public void ShowSection(string anchor)
+    {
+        if (_sections.TryGetValue(anchor, out var el)) Ui.ScrollTo(el);
+    }
+
     public AboutView()
     {
         var (root, body) = Ui.Page("Settings & About", $"Money Tweaks {App.Version}: a free, open-source Windows tweaker. No accounts, no ads, no telemetry, no paid tiers.", eyebrow: "Money Tweaks", icon: "\uE713");
@@ -176,8 +184,11 @@ public sealed class AboutView : UserControl, IPageLifecycle
         cc.Click += (_, _) => { App.Settings.ConfirmCautionTweaks = cc.IsChecked == true; App.Settings.Save(); };
         st.Children.Add(rp);
         st.Children.Add(cc);
-        st.Children.Add(new TextBlock { Text = "Motion & effects", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 14, 0, 2) });
-        st.Children.Add(Ui.Muted("Auto follows Windows (Settings › Accessibility › Visual effects › Animation effects) and your GPU. Reduced turns off page transitions, the ambient glow animation and the 3D preview's auto-rotate.", 12));
+        body.Children.Add(Ui.Card(st));
+
+        var ap = Ui.Section("Appearance");
+        ap.Children.Add(new TextBlock { Text = "Motion & effects", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 2) });
+        ap.Children.Add(Ui.Muted("Auto follows Windows (Settings › Accessibility › Visual effects › Animation effects) and your GPU. Reduced turns off page transitions, the ambient glow animation and the 3D preview's auto-rotate.", 12));
         var motion = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         foreach (var (label, value) in new (string, bool?)[] { ("Auto", null), ("Full", false), ("Reduced", true) })
         {
@@ -191,8 +202,37 @@ public sealed class AboutView : UserControl, IPageLifecycle
             };
             motion.Children.Add(rb);
         }
-        st.Children.Add(motion);
-        body.Children.Add(Ui.Card(st));
+        ap.Children.Add(motion);
+        ap.Children.Add(new TextBlock { Text = "Sidebar", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 2) });
+        ap.Children.Add(Ui.Muted("Compact shows icons only (names appear as tooltips). Groups can also be collapsed one by one by clicking their headings, and pages can be pinned with the ☆ next to the page name.", 12));
+        var compact = new CheckBox { Content = "Compact sidebar (icons only)", IsChecked = App.Settings.SidebarCompact, Margin = new Thickness(0, 8, 0, 0) };
+        compact.Click += (_, _) => { if (App.Settings.SidebarCompact != (compact.IsChecked == true)) MainWindow.Current?.ToggleSidebarFromSettings(); };
+        ap.Children.Add(compact);
+        ap.Children.Add(new TextBlock { Text = "Dashboard", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 2) });
+        ap.Children.Add(Ui.Muted("Choose which dashboard cards are shown with Customize on the dashboard.", 12));
+        ap.Children.Add(Ui.Row(Ui.Btn("Customize dashboard ›", (_, _) => MainWindow.Current?.Navigate("dashboard"), "GhostButton", new Thickness(0, 6, 8, 0))));
+        var apCard = Ui.Card(ap);
+        _sections["appearance"] = apCard;
+        body.Children.Add(apCard);
+
+        var hk = Ui.Section("Hotkeys", "Global hotkeys work while a game has focus; the search shortcut works inside Money Tweaks.");
+        void Key(string keys, string what, string? link = null, string? linkTag = null)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
+            if (link is not null) { var b = Ui.Btn(link + " ›", (_, _) => MainWindow.Current?.Navigate(linkTag!), "GhostButton", new Thickness(8, 0, 0, 0)); DockPanel.SetDock(b, Dock.Right); row.Children.Add(b); }
+            var k = new Border { CornerRadius = new CornerRadius(6), Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)), Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0), MinWidth = 120,
+                Child = new TextBlock { Text = keys, FontFamily = Ui.Res<System.Windows.Media.FontFamily>("MonoFont"), FontSize = 12 } };
+            DockPanel.SetDock(k, Dock.Left);
+            row.Children.Add(k);
+            row.Children.Add(new TextBlock { Text = what, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+            hk.Children.Add(row);
+        }
+        Key("Ctrl+K", "Search pages, tweaks, games and settings");
+        Key(MacroService.EmergencyHotkeyText, "Emergency stop: releases every macro key and stops the synthetic benchmark", "Gaming Macros", "macros");
+        Key(App.Settings.Overlay.Hotkey, "Show/hide the Performance Overlay. " + OverlayService.HotkeyStatus, "Change", "overlay");
+        var hkCard = Ui.Card(hk);
+        _sections["hotkeys"] = hkCard;
+        body.Children.Add(hkCard);
 
         var up = Ui.Section("Updates", $"You have Money Tweaks {App.Version}. Updates come from the official GitHub releases and are checksum-verified before installing.");
         var status = Ui.Muted(Updater.Available is { } av ? $"Version {av.Version.ToString(3)} is available." : "", 12.5);
@@ -205,7 +245,9 @@ public sealed class AboutView : UserControl, IPageLifecycle
         var auto = new CheckBox { Content = "Check for updates automatically when Money Tweaks starts", IsChecked = App.Settings.AutoCheckUpdates, Margin = new Thickness(0, 8, 0, 0) };
         auto.Click += (_, _) => { App.Settings.AutoCheckUpdates = auto.IsChecked == true; App.Settings.Save(); };
         up.Children.Add(auto);
-        body.Children.Add(Ui.Card(up));
+        var upCard = Ui.Card(up);
+        _sections["updates"] = upCard;
+        body.Children.Add(upCard);
 
         var sw = Ui.Section("Start with Windows", "Starts Money Tweaks as a background process after you sign in: no window opens, just a tray icon. Gaming Profiles auto-switch, the Fortnite resolution switch and the macro emergency stop keep working. Nothing is built until you open it from the tray, and the update check waits 2 minutes, so sign-in isn't slowed down.");
         var startBox = new CheckBox { Content = "Start Money Tweaks with Windows (background, tray icon)", IsChecked = AutoStart.IsEnabled, Margin = new Thickness(0, 4, 0, 0) };
@@ -234,7 +276,7 @@ public sealed class AboutView : UserControl, IPageLifecycle
         body.Children.Add(Ui.Card(ab));
 
         var na = Ui.Section("Not included", "These would need things Money Tweaks deliberately avoids (kernel drivers, paid content), so they are not available:");
-        na.Children.Add(Ui.Muted("• Controller response curves: need a virtual-controller driver. Use Steam Input instead.\n• Console (PlayStation/Xbox) guides: out of scope for a Windows app.\n• Full temperature/fan sensors: need a kernel driver. Use HWiNFO or LibreHardwareMonitor.\n• FPS counter: use your GPU driver overlay or Xbox Game Bar.", 12.5));
+        na.Children.Add(Ui.Muted("• Controller response curves: need a virtual-controller driver. Use Steam Input instead.\n• Console (PlayStation/Xbox) guides: out of scope for a Windows app.\n• Full temperature/fan sensors: need a kernel driver. Use HWiNFO or LibreHardwareMonitor.\n• Fan control and full motherboard sensors (Money Tweaks shows CPU temperature where the firmware exposes it and NVIDIA GPU temperature).", 12.5));
         body.Children.Add(Ui.Card(na));
 
         var dis = Ui.Section("Disclaimer");

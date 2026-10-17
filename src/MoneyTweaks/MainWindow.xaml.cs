@@ -10,6 +10,8 @@ using System.Windows.Threading;
 using MoneyTweaks.Controls;
 using MoneyTweaks.Core.Catalog;
 using MoneyTweaks.Core.Engine;
+using MoneyTweaks.Core.Features;
+using MoneyTweaks.Core.Games;
 using MoneyTweaks.Core.Model;
 using MoneyTweaks.Core.Sys;
 using MoneyTweaks.ViewModels;
@@ -17,7 +19,8 @@ using MoneyTweaks.Views;
 
 namespace MoneyTweaks;
 
-public sealed record PaletteItem(string Title, string Subtitle, string Icon, string Kind, Action Open);
+/// <summary>A search result. Keywords widen matching; Tag links pages to favourites/recents.</summary>
+public sealed record PaletteItem(string Title, string Subtitle, string Icon, string Kind, Action Open, string Keywords = "", string? Tag = null);
 
 public partial class MainWindow : Window
 {
@@ -26,45 +29,15 @@ public partial class MainWindow : Window
     private Storyboard? _ambient;
     private List<PaletteItem>? _paletteAll;
 
-    internal static readonly (string tag, string icon, string label)[] Tools =
-    [
-        ("profiles", "\uE7FC", "Gaming Profiles"),
-        ("library", "\uE8B7", "Game Library"),
-        ("scanner", "\uE721", "Smart Scanner"),
-        ("presets", "\uE8F1", "Presets"),
-        ("benchmark", "\uE9D2", "Test & Benchmark"),
-        ("macros", "\uE765", "Gaming Macros"),
-        ("potato", "\uE790", "Potato Graphics"),
-        ("stretched", "\uE7F4", "Stretched Resolution"),
-        ("fnstretch", "\uE740", "Fortnite Stretched"),
-        ("booster", "\uE945", "Game Booster"),
-        ("input", "\uE962", "Input Delay Reducer"),
-        ("ping", "\uE701", "Ping Stabilizer"),
-        ("crosshair", "\uE710", "Custom Crosshair"),
-        ("startup", "\uE7E8", "Startup Apps"),
-        ("monitor", "\uE9D9", "Hardware & Health"),
-        ("overlay", "\uE9D2", "Performance Overlay"),
-        ("restore", "\uE777", "Backup & Restore"),
-        ("logs", "\uE81C", "Activity Log"),
-        ("about", "\uE713", "Settings & About"),
-    ];
-
-    internal static readonly Dictionary<TweakCategory, string> CategoryIcons = new()
-    {
-        [TweakCategory.General] = "\uE771", [TweakCategory.Debloating] = "\uE74D", [TweakCategory.Networking] = "\uE968",
-        [TweakCategory.Advanced] = "\uE9E9", [TweakCategory.Services] = "\uE912", [TweakCategory.AppOptimizer] = "\uEC4A",
-        [TweakCategory.AppRemoval] = "\uE71D", [TweakCategory.GameProfiles] = "\uE7FC", [TweakCategory.Bios] = "\uE950",
-    };
+    /// <summary>Category icons, from the app's navigation model (one source for sidebar, search and pages).</summary>
+    internal static readonly Dictionary<TweakCategory, string> CategoryIcons = Enum.GetValues<TweakCategory>().ToDictionary(c => c, AppNavigation.CategoryIcon);
 
     public MainWindow()
     {
         InitializeComponent();
         Current = this;
         VersionText.Text = $"v{App.Version} · free & open source";
-        OverviewNav.Children.Add(NavItem("dashboard", "\uE80F", "Dashboard", null));
-        foreach (var c in Enum.GetValues<TweakCategory>())
-            CategoryNav.Children.Add(NavItem("cat:" + c, CategoryIcons[c], CategoryInfo.DisplayName(c), TweakCatalog.InCategory(c).Count().ToString()));
-        foreach (var (tag, icon, label) in Tools) ToolNav.Children.Add(NavItem(tag, icon, label, null));
+        BuildNav();
 
         bool admin = Admin.IsElevated;
         AdminBanner.Visibility = admin ? Visibility.Collapsed : Visibility.Visible;
@@ -140,41 +113,187 @@ public partial class MainWindow : Window
         t.Start();
     }
 
-    private RadioButton NavItem(string tag, string icon, string label, string? count)
+    // ═════ Sidebar ═════
+    private static AppSettings S => App.Settings;
+    private bool _syncingNav;
+    private string _current = "dashboard";
+    private readonly StackPanel _favPanel = new(), _recentPanel = new();
+
+    /// <summary>Builds the sidebar from AppNavigation: favourites, recent pages, then the collapsible groups.</summary>
+    private void BuildNav()
+    {
+        bool compact = S.SidebarCompact;
+        Nav.Children.Clear();
+        var home = new StackPanel { Margin = new Thickness(0, 2, 0, 0) };
+        foreach (var p in AppNavigation.Pages.Where(p => p.Group == "dashboard" && p.InSidebar)) home.Children.Add(NavItem(p.Tag, p.Icon, p.Label, null, compact));
+        Nav.Children.Add(home);
+        Nav.Children.Add(_favPanel);
+        Nav.Children.Add(_recentPanel);
+        RefreshPins();
+        foreach (var g in AppNavigation.Groups.Where(g => g.Id != "dashboard"))
+        {
+            var pages = AppNavigation.Pages.Where(p => p.Group == g.Id && p.InSidebar).ToList();
+            if (pages.Count == 0) continue;
+            bool collapsed = !compact && S.CollapsedNavGroups.Contains(g.Id);
+            var items = new StackPanel { Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible };
+            foreach (var p in pages) items.Children.Add(NavItem(p.Tag, p.Icon, p.Label, CountFor(p), compact));
+            Nav.Children.Add(GroupHeader(g, items, collapsed, compact));
+            Nav.Children.Add(items);
+        }
+        ApplyCompactChrome(compact);
+        SyncNav(_current);
+    }
+
+    private static string? CountFor(NavPage p) =>
+        p.Tag.StartsWith("cat:", StringComparison.Ordinal) ? TweakCatalog.InCategory(Enum.Parse<TweakCategory>(p.Tag[4..])).Count().ToString()
+        : p.Tag == "tweaks" ? TweakCatalog.All.Count.ToString() : null;
+
+    private UIElement GroupHeader(NavGroup g, StackPanel items, bool collapsed, bool compact)
+    {
+        if (compact) return new Border { Height = 1, Background = (Brush)FindResource("BorderBrush"), Margin = new Thickness(12, 10, 12, 8), ToolTip = g.Label };
+        var chevron = new TextBlock { Text = collapsed ? "\uE76C" : "\uE70D", Style = (Style)FindResource("Icon"), FontSize = 9, Foreground = (Brush)FindResource("Subtle"), VerticalAlignment = VerticalAlignment.Center };
+        var row = new DockPanel { Background = Brushes.Transparent, Margin = new Thickness(12, 14, 10, 6), Cursor = Cursors.Hand, ToolTip = collapsed ? $"Show {g.Label}" : $"Hide {g.Label}" };
+        DockPanel.SetDock(chevron, Dock.Right);
+        row.Children.Add(chevron);
+        var label = new TextBlock { Text = g.Label.ToUpperInvariant(), Foreground = (Brush)FindResource("Subtle"), FontSize = 10.5, FontWeight = FontWeights.Bold };
+        row.Children.Add(label);
+        row.MouseEnter += (_, _) => label.Foreground = (Brush)FindResource("Muted");
+        row.MouseLeave += (_, _) => label.Foreground = (Brush)FindResource("Subtle");
+        row.MouseLeftButtonUp += (_, _) =>
+        {
+            bool nowCollapsed = items.Visibility == Visibility.Visible;
+            items.Visibility = nowCollapsed ? Visibility.Collapsed : Visibility.Visible;
+            chevron.Text = nowCollapsed ? "\uE76C" : "\uE70D";
+            row.ToolTip = nowCollapsed ? $"Show {g.Label}" : $"Hide {g.Label}";
+            S.CollapsedNavGroups.Remove(g.Id);
+            if (nowCollapsed) S.CollapsedNavGroups.Add(g.Id);
+            App.SaveSettingsSoon();
+            Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
+        };
+        return row;
+    }
+
+    /// <summary>Favourites (pinned) and recently opened pages at the top of the sidebar.</summary>
+    private void RefreshPins()
+    {
+        bool compact = S.SidebarCompact;
+        FillPins(_favPanel, "FAVOURITES", S.FavouritePages, compact);
+        FillPins(_recentPanel, "RECENT", compact ? [] : S.RecentPages.Where(t => t != _current && !S.FavouritePages.Contains(t)).Take(4), compact);
+    }
+
+    private void FillPins(StackPanel panel, string title, IEnumerable<string> tags, bool compact)
+    {
+        panel.Children.Clear();
+        var pages = tags.Select(t => AppNavigation.Pages.FirstOrDefault(p => p.Tag == t)).OfType<NavPage>().ToList();
+        if (pages.Count == 0) return;
+        panel.Children.Add(compact
+            ? new Border { Height = 1, Background = (Brush)FindResource("BorderBrush"), Margin = new Thickness(12, 6, 12, 8), ToolTip = title }
+            : new TextBlock { Text = title, Foreground = (Brush)FindResource("Subtle"), FontSize = 10.5, FontWeight = FontWeights.Bold, Margin = new Thickness(12, 8, 0, 6) });
+        foreach (var p in pages) panel.Children.Add(NavItem(p.Tag, p.Icon, p.Label, null, compact, pin: true));
+    }
+
+    private void ApplyCompactChrome(bool compact)
+    {
+        SideCol.Width = new GridLength(compact ? 72 : 256);
+        BrandText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        StatusCard.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        DockPanel.SetDock(SidebarToggle, compact ? Dock.Bottom : Dock.Right);
+        SidebarToggle.Margin = compact ? new Thickness(0, 10, 0, 0) : new Thickness(0);
+        BrandBar.Margin = compact ? new Thickness(17, 16, 17, 12) : new Thickness(15, 16, 10, 12);
+        SidebarToggleIcon.Text = compact ? "\uE76C" : "\uE76B";
+        SidebarToggle.ToolTip = compact ? "Expand the sidebar" : "Collapse the sidebar to icons";
+    }
+
+    public void ToggleSidebarFromSettings() => ToggleSidebar(this, new RoutedEventArgs());
+
+    private void ToggleSidebar(object sender, RoutedEventArgs e)
+    {
+        S.SidebarCompact = !S.SidebarCompact;
+        App.SaveSettingsSoon();
+        BuildNav();
+    }
+
+    private RadioButton NavItem(string tag, string icon, string label, string? count, bool compact, bool pin = false)
     {
         var fg = new Binding("Foreground") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(RadioButton), 1) };
         var panel = new DockPanel();
-        if (count is not null)
+        if (count is not null && !compact)
         {
             var badge = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(7, 0, 7, 1), Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF)),
                 Child = new TextBlock { Text = count, FontSize = 10.5, Foreground = (Brush)FindResource("Muted") } };
             DockPanel.SetDock(badge, Dock.Right);
             panel.Children.Add(badge);
         }
-        var ic = new TextBlock { Text = icon, Style = (Style)FindResource("Icon"), FontSize = 15, Margin = new Thickness(0, 0, 12, 0) };
+        var ic = new TextBlock { Text = icon, Style = (Style)FindResource("Icon"), FontSize = 15, Margin = new Thickness(compact ? 4 : 0, 0, compact ? 0 : 12, 0) };
         ic.SetBinding(TextBlock.ForegroundProperty, fg);
-        var tx = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
-        tx.SetBinding(TextBlock.ForegroundProperty, fg);
         panel.Children.Add(ic);
-        panel.Children.Add(tx);
-        var rb = new RadioButton { Style = (Style)FindResource("NavButton"), Tag = tag, Content = panel };
-        rb.Checked += Nav_Checked;
-        rb.Checked += (_, _) => ic.Foreground = (Brush)FindResource("Accent");
-        rb.Unchecked += (_, _) => ic.SetBinding(TextBlock.ForegroundProperty, fg);
+        if (!compact)
+        {
+            var tx = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+            tx.SetBinding(TextBlock.ForegroundProperty, fg);
+            panel.Children.Add(tx);
+        }
+        var rb = new RadioButton { Style = (Style)FindResource("NavButton"), Tag = tag, Content = panel, GroupName = pin ? "pin" + tag + label : "nav", ToolTip = compact ? label : null };
+        if (pin)
+        {
+            // Shortcut entries open the page; the selection highlight stays on the page's own entry in its group.
+            rb.Checked += (_, _) => { Dispatcher.BeginInvoke(() => rb.IsChecked = false); if (!_syncingNav) Navigate(tag); };
+        }
+        else
+        {
+            rb.Checked += Nav_Checked;
+            rb.Checked += (_, _) => ic.Foreground = (Brush)FindResource("Accent");
+            rb.Unchecked += (_, _) => ic.SetBinding(TextBlock.ForegroundProperty, fg);
+        }
         return rb;
     }
 
     private void Nav_Checked(object sender, RoutedEventArgs e)
     {
-        if (sender is RadioButton { Tag: string tag } && IsLoaded) Navigate(tag);
+        if (_syncingNav) return;
+        if (sender is RadioButton { Tag: string tag }) Navigate(tag);
+    }
+
+    /// <summary>Checks the sidebar entry for a page (exact section entry first) without navigating again.</summary>
+    private void SyncNav(string tag)
+    {
+        _syncingNav = true;
+        try
+        {
+            var buttons = FindNavButtons().ToList();
+            var rb = buttons.FirstOrDefault(r => (string)r.Tag == tag) ?? buttons.FirstOrDefault(r => (string)r.Tag == tag.Split('#')[0]);
+            if (rb is not null) rb.IsChecked = true;
+            else foreach (var b in buttons) b.IsChecked = false;
+        }
+        finally { _syncingNav = false; }
         Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
+    }
+
+    private void ToggleFavourite(object sender, RoutedEventArgs e)
+    {
+        var tag = _current;
+        bool added = !S.FavouritePages.Remove(tag);
+        if (added) S.FavouritePages.Add(tag);
+        App.SaveSettingsSoon();
+        RefreshPins();
+        UpdateFavIcon();
+        Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
+        ShowToast(added ? $"{CrumbText.Text} added to favourites (sidebar and dashboard)." : $"{CrumbText.Text} removed from favourites.", "Success");
+    }
+
+    private void UpdateFavIcon()
+    {
+        bool fav = S.FavouritePages.Contains(_current);
+        FavIcon.Text = fav ? "★" : "☆";
+        FavIcon.Foreground = (Brush)FindResource(fav ? "Gold" : "Muted");
+        FavButton.ToolTip = fav ? "Remove this page from favourites" : "Add this page to favourites";
     }
 
     /// <summary>Glides the selection pill to the checked nav item.</summary>
     private void MoveIndicator()
     {
         var rb = FindNavButtons().FirstOrDefault(r => r.IsChecked == true);
-        if (rb is null || !rb.IsVisible) return;
+        if (rb is null || !rb.IsVisible) { NavIndicator.Opacity = 0; return; } // selected page sits in a collapsed group
         var y = rb.TranslatePoint(new Point(0, 0), NavGrid).Y;
         NavIndicator.Width = Math.Max(0, rb.ActualWidth);
         if (NavIndicator.Opacity < 1 || App.ReduceMotion)
@@ -189,61 +308,94 @@ public partial class MainWindow : Window
         NavIndicator.Height = rb.ActualHeight;
     }
 
+    /// <summary>
+    /// Opens a page by tag ("monitor", "cat:Networking", or "monitor#health" to open a page at a section). Pages are created
+    /// once and kept, so their state survives switching.
+    /// </summary>
     public void Navigate(string tag)
     {
-        // Keep the sidebar selection in sync when navigation comes from code (e.g. dashboard tiles).
-        foreach (var rb in FindNavButtons()) if ((string)rb.Tag == tag && rb.IsChecked != true) { rb.IsChecked = true; return; }
+        _current = tag;
+        SyncNav(tag);
+        ShowPage(tag);
+        S.RecentPages = AppNavigation.PushRecent(S.RecentPages, tag);
+        if (!App.ScreenshotMode) App.SaveSettingsSoon();
+        RefreshPins();
+        UpdateFavIcon();
+    }
 
-        if (!_pages.TryGetValue(tag, out var page))
+    /// <summary>Creates a page for a tag (every sidebar and search entry resolves through here).</summary>
+    public static FrameworkElement CreatePage(string pageTag) => pageTag switch
+    {
+        "dashboard" => new DashboardView(),
+        "presets" => new PresetsView(),
+        "macros" => new GamingMacrosView(),
+        "benchmark" => new BenchmarkView(),
+        "scanner" => new ScannerView(),
+        "profiles" => new ProfilesView(),
+        "library" => new GameLibraryView(),
+        "tweaks" => new TweakListView(),
+        "potato" => new PotatoView(),
+        "stretched" => new StretchedView(),
+        "fnstretch" => new FortniteStretchedView(),
+        "booster" => new BoosterView(),
+        "input" => new InputDelayView(),
+        "ping" => new PingView(),
+        "crosshair" => new CrosshairView(),
+        "startup" => new StartupView(),
+        "monitor" => new MonitorView(),
+        "overlay" => new OverlayView(),
+        "restore" => new RestoreView(),
+        "logs" => new LogView(),
+        "about" => new AboutView(),
+        _ when pageTag.StartsWith("cat:", StringComparison.Ordinal) => new TweakListView(Enum.Parse<TweakCategory>(pageTag[4..])),
+        _ => new DashboardView(),
+    };
+
+    private void ShowPage(string tag)
+    {
+        var pageTag = tag.Split('#')[0];
+        if (!_pages.TryGetValue(pageTag, out var page))
         {
-            using var perf = Perf.Measure($"create page {tag}", 20);
-            page = tag switch
+            using var perf = Perf.Measure($"create page {pageTag}", 20);
+            page = CreatePage(pageTag);
+            _pages[pageTag] = page;
+        }
+        var nav = AppNavigation.Find(tag);
+        CrumbRoot.Text = nav is null ? "Money Tweaks" : AppNavigation.GroupOf(nav).Label;
+        CrumbText.Text = nav?.Label ?? pageTag;
+
+        bool same = ReferenceEquals(Host.Content, page);
+        if (!same)
+        {
+            foreach (var other in _pages.Values.Where(p => p != page).OfType<IPageLifecycle>()) other.OnHidden();
+            Host.Content = page;
+            if (!App.ReduceMotion)
             {
-                "dashboard" => new DashboardView(),
-                "presets" => new PresetsView(),
-                "macros" => new GamingMacrosView(),
-                "benchmark" => new BenchmarkView(),
-                "scanner" => new ScannerView(),
-                "profiles" => new ProfilesView(),
-                "library" => new GameLibraryView(),
-                "potato" => new PotatoView(),
-                "stretched" => new StretchedView(),
-                "fnstretch" => new FortniteStretchedView(),
-                "booster" => new BoosterView(),
-                "input" => new InputDelayView(),
-                "ping" => new PingView(),
-                "crosshair" => new CrosshairView(),
-                "startup" => new StartupView(),
-                "monitor" => new MonitorView(),
-                "overlay" => new OverlayView(),
-                "restore" => new RestoreView(),
-                "logs" => new LogView(),
-                "about" => new AboutView(),
-                _ when tag.StartsWith("cat:") => new TweakListView(Enum.Parse<TweakCategory>(tag[4..])),
-                _ => new DashboardView(),
-            };
-            _pages[tag] = page;
+                page.Opacity = 0;
+                var shift = new TranslateTransform(0, 14);
+                page.RenderTransform = shift;
+                page.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(200)));
+                shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(280)) { EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut } });
+            }
+            else { page.BeginAnimation(OpacityProperty, null); page.Opacity = 1; page.RenderTransform = null; }
+            if (page is IPageLifecycle lc) lc.OnShown();
         }
-        if (tag.StartsWith("cat:")) { CrumbRoot.Text = "Tweaks"; CrumbText.Text = CategoryInfo.DisplayName(Enum.Parse<TweakCategory>(tag[4..])); }
-        else if (tag == "dashboard") { CrumbRoot.Text = "Overview"; CrumbText.Text = "Dashboard"; }
-        else { CrumbRoot.Text = "Tools"; CrumbText.Text = Tools.FirstOrDefault(t => t.tag == tag).label ?? tag; }
-
-        foreach (var other in _pages.Values.Where(p => p != page).OfType<IPageLifecycle>()) other.OnHidden();
-        Host.Content = page;
-        if (!App.ReduceMotion)
+        if (nav?.Anchor is { } anchor && page is IAnchorTarget target)
         {
-            page.Opacity = 0;
-            var shift = new TranslateTransform(0, 14);
-            page.RenderTransform = shift;
-            page.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(200)));
-            shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(280)) { EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut } });
+            void Go() => Dispatcher.BeginInvoke(() => target.ShowSection(anchor), DispatcherPriority.Loaded);
+            if (!page.IsLoaded)
+            {
+                RoutedEventHandler? once = null;
+                once = (_, _) => { page.Loaded -= once; Go(); };
+                page.Loaded += once;
+            }
+            Go();
         }
-        else { page.BeginAnimation(OpacityProperty, null); page.Opacity = 1; page.RenderTransform = null; }
-        if (page is IPageLifecycle lc) lc.OnShown();
+        else if (same && page is UserControl { Content: ScrollViewer sv }) sv.ScrollToTop();
     }
 
     private IEnumerable<RadioButton> FindNavButtons() =>
-        OverviewNav.Children.OfType<RadioButton>().Concat(CategoryNav.Children.OfType<RadioButton>()).Concat(ToolNav.Children.OfType<RadioButton>());
+        Nav.Children.OfType<StackPanel>().SelectMany(p => p.Children.OfType<RadioButton>()).Where(r => r.GroupName == "nav");
 
     public async Task RefreshAppliedSummaryAsync()
     {
@@ -287,7 +439,7 @@ public partial class MainWindow : Window
     // ═════ Command palette ═════
     private void OpenPalette(object sender, RoutedEventArgs e)
     {
-        _paletteAll ??= BuildPaletteItems();
+        _paletteAll = BuildPaletteItems(); // rebuilt each time: games and favourites change
         Palette.Visibility = Visibility.Visible;
         PaletteBox.Text = "";
         PaletteFilter(null!, null!);
@@ -299,18 +451,31 @@ public partial class MainWindow : Window
 
     private void ClosePalette(object? sender, RoutedEventArgs? e) => Palette.Visibility = Visibility.Collapsed;
 
+    /// <summary>Settings that live inside pages, so search can find them by name.</summary>
+    internal static readonly (string title, string where, string tag, string keywords)[] SettingsIndex =
+    [
+        ("Create a restore point before changes", "Safety", "about", "restore point system protection"),
+        ("Confirm before Caution tweaks", "Safety", "about", "confirm caution warning"),
+        ("Motion & effects", "Appearance", "about#appearance", "animation reduce motion effects"),
+        ("Compact sidebar", "Appearance", "about#appearance", "sidebar icons collapse"),
+        ("Check for updates automatically", "Updates", "about#updates", "update version github"),
+        ("Start with Windows (background)", "Startup", "about", "autostart tray background sign in"),
+        ("Search hotkey (Ctrl+K)", "Hotkeys", "about#hotkeys", "shortcut search"),
+        ("Emergency stop hotkey (Ctrl+Alt+End)", "Hotkeys", "about#hotkeys", "macro stop panic"),
+        ("Overlay show/hide hotkey", "Performance Overlay", "overlay", "hotkey fps overlay"),
+        ("Overlay automatic monitoring", "Performance Overlay", "overlay", "auto game watcher"),
+        ("Customize dashboard cards", "Dashboard", "dashboard", "dashboard cards hide show customize"),
+        ("Fortnite auto resolution", "Fortnite Stretched", "fnstretch", "2288 auto switch resolution"),
+        ("NVIDIA texture filtering presets", "Potato Graphics", "potato", "lod bias nvidia profile inspector legacy"),
+    ];
+
     private List<PaletteItem> BuildPaletteItems()
     {
-        var list = new List<PaletteItem> { new("Dashboard", "Overview, live metrics and quick actions", "\uE80F", "Page", () => Navigate("dashboard")) };
-        foreach (var c in Enum.GetValues<TweakCategory>())
+        var list = new List<PaletteItem>();
+        foreach (var p in AppNavigation.Pages)
         {
-            var cat = c;
-            list.Add(new(CategoryInfo.DisplayName(c), CategoryInfo.Blurb(c), CategoryIcons[c], "Category", () => Navigate("cat:" + cat)));
-        }
-        foreach (var (tag, icon, label) in Tools)
-        {
-            var t = tag;
-            list.Add(new(label, "Tool", icon, "Tool", () => Navigate(t)));
+            var page = p;
+            list.Add(new(p.Label, $"{AppNavigation.GroupOf(p).Label} · {p.Description}", p.Icon, p.Anchor is null ? "Page" : "Section", () => Navigate(page.Tag), p.Keywords, p.Tag));
         }
         foreach (var t in TweakCatalog.All)
         {
@@ -319,7 +484,21 @@ public partial class MainWindow : Window
             {
                 Navigate("cat:" + tw.Category);
                 if (Host.Content is TweakListView v) v.FocusTweak(tw.Name);
-            }));
+            }, tw.Id));
+        }
+        foreach (var g in GameLibrary.Items(GameLibrary.Current))
+        {
+            var name = g.Def.Name;
+            list.Add(new(name, $"Game · {GameCatalog.Label(g.Def.Category)} · {string.Join(", ", g.Def.ExeNames)}", "\uE7FC", "Game", () =>
+            {
+                Navigate("library");
+                if (Host.Content is GameLibraryView v) v.FocusGame(name);
+            }, string.Join(" ", g.Def.ExeNames)));
+        }
+        foreach (var (title, where, tag, keywords) in SettingsIndex)
+        {
+            var t = tag;
+            list.Add(new(title, "Setting · " + where, "\uE713", "Setting", () => Navigate(t), keywords));
         }
         return list;
     }
@@ -328,23 +507,33 @@ public partial class MainWindow : Window
     {
         if (_paletteAll is null) return;
         var q = PaletteBox.Text.Trim();
-        IEnumerable<PaletteItem> hits = q.Length == 0
-            ? _paletteAll.Where(i => i.Kind is "Page" or "Tool" or "Category")
-            : _paletteAll.Select(i => (i, score: Score(i, q))).Where(x => x.score > 0).OrderByDescending(x => x.score).Select(x => x.i);
+        IEnumerable<PaletteItem> hits;
+        if (q.Length == 0)
+        {
+            // Favourites and recent pages first, then every page.
+            var byTag = _paletteAll.Where(i => i.Tag is not null && i.Kind is "Page" or "Section").GroupBy(i => i.Tag!).ToDictionary(g => g.Key, g => g.First());
+            var fav = S.FavouritePages.Where(byTag.ContainsKey).Select(t => byTag[t] with { Kind = "★ Favourite" });
+            var recent = S.RecentPages.Where(t => byTag.ContainsKey(t) && !S.FavouritePages.Contains(t)).Take(5).Select(t => byTag[t] with { Kind = "Recent" });
+            var pages = _paletteAll.Where(i => i.Kind == "Page");
+            hits = fav.Concat(recent).Concat(pages).DistinctBy(i => i.Tag ?? i.Title);
+        }
+        else hits = _paletteAll.Select(i => (i, score: Score(i, q))).Where(x => x.score > 0).OrderByDescending(x => x.score).Select(x => x.i);
         var shown = hits.Take(80).ToList();
         PaletteList.ItemsSource = shown;
         PaletteList.SelectedIndex = shown.Count > 0 ? 0 : -1;
-        PaletteCount.Text = q.Length == 0 ? $"{_paletteAll.Count} items" : $"{shown.Count} result{(shown.Count == 1 ? "" : "s")}";
+        PaletteCount.Text = q.Length == 0 ? $"{_paletteAll.Count} items: pages, tweaks, games and settings" : $"{shown.Count} result{(shown.Count == 1 ? "" : "s")}";
     }
 
-    private static int Score(PaletteItem i, string q)
+    internal static int Score(PaletteItem i, string q)
     {
         int s = 0;
         if (i.Title.StartsWith(q, StringComparison.OrdinalIgnoreCase)) s += 100;
         else if (i.Title.Contains(q, StringComparison.OrdinalIgnoreCase)) s += 60;
-        else if (i.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase)) s += 20;
         else if (q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => i.Title.Contains(w, StringComparison.OrdinalIgnoreCase))) s += 40;
-        if (s > 0 && i.Kind != "Tweak") s += 15; // pages and tools first on ties
+        else if (i.Keywords.Contains(q, StringComparison.OrdinalIgnoreCase)) s += 30;
+        else if (i.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase)) s += 20;
+        if (s > 0 && i.Kind is "Page" or "Section") s += 15;      // pages first on ties
+        else if (s > 0 && i.Kind is "Game" or "Setting") s += 8;
         return s;
     }
 
@@ -546,4 +735,10 @@ public interface IPageLifecycle
 {
     void OnShown();
     void OnHidden();
+}
+
+/// <summary>A page with sections that navigation can open directly ("monitor#health").</summary>
+public interface IAnchorTarget
+{
+    void ShowSection(string anchor);
 }
