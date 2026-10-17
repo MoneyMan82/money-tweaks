@@ -306,6 +306,6 @@ public sealed class ScannerState
     public void Save()
     {
         Directory.CreateDirectory(AppPaths.Root);
-        File.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        AtomicFile.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
 }

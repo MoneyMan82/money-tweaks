@@ -158,7 +158,7 @@ public static class PotatoGraphics
         if (!g.HasBackup) File.Copy(g.ConfigPath, g.BackupPath);
         ClearReadOnly(g.ConfigPath);
         var (text, changed) = ApplyValues(File.ReadAllText(g.ConfigPath), g.Build(o), g.IsIni);
-        File.WriteAllText(g.ConfigPath, text);
+        AtomicFile.WriteAllText(g.ConfigPath, text);
         // Fortnite rewrites stretched resolutions on launch unless the file is read-only.
         if (o.Stretched && g.SupportsStretched) File.SetAttributes(g.ConfigPath, File.GetAttributes(g.ConfigPath) | FileAttributes.ReadOnly);
         Log.Info($"Potato Graphics ({o.Level}, {o.RenderScale}%) applied to {g.Name}: {changed} settings changed (backup: {g.BackupPath})");

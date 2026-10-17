@@ -40,14 +40,19 @@ public sealed class NvFortniteState
     public static NvFortniteState Load()
     {
         try { if (File.Exists(PathFor)) return JsonSerializer.Deserialize<NvFortniteState>(File.ReadAllText(PathFor)) ?? new(); }
-        catch (Exception ex) { Log.Warn("nvidia-fortnite.json unreadable: " + ex.Message); }
+        catch (Exception ex)
+        {
+            // Keep the damaged file (it may hold the only backup of original values) before the next Save replaces it.
+            Log.Warn("nvidia-fortnite.json unreadable (kept as .bad): " + ex.Message);
+            try { File.Copy(PathFor, PathFor + ".bad-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture), overwrite: false); } catch { }
+        }
         return new();
     }
 
     public void Save()
     {
         Directory.CreateDirectory(AppPaths.Root);
-        File.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        AtomicFile.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
 }
 
@@ -202,6 +207,8 @@ public static class NvidiaFortnite
                 created = true;
                 log.Add($"Created profile '{OwnProfileName}' for {exe}");
             }
+            // Same guard as the preset path: a change meant for Fortnite must never land on every game.
+            if (s.IsGlobalOrBase(prof)) return (false, "Nothing was changed: the profile found for Fortnite is the global/base profile.", log);
             if (state.Backup is null)
             {
                 state.Backup = new NvBackup
@@ -258,6 +265,7 @@ public static class NvidiaFortnite
         using (var s = new NvApi.Session())
         {
             var p = s.FindProfileForApp(exe);
+            if (p != IntPtr.Zero && s.IsGlobalOrBase(p)) return (false, "Nothing was restored: the profile found for Fortnite is the global/base profile.", log);
             if (p != IntPtr.Zero)
             {
                 if (b.CreatedProfile && s.ProfileName(p) == OwnProfileName) { s.DeleteProfile(p); log.Add($"Deleted '{OwnProfileName}' (created by Money Tweaks)"); }

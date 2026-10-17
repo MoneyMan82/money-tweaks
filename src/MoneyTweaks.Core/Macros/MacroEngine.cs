@@ -107,6 +107,7 @@ public sealed class MacroPlayer(IInputSink sink, Func<string?>? foregroundProces
             return StopReason.Finished;
         }
         catch (OperationCanceledException) { return StopReason.Stopped; }
+        catch (BlockedGameException b) { BlockedGame = b.Game; return StopReason.BlockedGame; }
         finally { ReleaseAll(); }
     }
 
@@ -150,7 +151,29 @@ public sealed class MacroPlayer(IInputSink sink, Func<string?>? foregroundProces
     }
 
     private static int Vk(string name) => VirtualKeys.TryParse(name, out var vk) ? vk : throw new InvalidOperationException($"Unknown key \"{name}\".");
-    private static Task Wait(int ms, CancellationToken ct) => ms <= 0 ? Task.CompletedTask : Task.Delay(ms, ct);
+    /// <summary>Thrown when a blocked competitive game takes focus while a step is holding or waiting.</summary>
+    private sealed class BlockedGameException(string game) : Exception(game) { public string Game { get; } = game; }
+
+    /// <summary>
+    /// Waits in short slices and checks the focused app between them. Without this, a held key ("hold W, wait 60 s")
+    /// kept going into a blocked game that took focus mid-step; the check used to run only between steps.
+    /// </summary>
+    private async Task Wait(int ms, CancellationToken ct)
+    {
+        if (ms <= 0) return;
+        if (foregroundProcess is null) { await Task.Delay(ms, ct); return; }
+        var end = Environment.TickCount64 + ms;
+        while (true)
+        {
+            if (MacroPolicy.BlockedGame(foregroundProcess()) is { } game) throw new BlockedGameException(game);
+            var left = end - Environment.TickCount64;
+            if (left <= 0) return;
+            await Task.Delay((int)Math.Min(left, BlockedPollMs), ct);
+        }
+    }
+
+    /// <summary>How often a running step re-checks the focused app for blocked games.</summary>
+    public const int BlockedPollMs = 100;
     private void Down(int vk) { sink.Key(vk, true); _keys.Add(vk); }
     private void Up(int vk) { sink.Key(vk, false); _keys.Remove(vk); }
     private void MDown(MouseBtn b) { sink.Mouse(b, true); _buttons.Add(b); }

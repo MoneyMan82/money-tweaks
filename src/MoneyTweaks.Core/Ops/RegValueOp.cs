@@ -78,6 +78,15 @@ public sealed class RegValueOp(Hive hive, string path, string name, RegistryValu
             if (RemoveKeyIfCreated && !keyExisted)
             {
                 Root.DeleteSubKeyTree(Path, throwOnMissingSubKey: false);
+                // CreateSubKey also created any missing parent (e.g. CLSID\{86ca…} above InprocServer32). Remove it
+                // too when it's now completely empty, so Windows doesn't keep seeing an override key.
+                var parent = System.IO.Path.GetDirectoryName(Path);
+                if (!string.IsNullOrEmpty(parent))
+                {
+                    bool empty;
+                    using (var pk = Root.OpenSubKey(parent)) empty = pk is not null && pk.SubKeyCount == 0 && pk.ValueCount == 0;
+                    if (empty) Root.DeleteSubKey(parent, throwOnMissingSubKey: false);
+                }
                 return;
             }
             if (backup is null && DefaultValue is not null)

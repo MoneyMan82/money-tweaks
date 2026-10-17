@@ -48,20 +48,27 @@ public sealed class NvProfileState
 {
     public string? LastBackupJson { get; set; }
     public string? InspectorPath { get; set; }
+    /// <summary>SHA-256 of the Inspector exe when the user chose it; a different file at that path is never started.</summary>
+    public string? InspectorSha256 { get; set; }
     public string? LastPreset { get; set; }
     internal static string PathFor => Path.Combine(AppPaths.Root, "nvidia-profile.json");
 
     public static NvProfileState Load()
     {
         try { if (File.Exists(PathFor)) return JsonSerializer.Deserialize<NvProfileState>(File.ReadAllText(PathFor)) ?? new(); }
-        catch (Exception ex) { Log.Warn("nvidia-profile.json unreadable: " + ex.Message); }
+        catch (Exception ex)
+        {
+            // Keep the damaged file (it may hold the only backup of original values) before the next Save replaces it.
+            Log.Warn("nvidia-profile.json unreadable (kept as .bad): " + ex.Message);
+            try { File.Copy(PathFor, PathFor + ".bad-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture), overwrite: false); } catch { }
+        }
         return new();
     }
 
     public void Save()
     {
         Directory.CreateDirectory(AppPaths.Root);
-        File.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        AtomicFile.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
 }
 
@@ -216,7 +223,7 @@ public static class NvidiaProfilePresets
         var stamp = snap.At.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
         var json = Path.Combine(BackupDir, $"fortnite-profile-{stamp}.json");
         var nip = Path.Combine(BackupDir, $"fortnite-profile-{stamp}.nip");
-        File.WriteAllText(json, JsonSerializer.Serialize(snap, new JsonSerializerOptions { WriteIndented = true }));
+        AtomicFile.WriteAllText(json, JsonSerializer.Serialize(snap, new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(nip, BuildNip(snap.ProfileName, snap.Exe, snap.Settings.Where(x => !x.Predefined)), Encoding.Unicode);
         return (json, nip);
     }
@@ -351,6 +358,10 @@ public static class NvidiaProfilePresets
         string method;
         if (inspector is not null && File.Exists(inspector))
         {
+            // Only start the exact file the user chose: a changed or swapped exe at the remembered path is refused.
+            if (!InspectorTrusted(state, inspector))
+                return Finish(false, $"NVIDIA Profile Inspector at {inspector} isn't the file you chose earlier (it changed), so it wasn't started. Choose it again to use it.",
+                    preset, resolved, snap, exe, backupNip, appliedNip, "none", render, renderText, displayBefore, log, rollback: true);
             // Inspector may replace the whole profile on import, so its file carries every user setting plus the preset.
             var merged = snap.Settings.Where(x => !x.Predefined && !toWrite.Any(t => t.Id == x.Id)).Concat(toWrite);
             File.WriteAllText(appliedNip, BuildNip(snap.ProfileName, exe, merged), Encoding.Unicode);
@@ -503,6 +514,24 @@ public static class NvidiaProfilePresets
             catch { }
         }
         return null;
+    }
+
+    /// <summary>Remembers the Inspector exe the user chose, pinned to its SHA-256 (Inspector releases aren't code-signed).</summary>
+    public static void TrustInspector(NvProfileState state, string? path)
+    {
+        state.InspectorPath = path;
+        state.InspectorSha256 = path is not null && File.Exists(path) ? Sha256(path) : null;
+    }
+
+    /// <summary>True only for the exact file (same path and contents) the user chose.</summary>
+    public static bool InspectorTrusted(NvProfileState state, string path) =>
+        state.InspectorPath is { } p && string.Equals(Path.GetFullPath(p), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase)
+        && state.InspectorSha256 is { } h && File.Exists(path) && string.Equals(Sha256(path), h, StringComparison.OrdinalIgnoreCase);
+
+    private static string Sha256(string path)
+    {
+        using var fs = File.OpenRead(path);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(fs));
     }
 
     /// <summary>Runs Inspector on a .nip (Inspector imports a .nip passed on its command line; it asks for admin rights itself).</summary>

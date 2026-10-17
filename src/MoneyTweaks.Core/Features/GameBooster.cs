@@ -46,6 +46,12 @@ public sealed class GameBooster
             .OrderByDescending(x => x.WorkingSetMb).ToList();
     }
 
+    /// <summary>Process names that may be closed: distinct, never protected, never the game being boosted.</summary>
+    public static IReadOnlyList<string> CloseTargets(IEnumerable<string> closeNames, string? gameProcessName) =>
+        closeNames.Select(n => Path.GetFileNameWithoutExtension(n.Trim()))
+            .Where(n => n.Length > 0 && !Protected.Contains(n) && !string.Equals(n, gameProcessName, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
     private static string? ActiveScheme()
     {
         var r = ProcessRunner.Run(Path.Combine(ProcessRunner.System32, "powercfg.exe"), "/getactivescheme");
@@ -62,16 +68,21 @@ public sealed class GameBooster
         var set = ProcessRunner.Run(Path.Combine(ProcessRunner.System32, "powercfg.exe"), "/setactive " + target);
         report.Add(set.Ok ? $"Power plan → {(target == ultimate ? "Ultimate Performance" : "High performance")}" : "Power plan: High performance is not available on this PC (Modern Standby devices hide it).");
 
-        foreach (var name in closeNames.Distinct(StringComparer.OrdinalIgnoreCase))
+        var session = Process.GetCurrentProcess().SessionId;
+        var game = string.IsNullOrWhiteSpace(gameProcess) ? null : Path.GetFileNameWithoutExtension(gameProcess);
+        foreach (var name in CloseTargets(closeNames, game))
         {
             int closed = 0;
             foreach (var p in Process.GetProcessesByName(name))
             {
                 try
                 {
+                    // Only this user's own processes (an elevated copy could otherwise end other users' apps).
+                    if (p.SessionId != session) continue;
                     // Ask nicely first so apps can save; force-kill only if they ignore it.
                     if (p.MainWindowHandle != 0 && p.CloseMainWindow() && p.WaitForExit(2500)) { closed++; continue; }
-                    p.Kill(entireProcessTree: true);
+                    // Only this process, never its tree: a launcher's children include the game it started.
+                    p.Kill(entireProcessTree: false);
                     closed++;
                 }
                 catch (Exception ex) { report.Add($"Could not close {name}: {ex.Message}"); }

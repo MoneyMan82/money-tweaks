@@ -87,7 +87,7 @@ public sealed partial class PotatoView
         else
         {
             var cb = new CheckBox { Content = $"Import with NVIDIA Profile Inspector ({_inspector})", IsChecked = _useInspector, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 0, 0, 2) };
-            cb.Click += (_, _) => { _useInspector = cb.IsChecked == true; _np.InspectorPath = _useInspector ? _inspector : null; SaveNp(); };
+            cb.Click += (_, _) => { _useInspector = cb.IsChecked == true; NvidiaProfilePresets.TrustInspector(_np, _useInspector ? _inspector : null); SaveNp(); };
             insp.Children.Add(cb);
             insp.Children.Add(Ui.Muted("Inspector asks for administrator rights and may show its own \"import done\" message. Money Tweaks reads the profile back afterwards either way.", 11.5));
         }
@@ -130,7 +130,7 @@ public sealed partial class PotatoView
         if (dlg.ShowDialog() != true) return;
         _inspector = dlg.FileName;
         _useInspector = true;
-        _np.InspectorPath = dlg.FileName;
+        NvidiaProfilePresets.TrustInspector(_np, dlg.FileName);
         SaveNp();
         _ = LoadMetaAsync().ContinueWith(_ => Dispatcher.Invoke(RenderLegacy));
     }

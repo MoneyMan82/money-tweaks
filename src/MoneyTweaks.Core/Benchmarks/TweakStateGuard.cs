@@ -43,7 +43,7 @@ public static class TweakStateGuard
     public static void SavePending(Dictionary<string, bool> original)
     {
         Directory.CreateDirectory(AppPaths.Root);
-        File.WriteAllText(PendingPath, JsonSerializer.Serialize(original));
+        AtomicFile.WriteAllText(PendingPath, JsonSerializer.Serialize(original));
     }
 
     public static Dictionary<string, bool>? LoadPending()

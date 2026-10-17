@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.43 – 2026-10-17
+Security and safety audit fixes (no features removed; nothing weakens Windows security):
+- **Backups can't be destroyed by a crash.** Tweak backups, the NVIDIA backups, the Health Center's update-service backup,
+  the benchmark recovery file, settings and the Fortnite/game settings files Money Tweaks edits are now written to a temp
+  file and swapped in, so a crash or power cut leaves the old or new file, never a half-written one.
+- **A damaged tweak backup is no longer treated as "no backup".** Before, Apply would overwrite it with the already-tweaked
+  values and Undo would write Windows defaults over your real originals while reporting success. Both now stop and say
+  which file is damaged. Undo without any backup now says it used the usual Windows defaults, not "your" values.
+- Damaged NVIDIA/Health state files are kept as .bad copies instead of being overwritten on the next save.
+- **Updates:** the downloaded installer is hashed again and locked against changes right before it starts (it waited in a
+  user-writable temp folder after verification); download and release-page links must be this repository's GitHub
+  releases over HTTPS; the release tag is sanitized before it's used in a folder name.
+- **Game Booster** no longer force-closes a chosen app's whole process tree (closing a launcher could kill the game it
+  started); it only closes your own session's processes, enforces the protected list when closing, and never closes the
+  game being boosted.
+- **Macros** re-check the focused app every 100 ms during holds and waits: before, "hold W, wait 60 s" kept the key held
+  for up to 60 s after a blocked competitive game took focus. The macro now stops and releases every key.
+- **NVIDIA Profile Inspector** is pinned to the file you chose (SHA-256): a different or replaced exe at that path is never
+  started. Choose it again once after updating. The older Fortnite NVIDIA path now has the same global/base-profile guard
+  as the preset path.
+- Health Center links only open HTTPS pages, ms-settings: pages and the two Windows tools the checks use (links are reloaded
+  from health.json and were started as-is).
+- "Disable dynamic tick" no longer shows as applied when bcdedit reports disabledynamictick No.
+- Undoing the Windows 11 classic context menu tweak also removes the empty CLSID key it created.
+- 12 regression tests (temp folders and a scratch HKCU key only).
+
 ## 1.42 – 2026-10-17
 - Settings › Hotkeys: shortcuts were drawn as one stretched box with the text stuck to its top edge, so they looked cut
   off and had different widths. Each key is now its own keycap ([Ctrl] + [Shift] + [F10]), vertically centred, in a

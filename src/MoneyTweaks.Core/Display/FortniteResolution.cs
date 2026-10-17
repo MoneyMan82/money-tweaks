@@ -61,7 +61,7 @@ public static class FortniteResolution
         Writable();
         var values = plan.Where(p => !p.Missing).GroupBy(p => p.Key).ToDictionary(x => x.Key, x => x.First().New);
         var (text, changed) = PotatoGraphics.ApplyValues(File.ReadAllText(g.ConfigPath), values, true);
-        File.WriteAllText(g.ConfigPath, text);
+        AtomicFile.WriteAllText(g.ConfigPath, text);
         // Fortnite resets resolutions it doesn't list on launch unless the file is read-only.
         if (lockFile) File.SetAttributes(g.ConfigPath, File.GetAttributes(g.ConfigPath) | FileAttributes.ReadOnly);
         // Read back what was written.

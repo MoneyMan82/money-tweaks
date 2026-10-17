@@ -126,7 +126,7 @@ public static class FortnitePotato
         PotatoGraphics.ClearReadOnly(g.ConfigPath);
         var values = plan.Where(p => !p.Missing).GroupBy(p => p.Key).ToDictionary(x => x.Key, x => x.First().New);
         var (text, changed) = PotatoGraphics.ApplyValues(File.ReadAllText(g.ConfigPath), values, true);
-        File.WriteAllText(g.ConfigPath, text);
+        AtomicFile.WriteAllText(g.ConfigPath, text);
         // Fortnite resets a custom stretched resolution on launch unless the file is read-only.
         if (s.Stretched) File.SetAttributes(g.ConfigPath, File.GetAttributes(g.ConfigPath) | FileAttributes.ReadOnly);
         var missing = plan.Where(p => p.Missing).ToList();

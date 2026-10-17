@@ -8,6 +8,8 @@ namespace MoneyTweaks.Core.Catalog;
 public static partial class TweakCatalog
 {
     private const string TcpIfaces = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";
+    /// <summary>bcdedit line for disabledynamictick set to Yes, in the languages bcdedit translates it to.</summary>
+    internal const string DynamicTickOnPattern = @"^\s*disabledynamictick\s+(Yes|Ja|Oui|Sí|Si|Sim|Kyllä|Tak|Да|Так|Evet|Igen|Ano|Áno|Da|Jah|Taip|Jā|Ναι|是|はい|예)\s*$";
     private const string TcpParams = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters";
     private const string SysProfile = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
     private const string MemMgmt = @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management";
@@ -136,7 +138,8 @@ public static partial class TweakCatalog
         yield return T(A, "adv.timer-dynamic-tick", "Disable dynamic tick",
             "Stops the kernel skipping timer ticks while idle. That can reduce timer jitter, but uses slightly more power. Changes the boot configuration (bcdedit).",
             Cmd("bcdedit /set disabledynamictick yes", "bcdedit /deletevalue disabledynamictick",
-                "bcdedit /enum {current}", @"disabledynamictick", label: "bcdedit disabledynamictick yes")) with { Risk = Risk.Caution, RequiresReboot = true, Group = "Timers" };
+                // "disabledynamictick No" must not count as applied: only "Yes" (bcdedit localizes it) counts.
+                "bcdedit /enum {current}", DynamicTickOnPattern, label: "bcdedit disabledynamictick yes")) with { Risk = Risk.Caution, RequiresReboot = true, Group = "Timers" };
         yield return T(A, "adv.timer-hpet", "Remove forced HPET (platform clock)",
             "Deletes a 'useplatformclock' override if a previous tool set one, so Windows can use its default (faster) timer source.",
             Cmd("bcdedit /deletevalue useplatformclock & exit /b 0", "exit /b 0",

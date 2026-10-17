@@ -72,7 +72,7 @@ public sealed class AppSettings
 
     public void Save()
     {
-        try { File.WriteAllText(AppPaths.SettingsFile, JsonSerializer.Serialize(this, Json)); }
+        try { AtomicFile.WriteAllText(AppPaths.SettingsFile, JsonSerializer.Serialize(this, Json)); }
         catch (Exception ex) { Log.Error("Could not save settings", ex); }
     }
 }

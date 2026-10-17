@@ -321,6 +321,8 @@ public sealed partial class MonitorView : IAnchorTarget
         try
         {
             var t = l.Target;
+            // Links are reloaded from health.json, so only the kinds of target the checks create are ever started.
+            if (!Core.Health.HealthLink.IsAllowedTarget(t)) { Dialog.Show("Link not opened", $"Money Tweaks only opens web pages, Settings pages and Windows tools from here. This link isn't one: {t}", DialogKind.Warning); return; }
             if (t.StartsWith("http", StringComparison.OrdinalIgnoreCase) || t.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) || !t.Contains(' '))
                 Process.Start(new ProcessStartInfo(t) { UseShellExecute = true });
             else

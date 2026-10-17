@@ -21,15 +21,27 @@ public static class BackupStore
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
     private static string PathFor(string id) => Path.Combine(AppPaths.Backups, id + ".json");
 
-    public static TweakBackup? Load(string id)
+    public static TweakBackup? Load(string id) => TryLoad(id, out var b) ? b : null;
+
+    /// <summary>
+    /// False when a backup file exists but can't be read. Callers must not treat that like "no backup": undoing with
+    /// Windows defaults would overwrite the user's real original values that the damaged file was meant to restore.
+    /// </summary>
+    public static bool TryLoad(string id, out TweakBackup? backup)
     {
+        backup = null;
         var p = PathFor(id);
-        if (!File.Exists(p)) return null;
-        try { return JsonSerializer.Deserialize<TweakBackup>(File.ReadAllText(p)); }
-        catch (Exception ex) { Log.Error($"Backup for {id} is unreadable", ex); return null; }
+        if (!File.Exists(p)) return true;
+        try
+        {
+            backup = JsonSerializer.Deserialize<TweakBackup>(File.ReadAllText(p));
+            if (backup is null) throw new JsonException("empty backup file");
+            return true;
+        }
+        catch (Exception ex) { Log.Error($"Backup for {id} is unreadable", ex); return false; }
     }
 
-    public static void Save(TweakBackup b) => File.WriteAllText(PathFor(b.TweakId), JsonSerializer.Serialize(b, Json));
+    public static void Save(TweakBackup b) => AtomicFile.WriteAllText(PathFor(b.TweakId), JsonSerializer.Serialize(b, Json));
     public static void Delete(string id) { try { File.Delete(PathFor(id)); } catch { /* ignore */ } }
     public static bool Exists(string id) => File.Exists(PathFor(id));
     public static IEnumerable<string> AllIds() =>
@@ -79,7 +91,8 @@ public static class TweakEngine
             return new(t, false, "Administrator rights are required. Use 'Restart as admin'.", GetState(t));
 
         // Keep the very first backup: re-applying must never overwrite the user's true original values.
-        var backup = BackupStore.Load(t.Id);
+        if (!BackupStore.TryLoad(t.Id, out var backup))
+            return new(t, false, DamagedBackupMessage(t), GetState(t));
         bool freshBackup = backup is null || backup.Ops.Count != t.Ops.Count;
         if (freshBackup)
         {
@@ -150,7 +163,8 @@ public static class TweakEngine
         if (t.RequiresAdmin && !Admin.IsElevated)
             return new(t, false, "Administrator rights are required. Use 'Restart as admin'.", GetState(t));
 
-        var backup = BackupStore.Load(t.Id);
+        if (!BackupStore.TryLoad(t.Id, out var backup))
+            return new(t, false, DamagedBackupMessage(t), GetState(t));
         var errors = new List<string>();
         for (int i = t.Ops.Count - 1; i >= 0; i--)
         {
@@ -171,11 +185,16 @@ public static class TweakEngine
                 return new(t, false, "Reverted, but read-back differs from the backup (kept so you can retry): " + string.Join("; ", diffs), GetState(t));
             }
             BackupStore.Delete(t.Id);
-            Log.Info($"Reverted: {t.Name}{(backup is null ? " (no backup found, restored Windows defaults)" : "")}");
-            return new(t, true, (backup is null ? "Reverted to Windows defaults." : "Reverted and verified against the backup.") + (t.RequiresReboot ? " Restart Windows to finish." : ""), GetState(t));
+            Log.Info($"Reverted: {t.Name}{(backup is null ? " (no backup found, used Money Tweaks' fallback values)" : "")}");
+            // Without a backup the fallback values are Windows' usual defaults, not necessarily what this PC had before.
+            return new(t, true, (backup is null ? "Reverted to the usual Windows defaults (no backup of this PC's previous values was found)." : "Reverted and verified against the backup.") + (t.RequiresReboot ? " Restart Windows to finish." : ""), GetState(t));
         }
         return new(t, false, string.Join(" | ", errors), GetState(t));
     }
+
+    private static string DamagedBackupMessage(Tweak t) =>
+        $"The backup of your original settings for this tweak is damaged ({t.Id}.json in the backups folder), so nothing was changed. " +
+        "Applying again would overwrite it and undoing would guess the values. If you have a copy of the file, put it back; otherwise delete it, and the current values become the new starting point.";
 }
 
 public static class RestorePoints

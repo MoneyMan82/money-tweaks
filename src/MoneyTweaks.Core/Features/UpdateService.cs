@@ -59,13 +59,35 @@ public static class UpdateService
         {
             var name = a.GetProperty("name").GetString() ?? "";
             var url = a.GetProperty("browser_download_url").GetString();
+            if (!IsTrustedDownloadUrl(url)) { Log.Warn($"Update asset {name} ignored: unexpected URL {url}"); continue; }
             if (name.Equals("MoneyTweaks-Setup.exe", StringComparison.OrdinalIgnoreCase)) setup = url;
             else if (name.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase)) sums = url;
             else if (name.EndsWith("-win-x64.exe", StringComparison.OrdinalIgnoreCase)) { portable = url; portableName = name; }
         }
+        var html = root.GetProperty("html_url").GetString();
         return new UpdateInfo(latest, tag, root.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "",
-            root.GetProperty("html_url").GetString() ?? ReleasesPage, setup, portable, portableName, sums);
+            IsTrustedPageUrl(html) ? html! : ReleasesPage, setup, portable, portableName, sums);
     }
+
+    /// <summary>Release files must come from this repository's GitHub releases over HTTPS (GitHub may redirect to its CDN).</summary>
+    public static bool IsTrustedDownloadUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps && u.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+        && u.AbsolutePath.StartsWith($"/{Repo}/releases/download/", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The release page opened in the browser must be this repository on github.com (it's launched via the shell).</summary>
+    public static bool IsTrustedPageUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps && u.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+        && u.AbsolutePath.StartsWith($"/{Repo}/", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Tag reduced to characters that are safe in a folder name (no "..", slashes or drive letters).</summary>
+    public static string SafeTag(string tag)
+    {
+        var s = new string(tag.Where(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or '_').ToArray()).Replace("..", ".");
+        return s.Trim('.').Length == 0 ? "unknown" : s.Trim('.');
+    }
+
+    // SHA-256 of each verified download, re-checked right before it is started.
+    private static readonly Dictionary<string, string> Verified = new(StringComparer.OrdinalIgnoreCase);
 
     private static Version Normalize(Version v) => new(v.Major, v.Minor, Math.Max(0, v.Build), Math.Max(0, v.Revision));
 
@@ -90,7 +112,8 @@ public static class UpdateService
         if (url is null || name is null) throw new InvalidOperationException("This release has no file for your copy of Money Tweaks. Download it manually from the releases page.");
         if (u.SumsUrl is null) throw new InvalidOperationException("This release has no SHA256SUMS.txt, so the download can't be verified.");
 
-        var dir = Path.Combine(Path.GetTempPath(), "MoneyTweaks-update-" + u.Tag);
+        if (!IsTrustedDownloadUrl(url) || !IsTrustedDownloadUrl(u.SumsUrl)) throw new InvalidOperationException("The update's download address isn't this project's GitHub releases, so nothing was downloaded.");
+        var dir = Path.Combine(Path.GetTempPath(), "MoneyTweaks-update-" + SafeTag(u.Tag));
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, name);
 
@@ -122,6 +145,7 @@ public static class UpdateService
                 File.Delete(path);
                 throw new InvalidOperationException($"Checksum mismatch for {name}. The download was deleted and nothing was installed.");
             }
+            lock (Verified) Verified[Path.GetFullPath(path)] = actual;
         }
         // Root cause of the old endless-update loop: a release tag whose files were built with an older version.
         // Installing those changes nothing, so refuse them instead of looping.
@@ -138,6 +162,9 @@ public static class UpdateService
     /// <summary>Starts the update. The caller must exit the app right after this returns.</summary>
     public static void Install(string downloadedPath)
     {
+        // The file sat in a user-writable temp folder since it was verified. Lock it against writes and deletion,
+        // hash it again and start it while the lock is held, so it can't be swapped between the check and the start.
+        using var guard = OpenVerified(downloadedPath);
         if (IsInstalled)
         {
             // Keep the same install scope as the existing copy (per-user vs all users).
@@ -157,6 +184,35 @@ public static class UpdateService
         // --restarted: the new copy waits for this one to close instead of handing off to it (single instance).
         Process.Start(new ProcessStartInfo(current, "--restarted") { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(current)! });
         Log.Info("Portable update swapped in; restarting");
+    }
+
+    /// <summary>
+    /// Opens a downloaded update so nobody can change or delete it (readers allowed), and checks it still has the hash
+    /// verified at download time. Throws, and nothing is started, if it was never verified or has changed.
+    /// </summary>
+    public static FileStream OpenVerified(string path)
+    {
+        var full = Path.GetFullPath(path);
+        string? expected;
+        lock (Verified) Verified.TryGetValue(full, out expected);
+        if (expected is null) throw new InvalidOperationException("This update file wasn't verified in this session, so it won't be started.");
+        var fs = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read);
+        try
+        {
+            var now = Convert.ToHexString(SHA256.HashData(fs));
+            fs.Position = 0;
+            if (!now.Equals(expected, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The downloaded update changed after it was verified, so it was not started. Download it again.");
+            return fs;
+        }
+        catch { fs.Dispose(); throw; }
+    }
+
+    /// <summary>Test hook: marks a file as verified with its current hash.</summary>
+    internal static void MarkVerifiedForTests(string path)
+    {
+        using var fs = File.OpenRead(path);
+        lock (Verified) Verified[Path.GetFullPath(path)] = Convert.ToHexString(SHA256.HashData(fs));
     }
 
     /// <summary>Removes the previous exe left behind by a portable update.</summary>

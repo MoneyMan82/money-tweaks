@@ -9,7 +9,17 @@ public enum HealthStatus { Passed, Warning, Problem, Unknown }
 
 public enum HealthArea { Drivers, Windows, Stability }
 
-public sealed record HealthLink(string Label, string Target);
+public sealed record HealthLink(string Label, string Target)
+{
+    /// <summary>Windows tools the checks link to. Anything else (a planted health.json entry) is never started.</summary>
+    private static readonly HashSet<string> Tools = new(StringComparer.OrdinalIgnoreCase) { "devmgmt.msc", "perfmon.exe /rel" };
+
+    /// <summary>HTTPS pages, ms-settings: pages and the known Windows tools only.</summary>
+    public static bool IsAllowedTarget(string? target) =>
+        target is not null && (Tools.Contains(target.Trim())
+            || target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) && !target.Contains(' ')
+            || Uri.TryCreate(target, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps);
+}
 
 /// <summary>
 /// One health check result. Details are the real values read from this PC (shown as technical details);
@@ -49,14 +59,19 @@ public sealed class HealthState
     public static HealthState Load()
     {
         try { if (File.Exists(PathFor)) return JsonSerializer.Deserialize<HealthState>(File.ReadAllText(PathFor)) ?? new(); }
-        catch (Exception ex) { Log.Warn("health.json unreadable: " + ex.Message); }
+        catch (Exception ex)
+        {
+            // Keep the damaged file (it may hold the only backup of original values) before the next Save replaces it.
+            Log.Warn("health.json unreadable (kept as .bad): " + ex.Message);
+            try { File.Copy(PathFor, PathFor + ".bad-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture), overwrite: false); } catch { }
+        }
         return new();
     }
 
     public void Save()
     {
         Directory.CreateDirectory(AppPaths.Root);
-        File.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        AtomicFile.WriteAllText(PathFor, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     /// <summary>Worst status across results (Unknown never outranks a real Warning/Problem).</summary>
