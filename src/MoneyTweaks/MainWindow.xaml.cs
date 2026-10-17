@@ -119,7 +119,7 @@ public partial class MainWindow : Window
     private string _current = "dashboard";
     private readonly StackPanel _favPanel = new(), _recentPanel = new();
 
-    /// <summary>Builds the sidebar from AppNavigation: favourites, recent pages, then the collapsible groups.</summary>
+    /// <summary>Builds the sidebar from AppNavigation: Dashboard, favourites, then the collapsible groups.</summary>
     private void BuildNav()
     {
         bool compact = S.SidebarCompact;
@@ -176,12 +176,16 @@ public partial class MainWindow : Window
         return row;
     }
 
-    /// <summary>Favourites (pinned) and recently opened pages at the top of the sidebar.</summary>
+    /// <summary>
+    /// Favourites (pinned) at the top of the sidebar. Dashboard is the fixed home item, so it never appears twice.
+    /// There's no "Recent" list in the sidebar any more: it reshuffled on every page change. Recent pages are still
+    /// offered by the search (Ctrl+K) when it's empty.
+    /// </summary>
     private void RefreshPins()
     {
         bool compact = S.SidebarCompact;
-        FillPins(_favPanel, "FAVOURITES", S.FavouritePages, compact);
-        FillPins(_recentPanel, "RECENT", compact ? [] : S.RecentPages.Where(t => t != _current && !S.FavouritePages.Contains(t)).Take(4), compact);
+        FillPins(_favPanel, "FAVOURITES", AppNavigation.SidebarFavourites(S.FavouritePages), compact);
+        _recentPanel.Children.Clear();
     }
 
     private void FillPins(StackPanel panel, string title, IEnumerable<string> tags, bool compact)
@@ -336,6 +340,8 @@ public partial class MainWindow : Window
 
     private void UpdateFavIcon()
     {
+        // Dashboard is always at the top of the sidebar; starring it would only add a duplicate.
+        FavButton.Visibility = AppNavigation.IsHome(_current) ? Visibility.Collapsed : Visibility.Visible;
         bool fav = S.FavouritePages.Contains(_current);
         FavIcon.Text = fav ? "★" : "☆";
         FavIcon.Foreground = (Brush)FindResource(fav ? "Gold" : "Muted");

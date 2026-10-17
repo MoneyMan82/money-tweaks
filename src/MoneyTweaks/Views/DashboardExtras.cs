@@ -119,7 +119,7 @@ public sealed partial class DashboardView
         var search = Ui.Btn("Search everything (Ctrl+K) ›", (_, _) => System.Windows.Input.ApplicationCommands.Find.Execute(null, MainWindow.Current), "GhostButton", new Thickness(0));
         DockPanel.SetDock(search, Dock.Right);
         ((DockPanel)_shortcuts.Children[0]).Children.Insert(0, search);
-        var favs = App.Settings.FavouritePages.Select(t => AppNavigation.Pages.FirstOrDefault(p => p.Tag == t)).OfType<NavPage>().ToList();
+        var favs = AppNavigation.SidebarFavourites(App.Settings.FavouritePages).Select(t => AppNavigation.Pages.FirstOrDefault(p => p.Tag == t)).OfType<NavPage>().ToList();
         bool suggested = favs.Count == 0;
         if (suggested) favs = new[] { "scanner", "library", "monitor#health", "restore" }.Select(t => AppNavigation.Pages.First(p => p.Tag == t)).ToList();
         var wrap = new WrapPanel();

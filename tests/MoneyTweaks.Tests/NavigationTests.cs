@@ -53,4 +53,13 @@ public class NavigationTests
         Assert.Equal(["b", "a", "c"], r);
         Assert.Equal(6, AppNavigation.PushRecent(Enumerable.Range(0, 10).Select(i => i.ToString()), "x").Count);
     }
+
+    [Fact]
+    public void Dashboard_never_appears_twice_in_the_sidebar()
+    {
+        Assert.True(AppNavigation.IsHome("dashboard"));
+        Assert.False(AppNavigation.IsHome("tweaks"));
+        // A saved favourites list that holds the dashboard, a duplicate and a page that no longer exists.
+        Assert.Equal(["library", "tweaks"], AppNavigation.SidebarFavourites(["dashboard", "library", "gone-page", "tweaks", "library"]));
+    }
 }

@@ -94,6 +94,13 @@ public static class AppNavigation
         "cat:General", "cat:Debloating", "cat:Networking", "cat:Advanced", "cat:Services", "cat:AppOptimizer", "cat:AppRemoval", "cat:GameProfiles", "cat:Bios",
     ];
 
+    /// <summary>Pages that are always at the top of the sidebar (Dashboard).</summary>
+    public static bool IsHome(string tag) => Find(tag) is { Group: "dashboard" };
+
+    /// <summary>Favourites as shown in the sidebar: known pages only, no home page (it's already at the top), no duplicates.</summary>
+    public static List<string> SidebarFavourites(IEnumerable<string> favourites) =>
+        favourites.Where(t => Pages.Any(p => p.Tag == t) && !IsHome(t)).Distinct().ToList();
+
     /// <summary>Adds a page to the front of the recent list (max 6, no duplicates).</summary>
     public static List<string> PushRecent(IEnumerable<string> recent, string tag, int max = 6) =>
         new[] { tag }.Concat(recent.Where(t => t != tag)).Take(max).ToList();

@@ -157,18 +157,12 @@
                                  ToolTip="Tweaks with known limitations, overlaps or conflicts with other tweaks"/>
                 </WrapPanel>
             </DockPanel>
-            <WrapPanel Margin="0,10,0,0">
-                <TextBlock x:Name="CategoryLabel" Text="Category" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <ComboBox x:Name="CategoryBox" Width="220" Margin="0,0,16,0" SelectionChanged="Category_Changed"/>
-                <TextBlock Text="Sort" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <ComboBox x:Name="SortBox" Width="220" SelectionChanged="Sort_Changed">
-                    <ComboBoxItem Content="Default order" Tag="default" IsSelected="True"/>
-                    <ComboBoxItem Content="Name (A–Z)" Tag="name"/>
-                    <ComboBoxItem Content="Risk (Caution first)" Tag="risk"/>
-                    <ComboBoxItem Content="Status (applied first)" Tag="status"/>
-                    <ComboBoxItem Content="Status (not applied first)" Tag="status-desc"/>
-                </ComboBox>
-            </WrapPanel>
+            <!-- All Tweaks only: one chip per category (built in code, with counts). -->
+            <WrapPanel x:Name="CategoryChips" Margin="0,10,0,0" Visibility="Collapsed"/>
+            <!-- Sorting: Money Tweaks' own segmented picker (built in code). -->
+            <StackPanel x:Name="SortRow" Orientation="Horizontal" Margin="0,10,0,0">
+                <TextBlock Text="SORT" Style="{StaticResource Eyebrow}" Foreground="{StaticResource Subtle}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            </StackPanel>
             <DockPanel Margin="0,10,0,0">
                 <TextBlock x:Name="CountText" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center"/>
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="0,0,12,0">

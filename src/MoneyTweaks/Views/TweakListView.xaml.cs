@@ -34,7 +34,6 @@ public partial class TweakListView : UserControl, IPageLifecycle
             TitleText.Text = CategoryInfo.DisplayName(c);
             CatIcon.Text = MainWindow.CategoryIcons[c];
             BlurbText.Text = CategoryInfo.Blurb(c);
-            CategoryLabel.Visibility = CategoryBox.Visibility = Visibility.Collapsed;
         }
         else
         {
@@ -42,10 +41,21 @@ public partial class TweakListView : UserControl, IPageLifecycle
             TitleText.Text = "All Tweaks";
             CatIcon.Text = "\uE8FD";
             BlurbText.Text = "Every Money Tweaks tweak in one place. Search, filter by category, status and risk, sort, read known limitations and conflicts, and apply or undo each one. Every change is backed up and read back.";
-            CategoryBox.Items.Add(new ComboBoxItem { Content = "All categories", Tag = null, IsSelected = true });
+            CategoryChips.Visibility = Visibility.Visible;
+            CategoryChips.Children.Add(CategoryChip("All categories", null, TweakCatalog.All.Count));
             foreach (var cat in Enum.GetValues<TweakCategory>())
-                CategoryBox.Items.Add(new ComboBoxItem { Content = $"{CategoryInfo.DisplayName(cat)} ({TweakCatalog.InCategory(cat).Count()})", Tag = cat });
+                CategoryChips.Children.Add(CategoryChip(CategoryInfo.DisplayName(cat), cat, TweakCatalog.InCategory(cat).Count()));
         }
+        var sort = new Controls.SegmentedPicker(
+        [
+            ("Default", "default", "The catalogue's own order, grouped"),
+            ("Name A–Z", "name", null),
+            ("Caution first", "risk", "Caution tweaks first, then by name"),
+            ("Applied first", "status", null),
+            ("Not applied first", "status-desc", null),
+        ], "default");
+        sort.Changed += Sort_Changed;
+        SortRow.Children.Add(sort);
         _items = new((category is { } only ? TweakCatalog.InCategory(only) : TweakCatalog.All).Select(t => new TweakItem(t)));
         _view = CollectionViewSource.GetDefaultView(_items);
         _view.GroupDescriptions.Add(new PropertyGroupDescription(category is null ? nameof(TweakItem.CategoryName) : nameof(TweakItem.Group)));
@@ -141,18 +151,27 @@ public partial class TweakListView : UserControl, IPageLifecycle
             if (gi.DataContext is CollectionViewGroup g) ApplyGroup(gi, IsCollapsed(g), animate: false);
     }
 
-    private void Category_Changed(object sender, SelectionChangedEventArgs e)
+    private RadioButton CategoryChip(string label, TweakCategory? cat, int count)
     {
-        _categoryFilter = (CategoryBox.SelectedItem as ComboBoxItem)?.Tag as TweakCategory?;
-        _view?.Refresh();
-        if (_view is not null) UpdateCount();
+        var chip = new RadioButton
+        {
+            Style = (Style)FindResource("Chip"), GroupName = "cat", IsChecked = cat is null, Margin = new Thickness(0, 0, 6, 6),
+            Content = new TextBlock { Inlines = { new System.Windows.Documents.Run(label), new System.Windows.Documents.Run($"  {count}") { Foreground = (System.Windows.Media.Brush)FindResource("Subtle") } } },
+        };
+        chip.Checked += (_, _) =>
+        {
+            _categoryFilter = cat;
+            _view?.Refresh();
+            if (_view is not null) UpdateCount();
+        };
+        return chip;
     }
 
-    private void Sort_Changed(object sender, SelectionChangedEventArgs e)
+    private void Sort_Changed(string sortKey)
     {
         if (_view is null) return;
         _view.SortDescriptions.Clear();
-        switch ((SortBox.SelectedItem as ComboBoxItem)?.Tag as string)
+        switch (sortKey)
         {
             case "name": _view.SortDescriptions.Add(new SortDescription(nameof(TweakItem.Name), ListSortDirection.Ascending)); break;
             case "risk": _view.SortDescriptions.Add(new SortDescription(nameof(TweakItem.IsCaution), ListSortDirection.Descending)); _view.SortDescriptions.Add(new SortDescription(nameof(TweakItem.Name), ListSortDirection.Ascending)); break;

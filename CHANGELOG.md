@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.41 – 2026-10-17
+- **Two Dashboards fixed**: the sidebar's Recent list showed every page except the open one, so Dashboard (always at the
+  top) appeared a second time as soon as another page was open. The Recent list is removed from the sidebar (it also
+  reshuffled on every page change); recent pages are still offered by the empty Ctrl+K search. Dashboard can't be
+  starred any more and is skipped in saved favourites and dashboard shortcuts.
+- **Custom sort picker** in All Tweaks and every category page, replacing the Sort drop-down: all options (Default,
+  Name A–Z, Caution first, Applied first, Not applied first) in one rounded bar with a highlight that slides to the
+  chosen one. All Tweaks' Category drop-down is now a row of category chips with counts.
+- Checked off-screen: the highlight moves mid-slide and lands exactly on the option (x and width), the list re-sorts;
+  group folding checks still pass.
+
 ## 1.40 – 2026-10-17
 - **Collapsible tweak groups** (every category page and All Tweaks): click a group heading to fold its tweaks away or
   bring them back, with a sliding height + fade animation and a rotating chevron. Folded groups show their count and
