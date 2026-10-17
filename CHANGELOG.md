@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.43 – 2026-10-17
+## 1.26 – 2026-10-17
+- Re-release of the safety fixes below under a correct version. They were first tagged v1.2.5, which is lower than 1.25.1,
+  so GitHub listed it as the latest release while the app (correctly) saw it as older and offered no update.
+- The release workflow now refuses any tag that isn't newer than the newest published release.
+
 Security and safety audit fixes (no features removed; nothing weakens Windows security):
 - **Backups can't be destroyed by a crash.** Tweak backups, the NVIDIA backups, the Health Center's update-service backup,
   the benchmark recovery file, settings and the Fortnite/game settings files Money Tweaks edits are now written to a temp
@@ -26,13 +30,13 @@ Security and safety audit fixes (no features removed; nothing weakens Windows se
 - Undoing the Windows 11 classic context menu tweak also removes the empty CLSID key it created.
 - 12 regression tests (temp folders and a scratch HKCU key only).
 
-## 1.42 – 2026-10-17
+## 1.25.1 – 2026-10-17
 - Settings › Hotkeys: shortcuts were drawn as one stretched box with the text stuck to its top edge, so they looked cut
   off and had different widths. Each key is now its own keycap ([Ctrl] + [Shift] + [F10]), vertically centred, in a
   shared column so the descriptions line up. The overlay row no longer repeats its hotkey in the description; it only
   adds a status when the hotkey couldn't be registered.
 
-## 1.41 – 2026-10-17
+## 1.25 – 2026-10-17
 - **Two Dashboards fixed**: the sidebar's Recent list showed every page except the open one, so Dashboard (always at the
   top) appeared a second time as soon as another page was open. The Recent list is removed from the sidebar (it also
   reshuffled on every page change); recent pages are still offered by the empty Ctrl+K search. Dashboard can't be
@@ -43,7 +47,7 @@ Security and safety audit fixes (no features removed; nothing weakens Windows se
 - Checked off-screen: the highlight moves mid-slide and lands exactly on the option (x and width), the list re-sorts;
   group folding checks still pass.
 
-## 1.40 – 2026-10-17
+## 1.24 – 2026-10-17
 - **Collapsible tweak groups** (every category page and All Tweaks): click a group heading to fold its tweaks away or
   bring them back, with a sliding height + fade animation and a rotating chevron. Folded groups show their count and
   "Hidden: click to show", are remembered per page, and Collapse all / Expand all sit above the list. While you search,

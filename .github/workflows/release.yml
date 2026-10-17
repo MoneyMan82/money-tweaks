@@ -10,6 +10,22 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Refuse a version that isn't newer than the last release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # The app only offers an update when the latest release is newer than what's installed, so a lower tag
+        # (e.g. v1.2.5 after v1.25.1) would become "latest" on GitHub and silently stop all in-app updates.
+        # Compared with published releases (tags without a release, like v1.30.0, never reached anyone).
+        run: |
+          function V($t) { $s = $t.TrimStart('v','V'); if ($s -match '^\d+\.\d+$') { $s += '.0' }; try { [version]$s } catch { $null } }
+          $mine = V $env:GITHUB_REF_NAME
+          if (-not $mine) { throw "Tag $($env:GITHUB_REF_NAME) isn't a version like v1.26.0" }
+          $tags = gh release list --repo $env:GITHUB_REPOSITORY --limit 200 --exclude-drafts --json tagName --jq '.[].tagName'
+          $newest = $tags | Where-Object { $_ -ne $env:GITHUB_REF_NAME } | ForEach-Object { V $_ } | Where-Object { $_ } | Sort-Object -Descending | Select-Object -First 1
+          if ($newest -and $mine -le $newest) { throw "Tag $($env:GITHUB_REF_NAME) ($mine) is not newer than the existing v$newest. Installed copies would never see it as an update. Use a higher version." }
+          Write-Host "Version $mine is newer than v$newest"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
