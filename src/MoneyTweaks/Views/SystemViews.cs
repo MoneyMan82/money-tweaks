@@ -235,7 +235,7 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
         body.Children.Add(hkCard);
 
         var up = Ui.Section("Updates", $"You have Money Tweaks {App.Version}. Updates come from the official GitHub releases and are checksum-verified before installing.");
-        var status = Ui.Muted(Updater.Available is { } av ? $"Version {av.Version.ToString(3)} is available." : "", 12.5);
+        var status = Ui.Muted(Updater.Available is { } av ? $"Version {AppVersioning.Display(av.Version)} is available." : "", 12.5);
         Updater.StatusChanged += t => Dispatcher.Invoke(() => status.Text = t);
         var install = Ui.Btn("Update now", async (_, _) => await Updater.InstallAsync(), "PrimaryButton");
         install.Visibility = Updater.Available is null ? Visibility.Collapsed : Visibility.Visible;

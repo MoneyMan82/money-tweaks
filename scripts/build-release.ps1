@@ -7,7 +7,7 @@
 #>
 param(
     [string]$Configuration = 'Release',
-    # Release version, e.g. 1.2.1 or v1.2.1. CI passes the git tag so binaries always match the tag.
+    # Release version, e.g. 1.24 or v1.24 (older releases: 1.2.1). CI passes the git tag so binaries always match the tag.
     [string]$ReleaseVersion = '',
     [switch]$SkipTests,
     [switch]$SkipInstaller
@@ -20,11 +20,15 @@ Set-Location $root
 $version = $props.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 if ($ReleaseVersion) {
     $tagVersion = $ReleaseVersion.TrimStart('v', 'V')
-    if ($tagVersion -notmatch '^\d+\.\d+\.\d+$') { throw "Release version '$ReleaseVersion' must look like 1.2.3 or v1.2.3" }
+    # Decimal scheme: an update adds 0.1 (1.23 -> 1.33), a minor update adds 0.01 (1.23 -> 1.24). Two decimals always ("1.30").
+    if ($tagVersion -notmatch '^\d+\.\d{2}(\.0)?$' -and $tagVersion -notmatch '^\d+\.\d+\.\d+$') { throw "Release version '$ReleaseVersion' must look like 1.24.0 (two decimals, shown as 1.24) or, for older releases, 1.2.3" }
+    if ($tagVersion -match '^\d+\.\d{2}$') { $tagVersion += '.0' } # older installs need a three-part version to update
     if ($tagVersion -ne $version) { Write-Warning "Directory.Build.props says $version but the release is $tagVersion; building as $tagVersion." }
     $version = $tagVersion
 }
 Write-Host "Money Tweaks $version" -ForegroundColor Green
+# Release notes come from this version's CHANGELOG.md section (they were a fixed file before, stuck at 1.4.1).
+& (Join-Path $PSScriptRoot 'release-notes.ps1') -Version $version
 
 $dist = Join-Path $root 'dist'
 $publish = Join-Path $root 'artifacts\publish'

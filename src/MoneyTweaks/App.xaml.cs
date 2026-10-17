@@ -45,7 +45,8 @@ public partial class App : Application
         _saveTimer.Start();
     }
     private static void SaveTick(object? s, EventArgs e) { _saveTimer!.Stop(); Settings.Save(); }
-    public static string Version => typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    /// <summary>Display version in the two-decimal scheme ("1.24"); see AppVersioning.</summary>
+    public static string Version => AppVersioning.Display(typeof(App).Assembly.GetName().Version ?? new System.Version(1, 0));
 
     public static readonly System.Diagnostics.Stopwatch StartupClock = System.Diagnostics.Stopwatch.StartNew();
 

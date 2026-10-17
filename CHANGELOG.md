@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.23.0 – 2026-10-17
+## 1.23 – 2026-10-17
+- **New version numbers**: an update adds 0.1 (1.23 → 1.33) and a minor update adds 0.01 (1.23 → 1.24). The app shows
+  two decimals ("1.24"); tags keep a trailing .0 (v1.24.0) so copies up to 1.22.1 can still update in-app.
+  `scripts/bump-version.ps1 -Kind update|minor` sets the next version.
+- Release notes on GitHub now come from this changelog for each release (they had been stuck on the 1.4.1 text).
 - **Smoother everywhere.** Smooth wheel scrolling in every scrollable area (glides over ~250 ms instead of jumping; nested
   lists scroll themselves first). Pages build in with a short staggered rise of their header and cards; the window fades
   in when it opens (also when reopened from the tray). Sidebar groups slide open and closed with a rotating chevron, the

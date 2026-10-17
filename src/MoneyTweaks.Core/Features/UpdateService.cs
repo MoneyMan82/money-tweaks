@@ -129,7 +129,7 @@ public static class UpdateService
         if (fileVersion is not null && !IsNewer(fileVersion, current))
         {
             File.Delete(path);
-            throw new UpdateMismatchException($"The {u.Tag} release on GitHub contains Money Tweaks {fileVersion.ToString(3)}, which is not newer than the version you have ({current.ToString(3)}). The release was published with the wrong files, so installing it would change nothing. Nothing was installed.");
+            throw new UpdateMismatchException($"The {u.Tag} release on GitHub contains Money Tweaks {AppVersioning.Display(fileVersion)}, which is not newer than the version you have ({AppVersioning.Display(current)}). The release was published with the wrong files, so installing it would change nothing. Nothing was installed.");
         }
         Log.Info($"Update {u.Tag} downloaded and verified: {path} (file version {fileVersion?.ToString() ?? "unknown"})");
         return path;

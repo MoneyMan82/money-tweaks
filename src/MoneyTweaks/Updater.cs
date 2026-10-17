@@ -22,16 +22,16 @@ public static class Updater
     {
         var s = App.Settings;
         if (string.IsNullOrEmpty(s.PendingUpdateVersion) || !Version.TryParse(s.PendingUpdateVersion, out var expected)) return;
-        var tag = s.PendingUpdateTag ?? "v" + expected.ToString(3);
+        var tag = s.PendingUpdateTag ?? "v" + AppVersioning.Display(expected);
         s.PendingUpdateVersion = null;
         s.PendingUpdateTag = null;
         if (UpdateService.IsNewer(expected, Current))
         {
             s.SkippedUpdateTag = tag;
             s.Save();
-            Log.Error($"Update to {tag} did not take effect: still running {Current.ToString(3)}");
+            Log.Error($"Update to {tag} did not take effect: still running {AppVersioning.Display(Current)}");
             Dialog.Show("The update didn't install",
-                $"Money Tweaks tried to update to {tag}, but this copy is still version {Current.ToString(3)}.\n\n" +
+                $"Money Tweaks tried to update to {tag}, but this copy is still version {AppVersioning.Display(Current)}.\n\n" +
                 $"Installer log: {UpdateService.InstallerLogPath}\n\n" +
                 "Automatic update prompts for this release are paused. You can install it manually from the releases page, or use Settings & About → Check for updates to try again.",
                 DialogKind.Warning);
@@ -40,8 +40,8 @@ public static class Updater
         {
             if (s.SkippedUpdateTag == tag) s.SkippedUpdateTag = null;
             s.Save();
-            Log.Info($"Update verified: now running {Current.ToString(3)} ({tag})");
-            MainWindow.Current?.ShowToast($"Updated to Money Tweaks {Current.ToString(3)}.");
+            Log.Info($"Update verified: now running {AppVersioning.Display(Current)} ({tag})");
+            MainWindow.Current?.ShowToast($"Updated to Money Tweaks {AppVersioning.Display(Current)}.");
         }
     }
 
@@ -55,8 +55,8 @@ public static class Updater
             Available = await UpdateService.CheckAsync(Current);
             if (Available is null)
             {
-                StatusChanged?.Invoke($"You're up to date (v{Current.ToString(3)}).");
-                if (manual) MainWindow.Current?.ShowToast($"You're on the latest version (v{Current.ToString(3)}).");
+                StatusChanged?.Invoke($"You're up to date (v{AppVersioning.Display(Current)}).");
+                if (manual) MainWindow.Current?.ShowToast($"You're on the latest version (v{AppVersioning.Display(Current)}).");
             }
             else if (!manual && Available.Tag == App.Settings.SkippedUpdateTag)
             {
@@ -66,7 +66,7 @@ public static class Updater
             }
             else
             {
-                StatusChanged?.Invoke($"Version {Available.Version.ToString(3)} is available.");
+                StatusChanged?.Invoke($"Version {AppVersioning.Display(Available.Version)} is available.");
                 MainWindow.Current?.ShowUpdateBanner(Available);
             }
         }
@@ -83,7 +83,7 @@ public static class Updater
     {
         if (_busy || Available is not { } u) return;
         var notes = string.IsNullOrWhiteSpace(u.Notes) ? "" : "\n\nWhat's new:\n" + (u.Notes.Length > 1200 ? u.Notes[..1200] + "…" : u.Notes);
-        if (!Dialog.Confirm($"Update to Money Tweaks {u.Version.ToString(3)}?",
+        if (!Dialog.Confirm($"Update to Money Tweaks {AppVersioning.Display(u.Version)}?",
                 $"The new version is downloaded from GitHub, its SHA-256 checksum and version are verified, and Money Tweaks restarts. Your applied tweaks and backups are kept.{notes}",
                 "Update now")) return;
         _busy = true;
@@ -94,7 +94,7 @@ public static class Updater
             StatusChanged?.Invoke("Installing update…");
             // Remember what we expect to be running after the restart, so VerifyPendingUpdate can confirm it.
             App.Settings.PendingUpdateTag = u.Tag;
-            App.Settings.PendingUpdateVersion = u.Version.ToString(3);
+            App.Settings.PendingUpdateVersion = AppVersioning.Display(u.Version);
             App.Settings.Save();
             UpdateService.Install(path);
             Application.Current.Shutdown();

@@ -595,7 +595,7 @@ public partial class MainWindow : Window
 
     public void ShowUpdateBanner(Core.Features.UpdateInfo u)
     {
-        UpdateText.Text = $"Money Tweaks {u.Version.ToString(3)} is available (you have {App.Version}).";
+        UpdateText.Text = $"Money Tweaks {AppVersioning.Display(u.Version)} is available (you have {App.Version}).";
         UpdateBanner.Visibility = Visibility.Visible;
     }
 
