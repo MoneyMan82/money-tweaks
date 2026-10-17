@@ -7,7 +7,7 @@ No accounts, no ads, no telemetry, no paid tiers.
 
 **Website:** https://money-tweaks.pages.dev/ · **Download:** [latest release](https://github.com/MoneyMan82/money-tweaks/releases/latest)
 
-> Money Tweaks is an independent project. It is not affiliated with, endorsed by or derived from EMTweaks, Microsoft
+> Money Tweaks is an independent project. It is not affiliated with, endorsed by or derived from Microsoft
 > or any game publisher. All code, text and artwork are original.
 
 ## Features

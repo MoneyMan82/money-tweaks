@@ -238,7 +238,7 @@ public sealed class AboutView : UserControl, IPageLifecycle
         body.Children.Add(Ui.Card(na));
 
         var dis = Ui.Section("Disclaimer");
-        dis.Children.Add(Ui.Muted("Money Tweaks is an independent project. It is not affiliated with, endorsed by or derived from EMTweaks, Microsoft or any game publisher. Tweaks change Windows settings; while every change is reversible and backed up, you use this software at your own risk under the MIT License. Benefits vary by hardware; no specific FPS gain is promised.", 12.5));
+        dis.Children.Add(Ui.Muted("Money Tweaks is an independent project. It is not affiliated with, endorsed by or derived from Microsoft or any game publisher. Tweaks change Windows settings; while every change is reversible and backed up, you use this software at your own risk under the MIT License. Benefits vary by hardware; no specific FPS gain is promised.", 12.5));
         body.Children.Add(Ui.Card(dis));
         Content = root;
     }

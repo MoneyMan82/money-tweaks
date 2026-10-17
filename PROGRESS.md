@@ -9,7 +9,6 @@ Resume point for future sessions. Keep it short.
 - Catalog: 334 verified tweaks across 9 categories (see tests output `Every_category_is_populated`).
 
 ## Decisions
-- EMTweaks' full list (356) only exists inside their paid app; public demo shows 52. We did NOT decompile or copy it.
   Catalog is original, built from documented Windows settings. Count is reported honestly.
 - No unlock password (owner decision, 2026-10-11).
 - Repo: https://github.com/MoneyMan82/money-tweaks (private at time of writing).
