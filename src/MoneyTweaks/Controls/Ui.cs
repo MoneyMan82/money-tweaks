@@ -14,6 +14,17 @@ public static class Ui
     public static T Res<T>(string key) => (T)Application.Current.Resources[key];
     public static Brush Brush(string key) => Res<Brush>(key);
 
+    /// <summary>Every visual descendant of a given type (depth-first).</summary>
+    public static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (int i = 0, n = VisualTreeHelper.GetChildrenCount(root); i < n; i++)
+        {
+            var c = VisualTreeHelper.GetChild(root, i);
+            if (c is T t) yield return t;
+            foreach (var d in Descendants<T>(c)) yield return d;
+        }
+    }
+
     /// <summary>Standard page: eyebrow, title, gradient underline, blurb, optional actions on the right.</summary>
     public static (ScrollViewer root, StackPanel body) Page(string title, string blurb, UIElement? headerRight = null, string? eyebrow = null, string? icon = null)
     {
@@ -261,6 +272,10 @@ public sealed class StatTile : Border
         var head = new StackPanel { Orientation = Orientation.Horizontal };
         head.Children.Add(new TextBlock { Text = icon, Style = Ui.Res<Style>("Icon"), Foreground = Ui.Brush("Accent"), FontSize = 14, Margin = new Thickness(0, 0, 8, 0) });
         head.Children.Add(new TextBlock { Text = label.ToUpperInvariant(), FontSize = 10.5, Foreground = Ui.Brush("Muted"), FontWeight = FontWeights.Bold });
+        // Faint guide lines so the chart area reads as a chart while the first minute of samples fills it.
+        var guide = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF)); guide.Freeze();
+        foreach (var va in new[] { VerticalAlignment.Top, VerticalAlignment.Center, VerticalAlignment.Bottom })
+            _chart.Children.Add(new Border { Height = 1, Background = guide, VerticalAlignment = va });
         _chart.Children.Add(_fill);
         _chart.Children.Add(_line);
         _chart.SizeChanged += (_, _) => Redraw();

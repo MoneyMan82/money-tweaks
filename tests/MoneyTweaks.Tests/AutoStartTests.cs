@@ -28,6 +28,9 @@ public class AutoStartTests : IDisposable
         AutoStart.EnsurePath(@"D:\Portable\MoneyTweaks.exe"); // moved copy: entry follows it
         Assert.Equal("\"D:\\Portable\\MoneyTweaks.exe\" --background", AutoStart.Current());
 
+        AutoStart.EnsurePath(@"C:\Temp\render\testhost.exe");  // some other host running this code: never takes over
+        Assert.Equal("\"D:\\Portable\\MoneyTweaks.exe\" --background", AutoStart.Current());
+
         AutoStart.Disable();
         Assert.False(AutoStart.IsEnabled);
         AutoStart.Disable();                                  // idempotent

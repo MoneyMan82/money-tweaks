@@ -541,7 +541,7 @@ public sealed class BoosterView : UserControl, IPageLifecycle
 {
     private readonly GameBooster _booster = new();
     private readonly WrapPanel _procs = new();
-    private readonly TextBox _game = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBox _game = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left, Tag = "e.g. FortniteClient-Win64-Shipping" };
     private readonly CheckBox _purge = new() { Content = "Clear standby memory (admin)", Margin = new Thickness(0, 10, 0, 0) };
     private readonly TextBlock _report = Ui.Muted("");
     private readonly Button _start, _end;
@@ -703,6 +703,11 @@ public sealed class PingView : UserControl, IPageLifecycle
     private readonly TextBlock _stats = Ui.Muted("");
     private readonly Canvas _chart = new() { Height = 160, ClipToBounds = true, Background = Brushes.Transparent };
     private readonly Polyline _line = new() { Stroke = Ui.Brush("Accent"), StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Round };
+    private readonly TextBlock _chartHint = new()
+    {
+        Text = "Latency over the last 2 minutes appears here while monitoring runs.", FontSize = 12, Foreground = Ui.Brush("Subtle"),
+        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false
+    };
     private readonly Button _toggle;
     private readonly TweakBundle _bundle = new(["net.nagle", "net.throttling-index", "net.qos-reserve", "net.adapter-power", "net.autotuning", "net.dns-cloudflare"]);
     private bool _running, _busy;
@@ -724,7 +729,15 @@ public sealed class PingView : UserControl, IPageLifecycle
         ms.Children.Add(_grade);
         ms.Children.Add(_stats);
         _chart.Children.Add(_line);
-        ms.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(6), Child = _chart });
+        _stats.Text = "Not monitoring. Start to measure latency, jitter and loss once a second.";
+        // Guide lines plus a hint while there's nothing to draw, so the chart never looks like a broken empty box.
+        var chartHost = new Grid();
+        var guide = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF)); guide.Freeze();
+        foreach (var va in new[] { VerticalAlignment.Top, VerticalAlignment.Center, VerticalAlignment.Bottom })
+            chartHost.Children.Add(new Border { Height = 1, Background = guide, VerticalAlignment = va, IsHitTestVisible = false });
+        chartHost.Children.Add(_chart);
+        chartHost.Children.Add(_chartHint);
+        ms.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(6), Child = chartHost });
         body.Children.Add(Ui.Card(ms));
         body.Children.Add(Ui.Card(DiagnosticSection()));
         var bs = Ui.Section("Stabilize", "Apply the network tweaks most associated with lag spikes. Each is reversible.");
@@ -762,6 +775,7 @@ public sealed class PingView : UserControl, IPageLifecycle
     {
         var samples = _mon.Samples;
         double w = _chart.ActualWidth, h = _chart.ActualHeight;
+        _chartHint.Visibility = samples.Count < 2 ? Visibility.Visible : Visibility.Collapsed;
         if (w <= 0 || samples.Count < 2) return;
         var max = Math.Max(50, samples.Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(50).Max() * 1.2);
         var pts = new PointCollection();

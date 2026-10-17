@@ -75,6 +75,7 @@ section{padding:80px 0}
 .card p{margin:0;color:var(--muted);font-size:14.5px}
 .ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:rgba(76,141,255,.12);color:var(--accent);margin-bottom:14px}
 .ico svg{width:22px;height:22px}
+.new{float:right;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);background:rgba(245,184,74,.12);border-radius:999px;padding:3px 10px}
 .count{float:right;font-size:13px;font-weight:700;color:var(--accent);background:rgba(76,141,255,.12);border-radius:999px;padding:2px 10px}
 /* tabs gallery */
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
@@ -113,9 +114,13 @@ th{color:var(--muted);font-weight:600;background:var(--surface)}
 details{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px}
 details summary{cursor:pointer;font-weight:700;list-style:none}
 details summary::-webkit-details-marker{display:none}
-details summary::after{content:"+";float:right;color:var(--accent);font-size:20px;line-height:1}
-details[open] summary::after{content:"–"}
+details{transition:border-color .2s}
+details:hover{border-color:rgba(76,141,255,.45)}
+details summary::after{content:"+";float:right;color:var(--accent);font-size:20px;line-height:1;transition:transform .25s ease}
+details[open] summary::after{transform:rotate(45deg)}
 details p{color:var(--muted);margin:10px 0 0}
+details[open] p{animation:faq-open .3s ease}
+@keyframes faq-open{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:14px}
 .foot{display:flex;flex-wrap:wrap;gap:30px;justify-content:space-between}
 .foot a{color:var(--muted)}
@@ -147,7 +152,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
     <div class="wrap hero-inner">
       <div class="eyebrow">Free · Open source · Windows 10 &amp; 11</div>
       <h1>Tune Windows for games.<br><span class="hl">Undo anything.</span></h1>
-      <p class="lead">Money Tweaks bundles 340 reversible tweaks and a set of gaming tools in one fast, dark app. Every change is backed up first, labelled Safe or Caution, and undone with the same switch.</p>
+      <p class="lead">Money Tweaks bundles 334 reversible tweaks, a game library, a live FPS overlay, a driver &amp; Windows health check and a set of gaming tools in one fast, dark app. Every change is backed up first, labelled Safe or Caution, and undone with the same switch.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/MoneyTweaks-Setup.exe">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
@@ -155,7 +160,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
         <a class="btn" href="https://github.com/MoneyMan82/money-tweaks">View source on GitHub</a>
       </div>
       <div class="facts">
-        <span class="fact"><b>340</b> reversible tweaks</span>
+        <span class="fact"><b>334</b> reversible tweaks</span>
         <span class="fact"><b>9</b> categories</span>
         <span class="fact"><b>$0</b> no tiers, ads or accounts</span>
         <span class="fact">MIT licensed</span>
@@ -168,13 +173,16 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
     <div class="wrap">
       <div class="section-head reveal"><div class="eyebrow">Tools</div><h2>More than a list of switches</h2><p class="muted">Alongside the tweak library, Money Tweaks ships with tools that handle the jobs gamers usually need three separate apps for.</p></div>
       <div class="cards">
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6M7 16h8"/></svg></div><h3>Game Library</h3><p>Finds your games from Steam and Epic manifests, the Riot Client, Roblox and Minecraft, plus any exe you add. A game only counts as running when its real executable runs from its install (Roblox Player and Studio are told apart). Per-game profiles, launch, Test Detection. Removing a game never uninstalls it.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 14l3-4 3 2 3-5 3 4"/><path d="M8 21h8"/></svg></div><h3>Performance Overlay</h3><p>FPS, frame time, 1% low, a frame-time graph, CPU/GPU load, RAM and temperatures on top of your game. Frame timing comes from the same Windows ETW Present events PresentMon uses: nothing is injected, nothing reads game memory. Hotkey, per-game layouts and auto-show.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/><path d="M8 12h2l1-2 2 4 1-2h2"/></svg></div><h3>Driver &amp; Windows Health</h3><p>Read-only checks for GPU, chipset, network, audio and storage drivers, Windows Update, blue screens, driver resets, crashes, throttling and disk health, plus SFC/DISM. Repairs only run after you confirm them. Results say "unable to check" instead of guessing.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="12" rx="3"/><path d="M8 11v4M6 13h4M15 12h.01M18 14h.01"/></svg></div><h3>Gaming Profiles</h3><p>Fortnite Competitive, Fortnite Performance Mode, Geometry Dash and General Gaming, or your own. One click to switch, or switch automatically when the game starts and restore everything when it closes.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><h3>Smart Scanner</h3><p>Reads your hardware, power plan, RAM, startup apps, background processes and network, then lists findings with severity, evidence and confidence. Fix, Undo or Ignore each one.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><h3>Test &amp; Benchmark</h3><p>Verify every tweak against what Windows actually reports, and run before/after benchmarks: a synthetic 3D stress scene with balanced A/B runs, real frame times, and verdicts only when a difference beats the noise.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><h3>Stretched Resolution</h3><p>Pick a monitor, type any resolution and see its aspect ratio. Every change is checked with your display driver first and reverts automatically unless you confirm it.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg></div><h3>Fortnite Stretched</h3><p>Sets a custom resolution for Fortnite only, in its own GameUserSettings.ini, without touching your desktop. Backup, restore and reset included.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></div><h3>Gaming Macros</h3><p>Timed key and mouse-button sequences with hotkey triggers, screen-colour triggers, pause and an emergency stop. Blocked in competitive anti-cheat games.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18c2-6 6-9 12-10M16 8l-1 5M16 8l-5-1"/><circle cx="7" cy="17" r="2"/></svg></div><h3>Potato Graphics</h3><p>Fortnite potato studio with a before/after 3D preview, plus potato levels for Minecraft Java and Rocket League. Only the game's own settings files change, backed up first, with one-click restore.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18c2-6 6-9 12-10M16 8l-1 5M16 8l-5-1"/><circle cx="7" cy="17" r="2"/></svg></div><h3>Potato Graphics</h3><p>Fortnite potato studio with a before/after 3D preview, plus potato levels for Minecraft Java and Rocket League. Only the game's own settings files change, backed up first, with one-click restore. On NVIDIA cards, texture-filtering presets (including Legacy Potato, LOD bias 0x20) go into Fortnite's own driver profile with a backup, read-back verification and Restore.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Game Booster</h3><p>One click: High/Ultimate power plan, close the background apps you pick, raise your game's priority and clear standby memory.</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 6v4"/></svg></div><h3>Input Delay Reducer</h3><p>Holds a 0.5 ms kernel timer while the app is open and groups the input tweaks (mouse acceleration, sticky keys, MSI mode, timers).</p></div>
         <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div><h3>Ping Stabilizer</h3><p>Live latency, jitter and packet-loss graph, plus a 20-second diagnostic that tells you whether lag comes from your home network or your provider. Clearly labelled as generic ping, not game-server ping.</p></div>
@@ -188,7 +196,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
 
   <section id="categories">
     <div class="wrap">
-      <div class="section-head reveal"><div class="eyebrow">Tweak library</div><h2>340 tweaks in 9 categories</h2><p class="muted">Every tweak maps to a documented Windows setting: a registry value, service start type, power-plan setting, scheduled task, network option or Store app. Expand any card in the app to see exactly what it changes, the expected benefit, how sure we are, and how it's verified and undone. Settings that weaken security are never applied.</p></div>
+      <div class="section-head reveal"><div class="eyebrow">Tweak library</div><h2>334 tweaks in 9 categories</h2><p class="muted">Every tweak maps to a documented Windows setting: a registry value, service start type, power-plan setting, scheduled task, network option or Store app. Expand any card in the app to see exactly what it changes, the expected benefit, how sure we are, known limitations and conflicts, and how it's verified and undone. Browse them all in one searchable library, or by category with groups you can fold away. Settings that weaken security are never applied.</p></div>
       <div class="cards">
         <div class="card reveal"><span class="count">32</span><h3>General</h3><p>Visual effects, instant menus, Ultimate Performance plan, core parking, USB and PCI Express power saving, mouse acceleration, Game Mode, Game DVR, notification pop-ups, Explorer and taskbar.</p></div>
         <div class="card reveal"><span class="count">61</span><h3>Debloating</h3><p>Telemetry, advertising ID, activity history, Start and lock-screen ads, Copilot, Recall, Widgets, Edge background mode and telemetry tasks.</p></div>
@@ -197,7 +205,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
         <div class="card reveal"><span class="count">110</span><h3>Services</h3><p>Telemetry, Xbox, printing, remote access, sensors, Hyper-V guest and enterprise services set to Manual or Disabled.</p></div>
         <div class="card reveal"><span class="count">3</span><h3>App Optimizer</h3><p>Below-normal priority for launchers and Discord, launcher auto-start off, idle-priority search indexer.</p></div>
         <div class="card reveal"><span class="count">76</span><h3>App Removal</h3><p>Bing apps, Clipchamp, Solitaire, Teams, Xbox apps, Copilot, OneDrive and sponsored third-party apps like TikTok and Candy Crush.</p></div>
-        <div class="card reveal"><span class="count">16</span><h3>Game Profiles</h3><p>High CPU priority for Fortnite, VALORANT, CS2, Apex, Call of Duty, Rainbow Six, Rocket League, Overwatch 2, Minecraft and more, plus Fortnite on the dedicated GPU for two-GPU PCs.</p></div>
+        <div class="card reveal"><span class="count">10</span><h3>Game CPU Priority</h3><p>High CPU priority for Fortnite, VALORANT, CS2, Apex Legends, Rocket League, GTA V (Legacy and Enhanced), Roblox and Marvel Rivals, plus Fortnite on the dedicated GPU for two-GPU PCs.</p></div>
         <div class="card reveal"><span class="count">3</span><h3>BIOS</h3><p>Step-by-step guides for Resizable BAR, XMP/EXPO memory profiles and CPU C-States, with an in-app RAM speed check.</p></div>
       </div>
     </div>
@@ -205,7 +213,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
 
   <section id="screens">
     <div class="wrap">
-      <div class="section-head reveal"><div class="eyebrow">Screenshots</div><h2>See it before you install</h2><p class="muted">Real screenshots of Money Tweaks 1.13.0, captured by the app on a Windows 11 PC.</p></div>
+      <div class="section-head reveal"><div class="eyebrow">Screenshots</div><h2>See it before you install</h2><p class="muted">Real screenshots captured by the app on a Windows 11 PC (version 1.13; the current version groups these pages in a sidebar and adds the Game Library, overlay and Health Center).</p></div>
       <div class="tabs" role="tablist" id="tabs"></div>
       <div class="gallery-frame reveal"><img id="shot" src="assets/screenshots/profiles.png" width="1280" height="820" alt="Money Tweaks screenshot"></div>
       <p class="caption" id="caption"></p>
@@ -279,6 +287,14 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <div class="card reveal" style="margin-bottom:16px">
         <h3>Recent releases <span class="muted" style="font-size:14px;font-weight:400">· October 2026</span></h3>
         <ul class="list">
+          <li><b>1.40:</b> Polish pass: tweak groups fold and unfold with an animation (remembered, plus Collapse all / Expand all), closing animations for the window and dialogs, dark animated drop-downs, text boxes with placeholders at the right height, notes moved into each tweak's details, consistent page labels, and fixes across the dashboard, Ping Stabilizer and overlay pages.</li>
+          <li><b>1.30 / 1.23:</b> New version numbers (+0.1 per update, +0.01 per minor update), release notes from the changelog, and smooth motion everywhere: smooth scrolling, page entrances, sliding sidebar groups, dialog pop-in, animated buttons.</li>
+          <li><b>1.22:</b> Reorganized app: grouped, collapsible sidebar, favourites and recent pages, Ctrl+K search over pages, tweaks, games and settings, the All Tweaks library, a customizable dashboard, and a Run in the background button.</li>
+          <li><b>1.21.0:</b> Game Library with real Steam/Epic/Riot/Roblox/Minecraft detection, identity-checked running games, Test Detection and per-game profiles.</li>
+          <li><b>1.20.0:</b> Live Performance Overlay: FPS, frame time and 1% low from Windows ETW Present events, plus CPU/GPU, RAM and temperatures.</li>
+          <li><b>1.19.0 / 1.18.0:</b> Driver &amp; Windows Health Center, and NVIDIA texture-filtering presets for Fortnite, including Legacy Potato (LOD bias 0x20) with backup, verify and restore.</li>
+          <li><b>1.17.0 / 1.16.0:</b> Start with Windows as a background tray process; single instance.</li>
+          <li><b>1.15.0 / 1.14.0:</b> Automatic stretched resolution while Fortnite runs; 2288×1440 preset and GPU custom-resolution guide.</li>
           <li><b>1.13.0:</b> Fortnite Stretched: a custom resolution for Fortnite only, written to its own settings file with backup, restore and reset.</li>
           <li><b>1.12.0:</b> Stretched Resolution: real monitor modes, driver-checked changes with an automatic-revert countdown, presets and scaling.</li>
           <li><b>1.11.0:</b> Six new verified tweaks, benefit/confidence/verification details on every tweak, and a network diagnostic.</li>
@@ -313,9 +329,10 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <details class="reveal"><summary>Is it really free?</summary><p>Yes. There's no paid tier, subscription, account, ads or locked feature. The full source is on GitHub under the MIT license.</p></details>
       <details class="reveal"><summary>How much FPS will I gain?</summary><p>It depends entirely on your hardware and what was running before. We don't promise a number. The biggest wins usually come on PCs with lots of background bloat, weak CPUs, or RAM running below its rated speed (the dashboard checks that).</p></details>
       <details class="reveal"><summary>Can a tweak break my PC?</summary><p>Every tweak backs up the original values and can be undone from the same switch. Caution tweaks have real trade-offs and ask before applying. As a last resort, roll back with the restore point Money Tweaks creates before your first change.</p></details>
-      <details class="reveal"><summary>Will it get me banned in games?</summary><p>Money Tweaks changes Windows settings, not game memory or files (except Potato Graphics, which edits the same settings file the game's own menu writes). The crosshair overlay is an ordinary topmost window. Still, check your game's rules on overlays before using one in competitive play.</p></details>
+      <details class="reveal"><summary>Will it get me banned in games?</summary><p>Money Tweaks changes Windows settings, not game memory or files (except Potato Graphics, which edits the same settings file the game's own menu writes). The crosshair and the performance overlay are ordinary topmost windows: nothing is injected into the game, and FPS is read from Windows' own ETW events, the same source PresentMon uses. Macros are blocked while competitive anti-cheat games run. Still, check your game's rules on overlays before using one in competitive play.</p></details>
       <details class="reveal"><summary>Why does Windows say it's an unrecognized app?</summary><p>The builds aren't code-signed. You can verify the SHA-256 hash, read the source, or build it yourself with one command.</p></details>
       <details class="reveal"><summary>How do I update?</summary><p>Money Tweaks checks GitHub for new versions when it starts and shows an <b>Update now</b> banner. The download is checksum-verified and the app restarts on the new version. You can also use Settings &amp; About → Check for updates. Version 1.0.0 had no updater, so install 1.1.0 once manually.</p></details>
+      <details class="reveal"><summary>How do the version numbers work?</summary><p>Since 1.23, each update adds 0.1 (1.30 → 1.40) and each minor update adds 0.01 (1.40 → 1.41). The app shows two decimals; GitHub tags end in .0 (v1.40.0) so older copies can still update themselves.</p></details>
       <details class="reveal"><summary>What happens when I uninstall?</summary><p>Applied tweaks stay applied. Undo them first from Backup &amp; Restore if you want Windows back to how it was. Your backups in %LOCALAPPDATA%\MoneyTweaks are kept so a reinstall can still undo them.</p></details>
     </div>
   </section>

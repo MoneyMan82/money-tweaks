@@ -108,6 +108,31 @@ public static class Motion
         s.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
     }
 
+    /// <summary>
+    /// Closing animation for a borderless (AllowsTransparency) window: the first Close is held while its content fades
+    /// and shrinks a little, then the window really closes. The dialog's result is already decided when Close is called.
+    /// </summary>
+    public static void AnimateClose(Window win, FrameworkElement content)
+    {
+        bool done = false;
+        win.Closing += (_, e) =>
+        {
+            if (done || !Enabled) return;
+            e.Cancel = true;
+            done = true;
+            win.IsHitTestVisible = false;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+            if (content.RenderTransform is not ScaleTransform s || s.IsFrozen) { s = new ScaleTransform(1, 1); content.RenderTransform = s; content.RenderTransformOrigin = new Point(0.5, 0.5); }
+            var shrink = new DoubleAnimation(s.ScaleX, 0.96, TimeSpan.FromMilliseconds(140)) { EasingFunction = ease };
+            s.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
+            s.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
+            var fade = new DoubleAnimation(content.Opacity, 0, TimeSpan.FromMilliseconds(140)) { EasingFunction = ease };
+            // Close on the next dispatcher turn: closing from inside Closing isn't allowed.
+            fade.Completed += (_, _) => win.Dispatcher.BeginInvoke(() => { try { win.Close(); } catch (InvalidOperationException) { } });
+            content.BeginAnimation(UIElement.OpacityProperty, fade);
+        };
+    }
+
     // ---- frame-synced tween (for values WPF can't animate directly, like a grid column width) ----------------------
 
     private sealed class TweenState { public EventHandler? Handler; }

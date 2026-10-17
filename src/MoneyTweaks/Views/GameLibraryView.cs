@@ -19,7 +19,7 @@ namespace MoneyTweaks.Views;
 public sealed class GameLibraryView : UserControl, IPageLifecycle
 {
     private static LibraryFile L => GameLibrary.Current;
-    private readonly TextBox _search = new() { Width = 260, VerticalAlignment = VerticalAlignment.Center, ToolTip = "Search by name or exe" };
+    private readonly TextBox _search = new() { Width = 260, VerticalAlignment = VerticalAlignment.Center, ToolTip = "Search by name or exe", Tag = "Search games or .exe names…" };
     private readonly WrapPanel _chips = new() { Margin = new Thickness(0, 8, 0, 4) };
     private readonly TextBlock _summary = Ui.Muted("Scanning Steam, Epic, Riot, Roblox and Minecraft…", 12);
     private readonly StackPanel _picker = new(), _grid = new(), _removed = new();

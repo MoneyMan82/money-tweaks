@@ -116,7 +116,7 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
         body.Children.Add(new Border
         {
             Style = Ui.Res<Style>("CardBorder"), Background = Ui.Brush("HeroFill"), BorderBrush = Ui.Brush("CardRimHover"), CornerRadius = new CornerRadius(22),
-            Padding = new Thickness(30, 26, 30, 26), Margin = new Thickness(0, 4, 0, 18), Child = hero
+            Padding = new Thickness(30, 26, 30, 26), Margin = new Thickness(0, 4, 14, 18), Child = hero // right edge lines up with the cards below
         });
 
         // ── Live performance ───────────────────────────────────────────────────────────────────────────────────
@@ -194,7 +194,9 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
     {
         _tags.Children.Clear();
         _tags.Children.Add(Admin.IsElevated ? Ui.Tag("Administrator", "Success") : Ui.Tag("Standard user", "Gold"));
-        _tags.Children.Add(Ui.Tag($"{BackupStore.AllIds().Count()} tweaks applied", "Accent"));
+        // Counts Money Tweaks' own backups; the ring counts recommended settings already in place, whoever set them.
+        var backed = BackupStore.AllIds().Count();
+        _tags.Children.Add(Ui.Tag(backed == 1 ? "1 change by Money Tweaks" : $"{backed} changes by Money Tweaks", "Accent"));
         _tags.Children.Add(App.Settings.CreateRestorePointBeforeBatch ? Ui.Tag("Auto restore point on", "Violet") : Ui.Tag("Auto restore point off", "Muted"));
         _tags.Children.Add(Ui.Tag($"{TweakCatalog.All.Count} tweaks available", "Muted"));
     }

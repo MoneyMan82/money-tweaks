@@ -223,9 +223,47 @@ public partial class MainWindow : Window
     /// <summary>Content fades in when the window opens (skipped with reduced motion).</summary>
     private void FadeInWindow()
     {
-        if (!Motion.Enabled) return;
+        _closingAnim = false;
+        if (!Motion.Enabled) { Root.BeginAnimation(OpacityProperty, null); Root.Opacity = 1; return; }
         Root.Opacity = 0;
         Root.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        var s = RootScale();
+        var grow = new DoubleAnimation(0.985, 1, TimeSpan.FromMilliseconds(360)) { EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut } };
+        s.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+        s.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+    }
+
+    private bool _closingAnim, _fadedOut;
+
+    private ScaleTransform RootScale()
+    {
+        if (Root.RenderTransform is not ScaleTransform s || s.IsFrozen) { s = new ScaleTransform(1, 1); Root.RenderTransform = s; Root.RenderTransformOrigin = new Point(0.5, 0.5); }
+        return s;
+    }
+
+    /// <summary>Closing animation: content fades and settles back slightly, then <paramref name="then"/> closes or hides the window.</summary>
+    private void FadeOutWindow(Action then)
+    {
+        if (_closingAnim) return; // a second click while it's closing does nothing extra
+        // Already faded out (Close → OnClosing → hide to tray): finish straight away.
+        if (_fadedOut || !Motion.Enabled || !IsVisible || WindowState == WindowState.Minimized) { then(); return; }
+        _closingAnim = true;
+        var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+        var fade = new DoubleAnimation(Root.Opacity, 0, TimeSpan.FromMilliseconds(170)) { EasingFunction = ease };
+        fade.Completed += (_, _) =>
+        {
+            _closingAnim = false;
+            _fadedOut = true;
+            try { then(); } finally { _fadedOut = false; }
+            // Ready for the next time the window is shown (BringToFront fades it back in).
+            Root.BeginAnimation(OpacityProperty, null); Root.Opacity = 1;
+            var rs = RootScale(); rs.BeginAnimation(ScaleTransform.ScaleXProperty, null); rs.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        };
+        var s = RootScale();
+        var shrink = new DoubleAnimation(1, 0.985, TimeSpan.FromMilliseconds(170)) { EasingFunction = ease };
+        s.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
+        s.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
+        Root.BeginAnimation(OpacityProperty, fade);
     }
 
     private RadioButton NavItem(string tag, string icon, string label, string? count, bool compact, bool pin = false)
@@ -348,7 +386,35 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Creates a page for a tag (every sidebar and search entry resolves through here).</summary>
-    public static FrameworkElement CreatePage(string pageTag) => pageTag switch
+    public static FrameworkElement CreatePage(string pageTag)
+    {
+        var page = CreatePageCore(pageTag);
+        AlignEyebrow(page, pageTag);
+        return page;
+    }
+
+    /// <summary>Old section names some pages still carried above their title; they now show the sidebar group instead.</summary>
+    private static readonly HashSet<string> GenericEyebrows = new(StringComparer.OrdinalIgnoreCase)
+        { "GAMING TOOLS", "GAMING", "TOOLS", "SYSTEM", "SAFETY", "MONEY TWEAKS", "TWEAK CATEGORY" };
+
+    /// <summary>Keeps the small label above each page title in step with the sidebar group (descriptive taglines stay).</summary>
+    private static void AlignEyebrow(FrameworkElement page, string pageTag)
+    {
+        if (AppNavigation.Find(pageTag) is not { } nav) return;
+        var eyebrowStyle = Application.Current.TryFindResource("Eyebrow");
+        static IEnumerable<TextBlock> Texts(object node, int depth)
+        {
+            if (depth > 8 || node is not DependencyObject d) yield break;
+            if (node is TextBlock tb) { yield return tb; yield break; }
+            foreach (var child in LogicalTreeHelper.GetChildren(d))
+                foreach (var t in Texts(child, depth + 1)) yield return t;
+        }
+        var eyebrow = Texts(page, 0).FirstOrDefault(t => ReferenceEquals(t.Style, eyebrowStyle));
+        if (eyebrow is not null && GenericEyebrows.Contains(eyebrow.Text.Trim()))
+            eyebrow.Text = AppNavigation.GroupOf(nav).Label.ToUpperInvariant();
+    }
+
+    private static FrameworkElement CreatePageCore(string pageTag) => pageTag switch
     {
         "dashboard" => new DashboardView(),
         "presets" => new PresetsView(),
@@ -630,11 +696,11 @@ public partial class MainWindow : Window
         // Pages stop their live sampling while nobody can see them; background services keep running.
         foreach (var p in _pages.Values.OfType<IPageLifecycle>()) p.OnHidden();
         _ambient?.Pause(Ambient);
-        Hide();
+        FadeOutWindow(Hide);
         TrayIcon.Notify("Money Tweaks is running in the background. Double-click the tray icon to open it; right-click › Exit to stop it.", "Accent");
     }
     private void Max_Click(object s, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-    private void Close_Click(object s, RoutedEventArgs e) => Close();
+    private void Close_Click(object s, RoutedEventArgs e) => FadeOutWindow(Close);
 
     /// <summary>First time the window is shown after a background start: build the dashboard and animations now.</summary>
     private void EnsureOpened()
@@ -652,7 +718,7 @@ public partial class MainWindow : Window
         if ((App.BackgroundStart || App.RunningInBackground) && !App.ExitRequested)
         {
             e.Cancel = true;
-            Hide();
+            FadeOutWindow(Hide);
             TrayIcon.Notify("Still running in the background. Right-click the tray icon to exit.", "Accent");
             return;
         }
@@ -677,12 +743,17 @@ public partial class MainWindow : Window
         Focus();
     }
 
+    private bool _wasMinimized;
+
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
         // Borderless windows overhang the screen when maximized; pad to keep content visible.
         Root.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
         if (WindowState == WindowState.Minimized) _ambient?.Pause(Ambient); else if (IsActive) _ambient?.Resume(Ambient);
+        // Coming back from the taskbar: the content eases in like on first open.
+        if (_wasMinimized && WindowState != WindowState.Minimized) FadeInWindow();
+        _wasMinimized = WindowState == WindowState.Minimized;
     }
 
     // ═════ Screenshot mode (real screenshots for the website) ═════

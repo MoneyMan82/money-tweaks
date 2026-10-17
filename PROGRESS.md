@@ -248,3 +248,10 @@ Resume point for future sessions. Keep it short.
   palette over pages+tweaks+games+settings, IAnchorTarget (MonitorView health, AboutView appearance/hotkeys/updates),
   TweakListView all-mode + sort/category/notes/undo, DashboardExtras.cs, AppSettings nav/dashboard fields.
   Harness NavCheck drives the real MainWindow without showing it.
+- 1.40 polish: TweakListView GroupStyle.ContainerStyle (PART_Header button + "body" border around ItemsPresenter),
+  state in AppSettings.CollapsedTweakGroups ("page|group"); re-applied on Loaded and DataContextChanged (the VSP recycles
+  group containers). Long groups animate only up to the viewport height. Window close/hide via FadeOutWindow (Root
+  opacity+scale, _fadedOut guard for Close -> OnClosing -> hide-to-tray), dialogs via Motion.AnimateClose. Theme: ComboBox/
+  ComboBoxItem styles; TextBox PART_ContentHost must NOT get Margin=Padding (TextBox already applies it: 51 px boxes).
+  Harness: an off-screen Border never gets Loaded; GroupCheck hosts it in an invisible HwndSource (no WS_VISIBLE).
+  Tags v1.23.0 and v1.30.0 both point at 28b8dda (user tagged), so this is 1.40.

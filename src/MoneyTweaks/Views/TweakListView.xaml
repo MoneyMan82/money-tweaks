@@ -60,10 +60,13 @@
                                     Visibility="{Binding CanUndo, Converter={StaticResource B2V}}" Click="Undo_Click"
                                     ToolTip="Roll back: restore the original values backed up when this tweak was applied, and read them back"/>
                         </WrapPanel>
-                        <TextBlock Text="{Binding NotesText}" Visibility="{Binding HasNotes, Converter={StaticResource B2V}}" FontSize="11.5" Foreground="{StaticResource Gold}"
-                                   TextWrapping="Wrap" MaxWidth="820" HorizontalAlignment="Left" Margin="0,8,0,0" Opacity="0.85"/>
-                        <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" Background="#FF0A0D13" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,10,0,0">
-                            <TextBlock Text="{Binding Details}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                        <!-- Notes (limitations, conflicts) live with the details: the gold badge above shows they exist and previews them on hover. -->
+                        <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" IsVisibleChanged="Details_VisibleChanged" Background="#FF0A0D13" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,10,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{Binding NotesText}" Visibility="{Binding HasNotes, Converter={StaticResource B2V}}" FontSize="11.5" Foreground="{StaticResource Gold}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding Details}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                     <Grid Grid.Column="2" VerticalAlignment="Top" Margin="12,16,18,0">
@@ -140,7 +143,7 @@
                     <Button Content="Undo all" Click="UndoAll_Click"/>
                 </StackPanel>
                 <Grid Width="260" Margin="0,0,12,0" HorizontalAlignment="Left">
-                    <TextBox x:Name="SearchBox" TextChanged="Filter_Changed" Padding="32,8,10,8"/>
+                    <TextBox x:Name="SearchBox" TextChanged="Filter_Changed" Padding="32,8,10,8" Tag="Search tweaks…"/>
                     <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="13" Foreground="{StaticResource Muted}" Margin="12,0,0,0" IsHitTestVisible="False"/>
                 </Grid>
                 <WrapPanel VerticalAlignment="Center">
@@ -168,6 +171,10 @@
             </WrapPanel>
             <DockPanel Margin="0,10,0,0">
                 <TextBlock x:Name="CountText" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="0,0,12,0">
+                    <Button Content="Collapse all" Style="{StaticResource GhostButton}" Padding="10,4" FontSize="11.5" Click="CollapseAll_Click" ToolTip="Fold every group to its heading"/>
+                    <Button Content="Expand all" Style="{StaticResource GhostButton}" Padding="10,4" FontSize="11.5" Margin="4,0,0,0" Click="ExpandAll_Click"/>
+                </StackPanel>
                 <ProgressBar x:Name="ScanBar" Width="220" HorizontalAlignment="Left" Visibility="Collapsed" Maximum="1"/>
             </DockPanel>
         </StackPanel>
@@ -194,16 +201,56 @@
                 </Style>
             </ListBox.ItemContainerStyle>
             <ListBox.GroupStyle>
+                <!-- Collapsible groups: click a heading to fold its tweaks away (animated, remembered per page). -->
                 <GroupStyle>
-                    <GroupStyle.HeaderTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="2,14,0,10">
-                                <Border Width="6" Height="6" CornerRadius="3" Background="{StaticResource AccentGradient}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource Text}"/>
-                                <TextBlock Text="{Binding ItemCount, StringFormat='  {0}'}" FontSize="12" Foreground="{StaticResource Subtle}"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </GroupStyle.HeaderTemplate>
+                    <GroupStyle.ContainerStyle>
+                        <Style TargetType="GroupItem">
+                            <EventSetter Event="Loaded" Handler="Group_Loaded"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="GroupItem">
+                                        <StackPanel>
+                                            <Button x:Name="PART_Header" Click="GroupHeader_Click" Cursor="Hand" Margin="0,8,0,8" Focusable="True"
+                                                    ToolTip="Click to collapse or expand this group">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="hb" Background="Transparent" CornerRadius="10" Padding="8,7">
+                                                            <Grid>
+                                                                <Border x:Name="hov" Background="#0CFFFFFF" CornerRadius="10" Margin="-8,-7" Opacity="0"/>
+                                                                <ContentPresenter/>
+                                                            </Grid>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="hov" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+                                                                <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="hov" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                                <DockPanel LastChildFill="False">
+                                                    <TextBlock x:Name="chev" Style="{StaticResource Icon}" Text="&#xE70D;" FontSize="10" Foreground="{StaticResource Muted}"
+                                                               Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5" DockPanel.Dock="Left">
+                                                        <TextBlock.RenderTransform><RotateTransform/></TextBlock.RenderTransform>
+                                                    </TextBlock>
+                                                    <Border Width="6" Height="6" CornerRadius="3" Background="{StaticResource AccentGradient}" VerticalAlignment="Center" Margin="0,0,10,0" DockPanel.Dock="Left"/>
+                                                    <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="Bold" Foreground="{StaticResource Text}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                                                    <Border Style="{StaticResource Badge}" Background="#10FFFFFF" Margin="10,0,0,0" DockPanel.Dock="Left" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding ItemCount}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
+                                                    </Border>
+                                                    <TextBlock x:Name="hint" Text="Hidden: click to show" FontSize="11" Foreground="{StaticResource Subtle}" Margin="12,0,0,0"
+                                                               DockPanel.Dock="Left" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                                </DockPanel>
+                                            </Button>
+                                            <Border x:Name="body" ClipToBounds="True">
+                                                <ItemsPresenter/>
+                                            </Border>
+                                        </StackPanel>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </GroupStyle.ContainerStyle>
                 </GroupStyle>
             </ListBox.GroupStyle>
         </ListBox>

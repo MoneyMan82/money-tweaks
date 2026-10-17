@@ -43,6 +43,8 @@ public static class AutoStart
     public static void EnsurePath(string? exe)
     {
         if (exe is null || Current() is not { } cur) return;
+        // Only Money Tweaks itself may take over the entry: a test host or another tool loading this code must never redirect it.
+        if (!Path.GetFileNameWithoutExtension(exe).StartsWith("MoneyTweaks", StringComparison.OrdinalIgnoreCase)) return;
         if (!string.Equals(cur, CommandFor(exe), StringComparison.OrdinalIgnoreCase)) Enable(exe);
     }
 }

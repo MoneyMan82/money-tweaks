@@ -328,10 +328,12 @@ public sealed class OverlayView : UserControl, IPageLifecycle
 
         // Add: type an exe, or pick from apps that have a window open right now.
         var add = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
-        var exeBox = new TextBox { Width = 260, Margin = new Thickness(0, 0, 8, 6), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Game executable, e.g. GeometryDash.exe" };
+        var exeBox = new TextBox { Width = 260, Margin = new Thickness(0, 0, 8, 6), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Game executable, e.g. GeometryDash.exe", Tag = "Game .exe, e.g. GeometryDash.exe" };
         add.Children.Add(exeBox);
         add.Children.Add(Ui.Btn("Add game", (_, _) => AddGame(exeBox.Text, null)));
         var running = new ComboBox { Width = 300, Margin = new Thickness(8, 0, 8, 6), ToolTip = "Apps with an open window" };
+        running.Items.Add(new ComboBoxItem { Content = "…or pick an app that's open now", IsEnabled = false, Tag = null });
+        running.SelectedIndex = 0;
         try
         {
             foreach (var p in Process.GetProcesses())

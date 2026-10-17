@@ -236,7 +236,7 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
         });
 
         var state = DisplayService.AutoActive ? $"Active now: {target.Current.Width}×{target.Current.Height} while Fortnite runs."
-            : a.Enabled ? "On. Waiting for Fortnite to start." : "Off.";
+            : a.Enabled ? "Auto-switch is on: waiting for Fortnite to start." : "Auto-switch is off. Tick the box below to turn it on.";
         sec.Children.Add(Ui.Muted(state, 12.5));
 
         var toggle = new CheckBox { Content = "Switch automatically when Fortnite starts", IsChecked = a.Enabled, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 10, 0, 0), FontWeight = FontWeights.SemiBold };

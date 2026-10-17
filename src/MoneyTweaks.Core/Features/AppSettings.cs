@@ -48,6 +48,8 @@ public sealed class AppSettings
     public bool SidebarCompact { get; set; }
     /// <summary>Sidebar groups the user collapsed.</summary>
     public List<string> CollapsedNavGroups { get; set; } = [];
+    /// <summary>Tweak-list groups the user collapsed, as "page|group" (e.g. "General|Power", "all|Networking").</summary>
+    public List<string> CollapsedTweakGroups { get; set; } = [];
     /// <summary>Pages pinned to the top of the sidebar and the dashboard shortcuts.</summary>
     public List<string> FavouritePages { get; set; } = [];
     /// <summary>Most recently opened pages, newest first.</summary>

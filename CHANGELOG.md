@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.40 – 2026-10-17
+- **Collapsible tweak groups** (every category page and All Tweaks): click a group heading to fold its tweaks away or
+  bring them back, with a sliding height + fade animation and a rotating chevron. Folded groups show their count and
+  "Hidden: click to show", are remembered per page, and Collapse all / Expand all sit above the list. While you search,
+  every group with matches opens so nothing is hidden behind a folded heading.
+- **Closing animations**: the window fades and settles back when you close it, hide it to the tray (Run in the
+  background, or closing while running in the background) and eases back in when it's restored from the taskbar or
+  tray. Dialogs shrink and fade out instead of vanishing. "What changes" details fade in when opened.
+- **Drop-downs are themed**: every drop-down (Game Library profiles, All Tweaks category/sort, overlay app picker) used
+  the white Windows control; they now match the app, with a hover glow, a rotating chevron and a drop-down that slides
+  and fades open.
+- **Text boxes fixed**: the theme applied the inner padding twice and let boxes stretch, so search fields were 51 px
+  tall empty blocks; they are now 35 px (same as buttons/drop-downs), centred, and show placeholders ("Search tweaks…",
+  "Search games or .exe names…", the booster's process example, the overlay's exe field).
+- Tweak cards no longer repeat their notes in gold under every card; the gold "N notes" badge shows them on hover and
+  they open with "What changes".
+- Page labels above titles follow the sidebar groups (e.g. "GAMING", "TOOLS", "OPTIMIZATION") instead of old section
+  names; descriptive labels stay.
+- Dashboard: the overview card lines up with the cards below; the tag now reads "N changes by Money Tweaks" (it counts
+  Money Tweaks' own backups, which the 53 % ring doesn't); live tiles show guide lines while their first minute fills.
+- Ping Stabilizer: the idle chart has guide lines and explains what will appear; the status line says it isn't
+  monitoring yet. Fortnite Stretched: the auto-switch status is a sentence instead of a lone "Off.".
+- Start with Windows: the Run entry only follows an executable that is Money Tweaks itself, so another program loading
+  Money Tweaks' code can't redirect it.
+- Checked off-screen with the real pages: a group folds (708 → 0 px, height shrinking mid-animation), unfolds and hands
+  its height back to layout, Collapse all folds all 7 General groups (also containers created while scrolling),
+  search reopens matching groups, Expand all clears the remembered state; themed TextBox 35 px, ComboBox 36 px.
+
 ## 1.23 – 2026-10-17
 - **New version numbers**: an update adds 0.1 (1.23 → 1.33) and a minor update adds 0.01 (1.23 → 1.24). The app shows
   two decimals ("1.24"); tags keep a trailing .0 (v1.24.0) so copies up to 1.22.1 can still update in-app.

@@ -135,6 +135,10 @@ public partial class TweakListView : UserControl, IPageLifecycle
     {
         if (sender is RadioButton { Tag: string tag }) _filter = tag;
         _view?.Refresh();
+        if (_view is null) return;
+        // Searching opens every group; clearing the search folds the remembered ones again.
+        foreach (var gi in Controls.Ui.Descendants<GroupItem>(List))
+            if (gi.DataContext is CollectionViewGroup g) ApplyGroup(gi, IsCollapsed(g), animate: false);
     }
 
     private void Category_Changed(object sender, SelectionChangedEventArgs e)
@@ -155,6 +159,112 @@ public partial class TweakListView : UserControl, IPageLifecycle
             case "status": _view.SortDescriptions.Add(new SortDescription(nameof(TweakItem.StatusRank), ListSortDirection.Ascending)); _view.SortDescriptions.Add(new SortDescription(nameof(TweakItem.Name), ListSortDirection.Ascending)); break;
             case "status-desc": _view.SortDescriptions.Add(new SortDescription(nameof(TweakItem.StatusRank), ListSortDirection.Descending)); _view.SortDescriptions.Add(new SortDescription(nameof(TweakItem.Name), ListSortDirection.Ascending)); break;
         }
+    }
+
+    // ---- collapsible groups ----------------------------------------------------------------------------------------
+
+    private static Core.Features.AppSettings S => App.Settings;
+    private string GroupKey(object? name) => $"{_category?.ToString() ?? "all"}|{name}";
+    /// <summary>While searching, every group shows its matches so nothing is hidden behind a folded heading.</summary>
+    private bool Searching => !string.IsNullOrWhiteSpace(SearchBox?.Text);
+    private bool IsCollapsed(CollectionViewGroup g) => !Searching && S.CollapsedTweakGroups.Contains(GroupKey(g.Name));
+
+    private static (FrameworkElement? body, UIElement? chev, UIElement? hint) Parts(GroupItem gi) =>
+        (gi.Template?.FindName("body", gi) as FrameworkElement,
+         (gi.Template?.FindName("PART_Header", gi) as Button)?.Content is DockPanel dp ? dp.Children[0] : null,
+         (gi.Template?.FindName("PART_Header", gi) as Button)?.Content is DockPanel dp2 ? dp2.Children[^1] : null);
+
+    /// <summary>Open, or opening; a body that is still animating closed counts as closed.</summary>
+    private static bool IsOpen(FrameworkElement body) => body.Visibility == Visibility.Visible && body.Tag as string != "closing";
+
+    /// <summary>Shows a group folded or open; animated when the user clicks, instant when a container (re)appears.</summary>
+    private void ApplyGroup(GroupItem gi, bool collapsed, bool animate)
+    {
+        gi.ApplyTemplate();
+        var (body, chev, hint) = Parts(gi);
+        if (body is null) return;
+        if (chev is not null) Controls.Motion.Rotate(chev, collapsed ? -90 : 0, animate ? 200 : 0);
+        if (hint is not null) hint.Visibility = collapsed ? Visibility.Visible : Visibility.Collapsed;
+        if (collapsed == !IsOpen(body)) return;
+        if (!animate)
+        {
+            body.BeginAnimation(HeightProperty, null); body.Height = double.NaN; body.BeginAnimation(OpacityProperty, null); body.Opacity = 1;
+            body.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+            body.Tag = collapsed ? "closing" : null;
+            return;
+        }
+        // Long groups only animate the part that is on screen, so the motion stays quick and smooth.
+        double viewport = Math.Max(200, List.ActualHeight);
+        if (collapsed)
+        {
+            body.Tag = "closing";
+            if (body.ActualHeight > viewport) body.Height = viewport;
+            Controls.Motion.Collapse(body, 230);
+        }
+        else
+        {
+            body.Tag = null;
+            body.Visibility = Visibility.Visible;
+            body.Measure(new Size(Math.Max(1, body.ActualWidth > 0 ? body.ActualWidth : List.ActualWidth), viewport));
+            Controls.Motion.Expand(body, 260);
+        }
+    }
+
+    private void Group_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not GroupItem gi) return;
+        // The virtualizing list reuses group containers for other groups without a new Loaded, so follow the group too.
+        gi.DataContextChanged -= Group_DataContextChanged;
+        gi.DataContextChanged += Group_DataContextChanged;
+        if (gi.DataContext is CollectionViewGroup g) ApplyGroup(gi, IsCollapsed(g), animate: false);
+    }
+
+    private void Group_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is GroupItem gi && e.NewValue is CollectionViewGroup g) ApplyGroup(gi, IsCollapsed(g), animate: false);
+    }
+
+    private void GroupHeader_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { TemplatedParent: GroupItem { DataContext: CollectionViewGroup g } gi }) return;
+        var key = GroupKey(g.Name);
+        bool collapse = Parts(gi).body is { } body && IsOpen(body); // what's on screen decides, so a quick second click reverses it
+        S.CollapsedTweakGroups.Remove(key);
+        if (collapse) S.CollapsedTweakGroups.Add(key);
+        S.Save();
+        ApplyGroup(gi, collapse, animate: true);
+    }
+
+    private void CollapseAll_Click(object sender, RoutedEventArgs e) => SetAllGroups(true);
+    private void ExpandAll_Click(object sender, RoutedEventArgs e) => SetAllGroups(false);
+
+    private void SetAllGroups(bool collapse)
+    {
+        foreach (var g in _view.Groups?.OfType<CollectionViewGroup>() ?? [])
+        {
+            var key = GroupKey(g.Name);
+            S.CollapsedTweakGroups.Remove(key);
+            if (collapse) S.CollapsedTweakGroups.Add(key);
+        }
+        S.Save();
+        // Containers on screen animate (with a small cascade); the rest pick the state up when they're created.
+        int i = 0;
+        foreach (var gi in Controls.Ui.Descendants<GroupItem>(List))
+        {
+            if (gi.DataContext is not CollectionViewGroup) continue;
+            var item = gi; int delay = Math.Min(i++, 8) * 25;
+            if (delay == 0 || !Controls.Motion.Enabled) ApplyGroup(item, collapse, animate: true);
+            else Dispatcher.InvokeAsync(async () => { await Task.Delay(delay); ApplyGroup(item, collapse, animate: true); });
+        }
+        if (collapse) (VisualTreeHelperFind<ScrollViewer>(List))?.ScrollToTop();
+    }
+
+    private static T? VisualTreeHelperFind<T>(DependencyObject root) where T : DependencyObject => Controls.Ui.Descendants<T>(root).FirstOrDefault();
+
+    /// <summary>"What changes" opens with a short fade and rise instead of popping in.</summary>
+    private void Details_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is FrameworkElement el && e.NewValue is true) Controls.Motion.FadeIn(el, 0, 6, 220);
     }
 
     /// <summary>Rollback for one tweak: restores its backed-up values through the same verified path as Undo all.</summary>
