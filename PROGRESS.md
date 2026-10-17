@@ -237,3 +237,9 @@ Resume point for future sessions. Keep it short.
   hotkey parse, GameWindow mode), NvApi.GpuTemperature + HardwareSnapshot.GpuTempC. UI: Controls/PerformanceOverlay.cs,
   OverlayService.cs (hotkey on main hwnd, 250 ms refresh, watcher), Views/OverlayView.cs. User is in Performance Log
   Users, so ETW works unelevated here. Off-screen render caught a status-rebuild re-parent bug (fixed).
+- 1.21.0 Game Library: Core/Games (GameCatalog, GameScanner: VDF/acf/Epic item/Riot yaml parsers + Resolve with
+  SourceCheck definitive flags, GameDetector: snapshot + identity Match + StatusOf + Report, GameLibrary: library.json,
+  GameRuntime: cached launcher data, statuses, priority). ProfileSession.TriggeredGameKey; ProfileEngine.RunningGame now
+  identity-aware. Real data on this PC: MECCHA CHAMELEON = Steam 4704690 → PenguinHotel.exe; Fortnite Epic manifest
+  launches FortniteBootstrapper.exe (game is FortniteClient-Win64-Shipping.exe); 10 Roblox version folders, one with
+  Studio; Geode helper exes beside GeometryDash.exe. Off-screen render caught a Chip-style/ToggleButton crash (fixed).

@@ -23,6 +23,7 @@ public sealed class ProfilesView : UserControl, IPageLifecycle
         var actions = Ui.Row(
             Ui.Btn("+  New profile", (_, _) => OpenEditor(null), "PrimaryButton"),
             Ui.Btn("Import…", (_, _) => Import()),
+            Ui.Btn("Game Library ›", (_, _) => MainWindow.Current?.Navigate("library")),
             Ui.Btn("Export my profiles…", (_, _) => Export(F.Profiles), margin: new Thickness(0, 0, 0, 8)));
         var (root, body) = Ui.Page("Gaming Profiles",
             "Switch a whole set of settings in one click, or let Money Tweaks switch automatically when a game starts and restore everything when it closes. Every change is shown first, backed up, and read back after restoring.",

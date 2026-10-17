@@ -1,5 +1,6 @@
 using System.Text;
 using System.Windows;
+using MoneyTweaks.Core.Games;
 using MoneyTweaks.Core.Profiles;
 using MoneyTweaks.Core.Sys;
 
@@ -37,7 +38,7 @@ public static class ProfileService
     }
 
     /// <summary>Activates a profile (switching off the current one first). With <paramref name="confirm"/>, shows every change first.</summary>
-    public static async Task<bool> ActivateAsync(GamingProfile p, string? trigger, bool confirm)
+    public static async Task<bool> ActivateAsync(GamingProfile p, string? trigger, bool confirm, string? gameKey = null)
     {
         if (_switching) return false;
         if (confirm)
@@ -55,7 +56,7 @@ public static class ProfileService
         try
         {
             if (Active is not null && !await DeactivateCoreAsync()) return false;
-            var (session, problems) = await Task.Run(() => ProfileEngine.Activate(p, trigger, s => { File.Active = s; Save(); }));
+            var (session, problems) = await Task.Run(() => ProfileEngine.Activate(p, trigger, s => { File.Active = s; Save(); }, gameKey));
             if (session is null) { File.Active = null; Save(); }
             Changed?.Invoke();
             if (session is null) Dialog.Show($"“{p.Name}” was not activated", string.Join("\n", problems), DialogKind.Error);
@@ -68,7 +69,7 @@ public static class ProfileService
     public static async Task<bool> DeactivateAsync(bool userInitiated = true)
     {
         if (_switching || Active is null) return false;
-        if (userInitiated && Active.TriggeredBy is { } exe && ProfileEngine.RunningGame([exe]) is not null) _suppressedExe = exe;
+        if (userInitiated && Active.TriggeredBy is not null && StillRunning(Active)) _suppressedExe = Active.TriggeredGameKey ?? Active.TriggeredBy;
         _switching = true;
         try { return await DeactivateCoreAsync(); }
         finally { _switching = false; }
@@ -86,9 +87,18 @@ public static class ProfileService
     }
 
     // ---- automatic switching -------------------------------------------------------------------------------------
+    /// <summary>Whether the game that triggered a profile still runs: library games by process identity, older sessions by exe.</summary>
+    private static bool StillRunning(ProfileSession s) =>
+        s.TriggeredGameKey is { } key ? GameRuntime.Running(key) is not null : s.TriggeredBy is { } exe && ProfileEngine.RunningGame([exe]) is not null;
+
+    private static bool SuppressedStillRunning(string token) =>
+        token.StartsWith("cat:", StringComparison.Ordinal) || token.StartsWith("usr:", StringComparison.Ordinal)
+            ? GameRuntime.Running(token) is not null
+            : ProfileEngine.RunningGame([token]) is not null;
+
     public static void StartWatcher()
     {
-        if (_watch is not null || File.AutoSwitch.Count == 0) return;
+        if (_watch is not null || (File.AutoSwitch.Count == 0 && !GameRuntime.NeedsWatcher(GameLibrary.Current))) return;
         _watch = new CancellationTokenSource();
         var ct = _watch.Token;
         var ui = Application.Current.Dispatcher;
@@ -108,11 +118,14 @@ public static class ProfileService
     private static async Task Poll(System.Windows.Threading.Dispatcher ui)
     {
         if (_switching) return;
-        if (_suppressedExe is not null && ProfileEngine.RunningGame([_suppressedExe]) is null) _suppressedExe = null;
-        if (Active is { TriggeredBy: { } exe })
+        // Game Library automation: verified game processes only (path/identity checked).
+        var libRunning = GameRuntime.RunningAutomated(GameLibrary.Current);
+        GameRuntime.RaisePriorities(libRunning);
+        if (_suppressedExe is not null && !SuppressedStillRunning(_suppressedExe)) _suppressedExe = null;
+        if (Active is { TriggeredBy: not null } act)
         {
             // Restore once the game that triggered the profile has been gone for two polls (~4 s).
-            _missingPolls = ProfileEngine.RunningGame([exe]) is null ? _missingPolls + 1 : 0;
+            _missingPolls = StillRunning(act) ? 0 : _missingPolls + 1;
             if (_missingPolls >= 2) { _missingPolls = 0; await ui.InvokeAsync(() => DeactivateAsync(userInitiated: false)).Task.Unwrap(); }
             return;
         }
@@ -133,13 +146,30 @@ public static class ProfileService
             await ui.InvokeAsync(() => ActivateAsync(p, running, confirm: false)).Task.Unwrap();
             return;
         }
+        foreach (var (g, proc) in libRunning.Where(x => x.game.Entry is { AutoActivate: true, ProfileId: not null }))
+        {
+            if (g.Key == _suppressedExe) continue;
+            if (ProfileStore.All(File).FirstOrDefault(p => p.Id == g.Entry!.ProfileId) is not { } p) continue;
+            if (!Admin.IsElevated && ProfileEngine.NeedsAdmin(p))
+            {
+                if (_adminNoticeExe != g.Key)
+                {
+                    _adminNoticeExe = g.Key;
+                    await ui.InvokeAsync(() => MainWindow.Current?.ShowToast($"{g.Def.Name} started, but \u201c{p.Name}\u201d needs Money Tweaks running as admin to switch automatically.", "Gold"));
+                }
+                return;
+            }
+            Log.Info($"{g.Def.Name} detected (pid {proc.Pid}, {proc.Path ?? "path unknown"}); activating \u201c{p.Name}\u201d");
+            await ui.InvokeAsync(() => ActivateAsync(p, g.Def.Name, confirm: false, gameKey: g.Key)).Task.Unwrap();
+            return;
+        }
     }
 
     /// <summary>At startup: a profile was still active when Money Tweaks last closed. Offer to restore.</summary>
     public static async Task CheckPendingAsync()
     {
         if (Active is not { } s) { StartWatcher(); return; }
-        var stillRunning = s.TriggeredBy is { } exe && ProfileEngine.RunningGame([exe]) is not null;
+        var stillRunning = s.TriggeredBy is not null && StillRunning(s);
         if (!stillRunning && Dialog.Confirm("Restore settings from a gaming profile?",
                 $"“{s.ProfileName}” was still active when Money Tweaks closed (started {s.StartedAt:g}). Restore the settings it changed?", "Restore", DialogKind.Warning))
         {

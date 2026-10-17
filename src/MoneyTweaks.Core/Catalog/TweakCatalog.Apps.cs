@@ -152,33 +152,59 @@ public static partial class TweakCatalog
                 admin: false, label: "OneDriveSetup.exe /uninstall")) with { Risk = Risk.Caution, Group = "Microsoft apps", Warning = "Files that are only stored online (cloud icon) won't be available offline after OneDrive is removed." };
     }
 
-    /// <summary>(id, game, process exe)</summary>
-    public static readonly (string id, string game, string exe)[] GameTable =
+    /// <summary>(id, game, process exe names). Kept to the main games; the Game Library handles any other game at runtime.</summary>
+    public static readonly (string id, string game, string[] exes)[] GameTable =
     [
-        ("fortnite", "Fortnite", "FortniteClient-Win64-Shipping.exe"),
-        ("valorant", "VALORANT", "VALORANT-Win64-Shipping.exe"),
-        ("cs2", "Counter-Strike 2", "cs2.exe"),
-        ("apex", "Apex Legends", "r5apex_dx12.exe"),
+        ("fortnite", "Fortnite", ["FortniteClient-Win64-Shipping.exe"]),
+        ("valorant", "VALORANT", ["VALORANT-Win64-Shipping.exe"]),
+        ("cs2", "Counter-Strike 2", ["cs2.exe"]),
+        ("apex", "Apex Legends", ["r5apex.exe", "r5apex_dx12.exe"]),
+        ("rocketleague", "Rocket League", ["RocketLeague.exe"]),
+        ("gta5", "Grand Theft Auto V Legacy", ["GTA5.exe"]),
+        ("gta5-enhanced", "Grand Theft Auto V Enhanced", ["GTA5_Enhanced.exe"]),
+        ("roblox", "Roblox Player", ["RobloxPlayerBeta.exe"]),
+        ("marvelrivals", "Marvel Rivals", ["Marvel-Win64-Shipping.exe"]),
+    ];
+
+    /// <summary>
+    /// Entries removed from the list above. They're only shown (undo-only) if this PC still has the setting applied, so
+    /// nobody is left with a registry value they can't undo. Minecraft's was harmful: javaw.exe is every Java program.
+    /// </summary>
+    internal static readonly (string id, string game, string exe)[] RetiredGameTable =
+    [
         ("cod", "Call of Duty (HQ / Warzone)", "cod.exe"),
         ("r6", "Rainbow Six Siege", "RainbowSix.exe"),
-        ("rocketleague", "Rocket League", "RocketLeague.exe"),
         ("overwatch", "Overwatch 2", "Overwatch.exe"),
-        ("minecraft", "Minecraft: Java Edition", "javaw.exe"),
-        ("gta5", "Grand Theft Auto V", "GTA5.exe"),
+        ("minecraft", "Minecraft: Java Edition (javaw.exe, affects all Java programs)", "javaw.exe"),
         ("lol", "League of Legends", "League of Legends.exe"),
         ("pubg", "PUBG: Battlegrounds", "TslGame.exe"),
-        ("roblox", "Roblox", "RobloxPlayerBeta.exe"),
         ("rust", "Rust", "RustClient.exe"),
-        ("marvelrivals", "Marvel Rivals", "Marvel-Win64-Shipping.exe"),
     ];
+
+    private static bool PriorityApplied(string exe)
+    {
+        try
+        {
+            using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey($@"{Ifeo}\{exe}\PerfOptions");
+            return k?.GetValue("CpuPriorityClass") is int v && v == 3;
+        }
+        catch { return false; }
+    }
 
     private static IEnumerable<Tweak> GameProfiles()
     {
-        foreach (var (id, game, exe) in GameTable)
+        foreach (var (id, game, exes) in GameTable)
         {
             yield return T(TweakCategory.GameProfiles, "game." + id, $"{game}: High CPU priority",
-                $"Tells Windows to always start {exe} at High CPU priority, so background apps can't steal cycles mid-match. Applied through Image File Execution Options; no game files are touched. Takes effect on the next launch.",
-                CpuPriority(exe, 3)) with { Group = "CPU priority" };
+                $"Tells Windows to always start {string.Join(" / ", exes)} at High CPU priority, so background apps can't steal cycles mid-match. Applied through Image File Execution Options; no game files are touched. Takes effect on the next launch.",
+                exes.Select(e => (TweakOp)CpuPriority(e, 3)).ToArray()) with { Group = "CPU priority" };
+        }
+        foreach (var (id, game, exe) in RetiredGameTable)
+        {
+            if (!PriorityApplied(exe)) continue;
+            yield return T(TweakCategory.GameProfiles, "game." + id, $"{game}: High CPU priority (retired, undo only)",
+                $"No longer offered. It's listed because {exe} still starts at High priority on this PC; undo it here. Use the Game Library's runtime priority option instead, which only affects the verified game process.",
+                CpuPriority(exe, 3)) with { Group = "Retired (undo only)" };
         }
     }
 

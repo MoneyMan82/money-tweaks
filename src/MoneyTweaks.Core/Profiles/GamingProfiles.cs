@@ -44,6 +44,8 @@ public sealed class ProfileSession
     public string ProfileName { get; set; } = "";
     public DateTime StartedAt { get; set; } = DateTime.Now;
     public string? TriggeredBy { get; set; }
+    /// <summary>Game Library key ("cat:fortnite") when a library game triggered the profile; checked by process identity.</summary>
+    public string? TriggeredGameKey { get; set; }
     public Dictionary<string, bool> OriginalTweakStates { get; set; } = [];
     public string? PreviousPowerScheme { get; set; }
     public double? TimerMs { get; set; }
@@ -225,10 +227,10 @@ public static class ProfileEngine
     /// Applies a profile. <paramref name="persist"/> is called with the session BEFORE any change (so a crash can be
     /// recovered) and again at the end. Returns the session and problems; on a tweak failure everything is rolled back.
     /// </summary>
-    public static (ProfileSession? session, List<string> problems) Activate(GamingProfile p, string? triggeredBy, Action<ProfileSession> persist)
+    public static (ProfileSession? session, List<string> problems) Activate(GamingProfile p, string? triggeredBy, Action<ProfileSession> persist, string? gameKey = null)
     {
         var usable = p.TweakIds.Select(TweakCatalog.Find).Where(t => t is not null && ProfileStore.Usable(t, out _)).Select(t => t!).ToList();
-        var session = new ProfileSession { ProfileId = p.Id, ProfileName = p.Name, TriggeredBy = triggeredBy };
+        var session = new ProfileSession { ProfileId = p.Id, ProfileName = p.Name, TriggeredBy = triggeredBy, TriggeredGameKey = gameKey };
         if (p.Power != PowerChoice.Keep) session.PreviousPowerScheme = ActiveScheme();
         persist(session); // saved before the first change
         var problems = new List<string>();
@@ -290,15 +292,9 @@ public static class ProfileEngine
                     catch (Exception ex) { Log.Debug($"priority {exe}: {ex.Message}"); }
     }
 
-    /// <summary>The first configured game exe that is running, or null.</summary>
-    public static string? RunningGame(IEnumerable<string> exes)
-    {
-        foreach (var exe in exes)
-        {
-            var ps = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exe));
-            try { if (ps.Length > 0) return exe; }
-            finally { foreach (var x in ps) x.Dispose(); }
-        }
-        return null;
-    }
+    /// <summary>
+    /// The first configured game exe that is running, or null. Uses the Game Library's identity rules, so a generic exe
+    /// only counts when it really is the game (javaw.exe only when it's Minecraft's Java).
+    /// </summary>
+    public static string? RunningGame(IEnumerable<string> exes) => Games.GameDetector.FirstRunning(exes)?.exe;
 }

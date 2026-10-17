@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     internal static readonly (string tag, string icon, string label)[] Tools =
     [
         ("profiles", "\uE7FC", "Gaming Profiles"),
+        ("library", "\uE8B7", "Game Library"),
         ("scanner", "\uE721", "Smart Scanner"),
         ("presets", "\uE8F1", "Presets"),
         ("benchmark", "\uE9D2", "Test & Benchmark"),
@@ -204,6 +205,7 @@ public partial class MainWindow : Window
                 "benchmark" => new BenchmarkView(),
                 "scanner" => new ScannerView(),
                 "profiles" => new ProfilesView(),
+                "library" => new GameLibraryView(),
                 "potato" => new PotatoView(),
                 "stretched" => new StretchedView(),
                 "fnstretch" => new FortniteStretchedView(),

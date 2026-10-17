@@ -345,14 +345,9 @@ public sealed partial class BenchmarkView
     /// <summary>Known games currently running (they would skew a synthetic benchmark).</summary>
     private static List<string> RunningGames()
     {
-        var found = new List<string>();
-        foreach (var (_, game, exe) in TweakCatalog.GameTable)
-        {
-            var ps = System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(exe));
-            if (ps.Length > 0 && exe != "javaw.exe") found.Add(game);
-            foreach (var p in ps) p.Dispose();
-        }
-        return found;
+        // Same identity-checked detection as the Game Library (a generic exe like javaw.exe only counts when it is the game).
+        var games = Core.Games.GameLibrary.Items(Core.Games.GameLibrary.Current);
+        return Core.Games.GameRuntime.Statuses(games).Where(s => s.status == Core.Games.GameStatus.Running).Select(s => s.game.Def.Name).ToList();
     }
 
     /// <summary>Called at startup: if a synthetic benchmark was interrupted, offer to put the tweaks back.</summary>

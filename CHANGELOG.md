@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.21.0 – 2026-10-17
+- **Game Library** (new page, also linked from Gaming Profiles): an editable library of 42 catalogue games plus any game
+  you add by its exe or installation folder, with search (name or exe), favourites, category filters and "hide not
+  installed". Includes Fortnite, Geometry Dash, Roblox Player and Roblox Studio (separate), MECCHA CHAMELEON, Minecraft
+  Java and Bedrock, GTA V Legacy and Enhanced, Rocket League, Brawlhalla, Fall Guys, Among Us, Phasmophobia, Lethal
+  Company, Counter-Strike 2, VALORANT, Apex Legends, Marvel Rivals and other multiplayer, party, co-op and indie games.
+- **Real detection** (root cause: games were matched by process name only and installs weren't detected at all):
+  installs come from Steam's libraryfolders.vdf and app manifests, Epic's .item manifests (DLC ignored), Riot's product
+  settings, Roblox/Bloxstrap version folders (newest build), the Minecraft launcher and runtimes, the Bedrock package or
+  XboxGames folder, Rockstar's registry keys and Apps & features. An install only counts if the game's own exe is in it.
+  Running games are matched by real executable path (QueryFullProcessImageName, no memory access): the process must run
+  from the game's install, and generic exes need identity rules (javaw.exe is Minecraft only from Minecraft's runtime or
+  with a "Minecraft" window). Statuses: Running, Installed, Not installed (every launcher it can come from was checked),
+  Not detected (a launcher couldn't be checked). Test Detection shows every source, the matched exe and full path, and
+  why other processes were rejected (e.g. Roblox Studio is not Roblox Player).
+- Remove from Library for catalogue and your own games: only Money Tweaks' entry is removed (never uninstalls or deletes
+  anything); catalogue games can be restored. Linked custom profiles are offered for export, then deletion is confirmed
+  separately. Set/Change exe handles moved installs and updated executables.
+- Profiles per game use the existing Gaming Profiles engine (preview, backup, verified restore): choose a profile,
+  optionally auto-activate it while the game runs (identity-checked, restored when it closes), and optionally raise only
+  the verified game process to High priority (runtime only). Links to real game settings (Potato Graphics, Fortnite
+  Stretched, Performance Overlay, CPU priority tweak). Every game can be launched (Steam/Epic URIs, Riot Client, exe).
+- Auto-switch, the overlay's game watcher and the benchmark's "game running" warning now use the same identity-checked
+  detection.
+- Game Profiles category trimmed to the main games (Apex now covers r5apex.exe and r5apex_dx12.exe; GTA V Enhanced
+  added). Removed entries stay listed as "undo only" if their setting is still applied on the PC; the Minecraft one
+  raised every Java program (javaw.exe) and is no longer offered.
+
 ## 1.20.0 – 2026-10-17
 - **Live Performance Overlay** (new Tools page "Performance Overlay"): a small transparent, click-through, topmost window
   that never takes focus, showing FPS, frame time, 1% low, a frame-time graph, CPU/GPU load, RAM and temperatures.
