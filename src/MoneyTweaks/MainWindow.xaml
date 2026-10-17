@@ -126,6 +126,8 @@
                 </Grid.RowDefinitions>
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Style="{StaticResource ChromeButton}" Content="&#xE73F;" Click="Background_Click"
+                                ToolTip="Run in the background: hide to the tray and keep auto-switching, Fortnite auto resolution, hotkeys and macros working"/>
                         <Button Style="{StaticResource ChromeButton}" Content="&#xE921;" Click="Min_Click" ToolTip="Minimize"/>
                         <Button x:Name="MaxButton" Style="{StaticResource ChromeButton}" Content="&#xE922;" Click="Max_Click" ToolTip="Maximize"/>
                         <Button Style="{StaticResource CloseChromeButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Close"/>

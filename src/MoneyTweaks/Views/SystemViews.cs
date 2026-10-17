@@ -261,6 +261,7 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
             catch (Exception ex) { startBox.IsChecked = AutoStart.IsEnabled; Dialog.Show("Couldn't change the startup setting", ex.Message, DialogKind.Error); }
         };
         sw.Children.Add(startBox);
+        sw.Children.Add(Ui.Row(Ui.Btn("Run in the background now", (_, _) => MainWindow.Current?.SendToBackground(), margin: new Thickness(0, 8, 8, 4))));
         sw.Children.Add(Ui.Muted("Uses your user account's Run entry (no administrator rights, no service). When started this way, closing the window hides it to the tray; use the tray icon's Exit to stop it. You can also turn startup off in Task Manager → Startup apps.", 11.5));
         body.Children.Add(Ui.Card(sw));
 

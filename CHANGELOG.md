@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.22.1 – 2026-10-17
+- **Run in the background** button in the title bar (next to Minimize), also in Settings › Start with Windows and in search:
+  hides Money Tweaks to the tray without exiting. Gaming Profiles auto-switch, Fortnite auto resolution, the overlay
+  hotkey/game watcher and the macro emergency stop keep working; pages stop their live sampling while hidden. Open it
+  again by double-clicking the tray icon (or starting Money Tweaks); after that, closing the window also hides it to the
+  tray until you choose Exit from the tray menu.
+
 ## 1.22.0 – 2026-10-17
 - **Reorganized app** (every feature kept; all earlier page links and saved data still work). The sidebar is grouped into
   Dashboard, Optimization, Gaming, Monitoring & Benchmarks, Tools, Backup & Restore and Settings. Groups collapse with a

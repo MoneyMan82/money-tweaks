@@ -460,6 +460,7 @@ public partial class MainWindow : Window
         ("Compact sidebar", "Appearance", "about#appearance", "sidebar icons collapse"),
         ("Check for updates automatically", "Updates", "about#updates", "update version github"),
         ("Start with Windows (background)", "Startup", "about", "autostart tray background sign in"),
+        ("Run in the background now", "Title bar button / Settings", "about", "background tray hide minimize keep running"),
         ("Search hotkey (Ctrl+K)", "Hotkeys", "about#hotkeys", "shortcut search"),
         ("Emergency stop hotkey (Ctrl+Alt+End)", "Hotkeys", "about#hotkeys", "macro stop panic"),
         ("Overlay show/hide hotkey", "Performance Overlay", "overlay", "hotkey fps overlay"),
@@ -590,6 +591,22 @@ public partial class MainWindow : Window
     }
 
     private void Min_Click(object s, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Background_Click(object s, RoutedEventArgs e) => SendToBackground();
+
+    private bool _hiddenToTray;
+
+    /// <summary>Hides the window to the tray; the app keeps running. Open it again from the tray icon or by starting Money Tweaks.</summary>
+    public void SendToBackground()
+    {
+        App.EnterBackground();
+        _hiddenToTray = true;
+        // Pages stop their live sampling while nobody can see them; background services keep running.
+        foreach (var p in _pages.Values.OfType<IPageLifecycle>()) p.OnHidden();
+        _ambient?.Pause(Ambient);
+        Hide();
+        TrayIcon.Notify("Money Tweaks is running in the background. Double-click the tray icon to open it; right-click › Exit to stop it.", "Accent");
+    }
     private void Max_Click(object s, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void Close_Click(object s, RoutedEventArgs e) => Close();
 
@@ -606,7 +623,7 @@ public partial class MainWindow : Window
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         // Started in the background: closing hides the window so the background features keep running.
-        if (App.BackgroundStart && !App.ExitRequested)
+        if ((App.BackgroundStart || App.RunningInBackground) && !App.ExitRequested)
         {
             e.Cancel = true;
             Hide();
@@ -622,6 +639,12 @@ public partial class MainWindow : Window
         if (!IsVisible) Show();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         EnsureOpened();
+        if (_hiddenToTray)
+        {
+            _hiddenToTray = false;
+            if (Host.Content is IPageLifecycle lc) lc.OnShown();
+            _ambient?.Resume(Ambient);
+        }
         Activate();
         Topmost = true; Topmost = false; // reliably raise above the launching app
         Focus();

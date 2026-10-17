@@ -13,6 +13,20 @@ public partial class App : Application
     public static bool BackgroundStart { get; private set; }
     /// <summary>Set by the tray menu's Exit; otherwise closing the window in background mode only hides it.</summary>
     public static bool ExitRequested { get; set; }
+    /// <summary>The user sent the app to the background (tray) from the window; closing the window then hides it too.</summary>
+    public static bool RunningInBackground { get; private set; }
+
+    /// <summary>
+    /// Keeps Money Tweaks running as a background process with only a tray icon, the same way a start with Windows does:
+    /// profile auto-switch, Fortnite auto resolution, overlay hotkey and macro emergency stop keep working.
+    /// </summary>
+    public static void EnterBackground()
+    {
+        RunningInBackground = true;
+        Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        TrayIcon.Create();
+        Log.Info("Sent to the background by the user (tray icon only)");
+    }
     private static Mutex? _single;
     private static EventWaitHandle? _showSignal;
     private const string MutexName = @"Local\MoneyTweaks.SingleInstance", ShowName = @"Local\MoneyTweaks.Show";
