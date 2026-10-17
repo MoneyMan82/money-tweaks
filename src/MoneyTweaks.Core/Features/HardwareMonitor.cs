@@ -8,7 +8,11 @@ namespace MoneyTweaks.Core.Features;
 public sealed record HardwareSnapshot(
     double CpuPercent, double RamUsedGb, double RamTotalGb, double RamPercent,
     double? GpuPercent, double? DiskPercent, double NetDownKBps, double NetUpKBps,
-    double? CpuTempC, int ProcessCount, TimeSpan Uptime);
+    double? CpuTempC, int ProcessCount, TimeSpan Uptime)
+{
+    /// <summary>NVIDIA GPU temperature through NVAPI (null on other GPUs or if the driver doesn't report it).</summary>
+    public double? GpuTempC { get; init; }
+}
 
 public sealed record SystemSpecs(string Os, string Cpu, int Cores, int Threads, string Gpus, double RamGb,
     int? RamRatedMts, int? RamConfiguredMts, string Motherboard, string Bios);
@@ -32,6 +36,9 @@ public sealed class HardwareMonitor : IDisposable
     private DateTime _lastNet;
     private DateTime _lastGpuRefresh = DateTime.MinValue;
     private bool _tempUnavailable;
+    private bool _gpuTempUnavailable = !NvApi.DriverPresent;
+    private DateTime _gpuTempAt = DateTime.MinValue;
+    private double? _lastGpuTemp;
 
     public HardwareMonitor()
     {
@@ -122,7 +129,17 @@ public sealed class HardwareMonitor : IDisposable
         double cpu = 0;
         try { cpu = Math.Clamp(_cpu?.NextValue() ?? 0, 0, 100); } catch { }
         return new HardwareSnapshot(cpu, (total - avail) / 1073741824.0, total / 1073741824.0, load,
-            GpuPercent(), disk, down, up, CpuTemp(), ProcessCount(), TimeSpan.FromMilliseconds(Environment.TickCount64));
+            GpuPercent(), disk, down, up, CpuTemp(), ProcessCount(), TimeSpan.FromMilliseconds(Environment.TickCount64)) { GpuTempC = GpuTemp() };
+    }
+
+    private double? GpuTemp()
+    {
+        if (_gpuTempUnavailable) return null;
+        if (DateTime.UtcNow - _gpuTempAt < TimeSpan.FromSeconds(2)) return _lastGpuTemp;
+        _gpuTempAt = DateTime.UtcNow;
+        _lastGpuTemp = NvApi.GpuTemperature();
+        if (_lastGpuTemp is null) _gpuTempUnavailable = true; // don't keep asking a driver that can't answer
+        return _lastGpuTemp;
     }
 
     private int ProcessCount()

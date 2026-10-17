@@ -100,6 +100,35 @@ public static unsafe class NvApi
         finally { NativeMemory.Free(buf); }
     }
 
+    /// <summary>
+    /// Hottest NVIDIA GPU core temperature in °C (NvAPI_GPU_GetThermalSettings, an in-process driver query, cheap enough to
+    /// call every couple of seconds while a game runs, unlike starting nvidia-smi). Null if unavailable.
+    /// </summary>
+    public static double? GpuTemperature()
+    {
+        try
+        {
+            Initialize();
+            var handles = stackalloc IntPtr[64];
+            uint count;
+            if (((delegate* unmanaged[Cdecl]<IntPtr*, uint*, int>)F(0xE5AC921F))(handles, &count) != Ok || count == 0) return null;
+            const int size = 4 + 4 + 3 * 20; // NV_GPU_THERMAL_SETTINGS: version, count, 3 sensors × 5 ints
+            var buf = stackalloc byte[size];
+            double? best = null;
+            for (int i = 0; i < count; i++)
+            {
+                new Span<byte>(buf, size).Clear();
+                *(uint*)buf = Ver(size, 2);
+                if (((delegate* unmanaged[Cdecl]<IntPtr, uint, byte*, int>)F(0xE3640A56))(handles[i], 15 /* NVAPI_THERMAL_TARGET_ALL */, buf) != Ok) continue;
+                if (*(uint*)(buf + 4) == 0) continue;
+                var t = *(int*)(buf + 8 + 12); // sensor[0].currentTemp
+                if (t is > 0 and < 130) best = Math.Max(best ?? 0, t);
+            }
+            return best;
+        }
+        catch { return null; }
+    }
+
     /// <summary>The driver's ID for a setting name ("Texture filtering - LOD Bias"), or null if the driver doesn't know the name.</summary>
     public static uint? SettingIdFromName(string name)
     {

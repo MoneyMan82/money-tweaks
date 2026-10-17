@@ -232,3 +232,9 @@ Resume point for future sessions. Keep it short.
   Downloads (requireAdministrator, interactive .nip import dialog, no silent switch): Inspector import path built but not
   run here (would need UAC + dialog while a game was running). Lesson: render harness must not construct MoneyTweaks.App
   (its startup hands off to / opens the real app); use a plain Application + Theme.xaml.
+- 1.20.0 Overlay: Core PresentMonitor.cs (raw ETW: StartTrace/EnableTraceEx2/OpenTrace/ProcessTrace, EVENT_TRACE_LOGFILEW
+  448 bytes, EVENT_RECORD offsets pid@12 ts@16 provider@24 id@40; FrameTracker ring per pid, stats anchored to newest
+  delivered frame because real-time buffers flush ~1 s late; 8 KB buffers), OverlaySettings.cs (layout, profiles,
+  hotkey parse, GameWindow mode), NvApi.GpuTemperature + HardwareSnapshot.GpuTempC. UI: Controls/PerformanceOverlay.cs,
+  OverlayService.cs (hotkey on main hwnd, 250 ms refresh, watcher), Views/OverlayView.cs. User is in Performance Log
+  Users, so ETW works unelevated here. Off-screen render caught a status-rebuild re-parent bug (fixed).

@@ -42,6 +42,7 @@ public partial class MainWindow : Window
         ("crosshair", "\uE710", "Custom Crosshair"),
         ("startup", "\uE7E8", "Startup Apps"),
         ("monitor", "\uE9D9", "Hardware & Health"),
+        ("overlay", "\uE9D2", "Performance Overlay"),
         ("restore", "\uE777", "Backup & Restore"),
         ("logs", "\uE81C", "Activity Log"),
         ("about", "\uE713", "Settings & About"),
@@ -89,6 +90,7 @@ public partial class MainWindow : Window
             Log.Info($"[perf] startup to {(App.BackgroundStart ? "background ready" : "first frame")}: {App.StartupClock.ElapsedMilliseconds} ms");
             StartStallDetector();
             MacroService.Init(this);
+            OverlayService.Init(this); // overlay hotkey + optional game watcher (also in background mode)
             if (!App.BackgroundStart) StartAmbient();
             Activated += (_, _) => _ambient?.Resume(Ambient);
             Deactivated += (_, _) => _ambient?.Pause(Ambient);
@@ -211,6 +213,7 @@ public partial class MainWindow : Window
                 "crosshair" => new CrosshairView(),
                 "startup" => new StartupView(),
                 "monitor" => new MonitorView(),
+                "overlay" => new OverlayView(),
                 "restore" => new RestoreView(),
                 "logs" => new LogView(),
                 "about" => new AboutView(),

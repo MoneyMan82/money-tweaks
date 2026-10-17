@@ -42,6 +42,8 @@ public sealed class AppSettings
     /// <summary>User's own Fortnite captures for the Potato before/after comparison.</summary>
     public string? PotatoBeforeShot { get; set; }
     public string? PotatoAfterShot { get; set; }
+    /// <summary>Live performance overlay: layout, hotkey and per-game profiles.</summary>
+    public OverlaySettings Overlay { get; set; } = OverlaySettings.WithDefaults();
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

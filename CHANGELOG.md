@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.20.0 – 2026-10-17
+- **Live Performance Overlay** (new Tools page "Performance Overlay"): a small transparent, click-through, topmost window
+  that never takes focus, showing FPS, frame time, 1% low, a frame-time graph, CPU/GPU load, RAM and temperatures.
+  - FPS/frame time from a real-time ETW session on the same Present events PresentMon uses (Microsoft-Windows-DXGI
+    Present_Start for DirectX 10/11/12, Microsoft-Windows-D3D9 for DirectX 9), measured as time between Present calls.
+    Works in windowed, borderless and exclusive fullscreen; Vulkan/OpenGL are reported as "no frames", not guessed.
+    Written directly against the Windows ETW API: no new dependency, no injection, no game memory access.
+  - Needs administrator rights or the Performance Log Users group (Windows' rule for ETW); otherwise "needs admin"
+    with the other readings still working. Stale sessions are cleaned up; the session only runs while the overlay is shown.
+  - CPU/GPU/RAM/CPU temperature reuse the shared LiveStats/HardwareMonitor sampler; GPU temperature added to it through
+    NVAPI (in-process, unlike nvidia-smi which causes frame-time spikes). Missing sensors show n/a.
+  - Configurable metrics, text size, text/accent colours, background opacity, corner and margin, with a live preview;
+    global show/hide hotkey (default Ctrl+Shift+F10, works in background mode); per-game profiles with their own
+    layouts; optional automatic monitoring that shows the overlay when a listed game starts and hides it, stopping
+    frame timing, when it closes (Fortnite listed by default, off until enabled).
+  - Window mode detection (exclusive fullscreen via SHQueryUserNotificationState, borderless vs windowed) explains
+    when an overlay can't be drawn on top; honest notes on anti-cheat and games that hide overlays.
+  - "Test frame capture" lists the apps drawing frames right now with their FPS. Verified on this PC: DXGI frames at
+    240.0 FPS / 4.17 ms (240 Hz display), NVAPI GPU temperature within 1 °C of nvidia-smi, session removed after stop.
+
 ## 1.19.0 – 2026-10-17
 - **Legacy Potato — LOD Bias 0x20** (Potato Graphics › NVIDIA texture filtering), from the NVIDIA Inspector low-spec
   guide (Steam guide 1884111121): Transparency Supersampling = AA_MODE_REPLAY_MODE_ALL (0x00000008), Texture Filtering

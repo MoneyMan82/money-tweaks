@@ -114,6 +114,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         MacroService.Shutdown(); // releases any keys a macro is holding
+        OverlayService.Shutdown(); // stops the frame-timing ETW session
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile
         DisplayService.Shutdown(); // drops an unconfirmed test resolution
         TrayIcon.Dispose();
