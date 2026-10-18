@@ -65,6 +65,8 @@ public partial class MainWindow : Window
         // Tuning applied in an earlier session but never confirmed (the app closed or crashed): offer to undo, never re-apply.
         try
         {
+            // A fan curve left "running" by a crash: put the fan back on automatic first (safety, never a new setting).
+            if (await Task.Run(FanCurveService.RecoverAfterCrash) is { } fanMsg) ShowToast(fanMsg, "Gold");
             var ts = Core.Tuning.TuningState.Load();
             if (ts.PendingConfirmation && ts.HasChanges)
                 ShowToast($"CPU/GPU tuning \"{ts.ProfileName}\" from {ts.AppliedAt:g} wasn't confirmed stable. Open CPU & GPU Tuning to undo or keep it.", "Gold");

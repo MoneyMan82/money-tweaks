@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.31 – 2026-10-18
+(1.30 is skipped: an old v1.30.0 tag already exists on an earlier commit.)
+- **GPU clock offsets, undervolt, temperature limit, fan and fan curve** on the CPU & GPU Tuning page, through MSI
+  Afterburner's documented third-party control interface (MACMSharedMemory.h in Afterburner's SDK, same protocol as its
+  official sample: SDK mutex, write, FLUSH, notify, wait, read back). Needs Afterburner running and Money Tweaks as
+  administrator; otherwise the page says so and offers to start Afterburner instead of showing dead controls.
+  - Core and memory clock offsets, temperature limit and fixed/automatic fan with Afterburner's own ranges.
+  - Undervolt: pick a voltage point and a target clock; that point reaches the clock and every higher-voltage point is
+    capped at it. "Reset curve" clears the offsets.
+  - Every value is read back from Afterburner; a mismatch undoes the change. Afterburner's settings from before Money
+    Tweaks' first change are backed up and restored by Undo all.
+  - **Fan curve** (°C → %) driven by Money Tweaks while it's open: must rise with temperature, stay at or above the fan's
+    minimum and reach 100% by 85 °C. If the temperature can't be read or a write fails, the fan goes back to automatic;
+    closing Money Tweaks does the same, and after a crash the next start puts the fan back on automatic first.
+- **CPU temperature** where the firmware doesn't report it (common on desktop boards, including this ASUS B650): read
+  from MSI Afterburner's documented monitoring memory (MAHMSharedMemory.h) while Afterburner runs, so the dashboard,
+  monitor, tuning page and stability tests (95 °C limit) can use it. Money Tweaks still installs no driver.
+- **Per-game tuning**: Gaming Profiles › Edit › "CPU & GPU tuning while active" (Efficiency, Quiet or Maximum headroom).
+  Applied when the profile starts, put back exactly (AC and DC values, power limit, clock lock) when it ends, also after
+  a crash through the profile session's recovery. Without administrator rights only the CPU part is applied and the
+  GPU part is reported as skipped.
+- AMD's Ryzen Master libraries were checked and are not used: their exports (e.g. SetPPTLimit, SetCurrentVoltage) are
+  undocumented internals, and the documented Monitoring SDK's headers aren't part of the install.
+- 11 new tests against byte-exact replicas of the SDK layouts and a fake Afterburner (264 total).
+
 ## 1.29 – 2026-10-18
 - **New page: CPU & GPU Tuning** (Optimization group; Money Tweaks had no overclocking page before). Built only on
   interfaces the vendors document for other programs; everything else is a guided handoff, never a fake control:

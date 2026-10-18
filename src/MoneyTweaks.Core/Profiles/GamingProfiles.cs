@@ -25,6 +25,8 @@ public sealed class GamingProfile
     public double? TimerResolutionMs { get; set; }
     /// <summary>Raise the game's process to High priority when it is detected (runtime only, ends with the process).</summary>
     public bool RaiseGamePriority { get; set; }
+    /// <summary>CPU & GPU Tuning profile while active ("efficiency", "quiet", "headroom"), null = none. Restored when it ends.</summary>
+    public string? TuningProfileId { get; set; }
     /// <summary>Executables (e.g. FortniteClient-Win64-Shipping.exe) that trigger automatic switching.</summary>
     public List<string> GameExes { get; set; } = [];
     public DateTime Modified { get; set; } = DateTime.Now;
@@ -33,7 +35,7 @@ public sealed class GamingProfile
     public GamingProfile Copy(string name) => new()
     {
         Name = name, Description = Description, TweakIds = [.. TweakIds], Power = Power, TimerResolutionMs = TimerResolutionMs,
-        RaiseGamePriority = RaiseGamePriority, GameExes = [.. GameExes],
+        RaiseGamePriority = RaiseGamePriority, GameExes = [.. GameExes], TuningProfileId = TuningProfileId,
     };
 }
 
@@ -49,6 +51,8 @@ public sealed class ProfileSession
     public Dictionary<string, bool> OriginalTweakStates { get; set; } = [];
     public string? PreviousPowerScheme { get; set; }
     public double? TimerMs { get; set; }
+    /// <summary>Values from before the profile's tuning, put back when it ends (also after a crash, through session recovery).</summary>
+    public Tuning.TuningRestorePoint? TuningRestore { get; set; }
 }
 
 public sealed class ProfileFile
@@ -256,6 +260,12 @@ public static class ProfileEngine
             }
             if (p.TimerResolutionMs is { } ms) { TimerResolution.Set(ms); session.TimerMs = ms; }
             if (p.RaiseGamePriority) RaisePriority(p);
+            if (p.TuningProfileId is { } tid)
+            {
+                var (restore, tuneProblems) = Tuning.TuningEngine.ApplyForGame(tid, p.Name);
+                session.TuningRestore = restore;
+                problems.AddRange(tuneProblems);
+            }
             persist(session);
             Log.Info($"Profile '{p.Name}' activated{(triggeredBy is null ? "" : $" by {triggeredBy}")}");
             return (session, problems);
@@ -273,6 +283,7 @@ public static class ProfileEngine
     public static List<string> Deactivate(ProfileSession s)
     {
         var problems = TweakStateGuard.Restore(s.OriginalTweakStates);
+        if (s.TuningRestore is { } tr) problems.AddRange(Tuning.TuningEngine.RestoreAfterGame(tr));
         if (s.TimerMs is { } ms) { try { TimerResolution.Release(ms); } catch (Exception ex) { problems.Add("Timer: " + ex.Message); } }
         if (s.PreviousPowerScheme is { } prev && ActiveScheme() != prev)
         {

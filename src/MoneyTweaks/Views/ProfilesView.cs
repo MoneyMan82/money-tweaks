@@ -201,6 +201,10 @@ public sealed class ProfilesView : UserControl, IPageLifecycle
         sp.Children.Add(Chips("tr", [("Off", ""), ("1.0 ms", "1.0"), ("0.5 ms", "0.5")], timer?.ToString("0.0", CultureInfo.InvariantCulture) ?? "", v => timer = v.Length == 0 ? null : double.Parse(v, CultureInfo.InvariantCulture)));
         var prio = new CheckBox { Content = "Raise the game to High CPU priority while it runs", IsChecked = p.RaiseGamePriority, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 10, 0, 0) };
         sp.Children.Add(prio);
+        string? tuning = p.TuningProfileId;
+        sp.Children.Add(L("CPU & GPU tuning while active"));
+        sp.Children.Add(Chips("tu", [("None", ""), ("Efficiency", "efficiency"), ("Quiet", "quiet"), ("Maximum headroom", "headroom")], tuning ?? "", v => tuning = v.Length == 0 ? null : v));
+        sp.Children.Add(Ui.Muted("Applied when the profile starts and put back when it ends (also after a crash). GPU limits need Money Tweaks running as administrator; without it only the CPU part is applied, and you'll be told.", 11.5));
 
         sp.Children.Add(L("Tweaks (only instant, reversible ones are listed)"));
         var selected = p.TweakIds.ToHashSet();
@@ -240,13 +244,14 @@ public sealed class ProfilesView : UserControl, IPageLifecycle
                 var draft = new GamingProfile
                 {
                     Id = p.Id, Name = name.Text.Trim(), Description = desc.Text.Trim(), TweakIds = usable.Where(t => selected.Contains(t.Id)).Select(t => t.Id).ToList(),
-                    Power = power, TimerResolutionMs = timer, RaiseGamePriority = prio.IsChecked == true,
+                    Power = power, TimerResolutionMs = timer, RaiseGamePriority = prio.IsChecked == true, TuningProfileId = tuning,
                     GameExes = games.Text.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                 };
                 var errors = ProfileStore.Validate(draft, ProfileStore.All(F));
                 if (errors.Count > 0) { err.Text = string.Join("\n", errors); return; }
                 (p.Name, p.Description, p.TweakIds, p.Power, p.TimerResolutionMs, p.RaiseGamePriority, p.GameExes, p.Modified) =
                     (draft.Name, draft.Description, draft.TweakIds, draft.Power, draft.TimerResolutionMs, draft.RaiseGamePriority, draft.GameExes, DateTime.Now);
+                p.TuningProfileId = draft.TuningProfileId;
                 if (isNew) F.Profiles.Add(p);
                 if (p.GameExes.Count == 0) F.AutoSwitch.Remove(p.Id);
                 ProfileService.Save();

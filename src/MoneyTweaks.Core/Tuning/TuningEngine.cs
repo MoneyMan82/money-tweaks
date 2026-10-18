@@ -15,6 +15,14 @@ public sealed record TuningSettings
     public bool IsEmpty => GpuPowerLimitW is null && GpuClockLock is null && MemClockLock is null && CpuBoostMode is null && CpuMaxState is null && CpuEpp is null;
 }
 
+/// <summary>What a gaming profile's tuning changed, so it can be put back exactly (JSON-friendly: no tuples).</summary>
+public sealed class TuningRestorePoint
+{
+    public double? GpuPowerLimitW { get; set; }
+    public bool UnlockGpuClocks { get; set; }
+    public Dictionary<string, int[]> Cpu { get; set; } = [];
+}
+
 /// <summary>Configured = chosen; Applied = the driver/Windows accepted it; Verified = read back and matches.</summary>
 public enum ItemStatus { Configured, Applied, Verified, Failed, RolledBack }
 
@@ -39,6 +47,12 @@ public sealed class TuningState
     /// crashes meanwhile, the next start offers to revert (it never re-applies anything on its own).</summary>
     public bool PendingConfirmation { get; set; }
     public string? LastTestSummary { get; set; }
+    /// <summary>MSI Afterburner control memory from before Money Tweaks' first Afterburner change (exact rollback).</summary>
+    public byte[]? AfterburnerBackup { get; set; }
+    /// <summary>Money Tweaks' fan curve (°C → %); runs only while Money Tweaks is open.</summary>
+    public List<int[]> FanCurve { get; set; } = [];
+    /// <summary>True while the fan curve is driving the fan. If set at startup, Money Tweaks crashed: the fan goes back to auto.</summary>
+    public bool FanCurveActive { get; set; }
 
     private static string PathFor => System.IO.Path.Combine(AppPaths.Root, "tuning.json");
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
@@ -55,7 +69,7 @@ public sealed class TuningState
     }
 
     public void Save() => AtomicFile.WriteAllText(PathFor, JsonSerializer.Serialize(this, Json));
-    public bool HasChanges => GpuClocksLocked || MemClocksLocked || ProfileName is not null || LastApply.Any(r => r.Status is ItemStatus.Applied or ItemStatus.Verified);
+    public bool HasChanges => GpuClocksLocked || MemClocksLocked || ProfileName is not null || AfterburnerBackup is not null || LastApply.Any(r => r.Status is ItemStatus.Applied or ItemStatus.Verified);
 }
 
 /// <summary>
@@ -247,6 +261,12 @@ public static class TuningEngine
             bool v = r.ok && back is { } x && Math.Abs(x - pl) < 0.6;
             ok &= v; log.Add($"GPU power limit → {pl:0} W: {(v ? "verified" : r.msg)}");
         }
+        if (st.AfterburnerBackup is { } ab)
+        {
+            var r = Afterburner.Restore(ab);
+            ok &= r.ok; log.Add($"MSI Afterburner settings → before Money Tweaks: {r.message}");
+            if (r.ok) { st.AfterburnerBackup = null; st.FanCurveActive = false; }
+        }
         foreach (var (alias, vals) in st.OrigCpu)
         {
             if (b.ReadCpu(alias) is ({ } a, { } d) && a == vals[0] && d == vals[1]) continue;
@@ -263,6 +283,135 @@ public static class TuningEngine
         Log.Info($"Tuning revert: {(ok ? "ok" : "problems")} – {string.Join(" | ", log)}");
         return (ok, log);
     }
+
+    // ---- per-game tuning (Gaming Profiles) --------------------------------------------------------------------------
+
+    /// <summary>Hooks so tests can supply hardware limits; the app reads them from nvidia-smi and powercfg.</summary>
+    internal static Func<NvidiaGpuLimits?> GpuLimits { get; set; } = () => NvidiaSmi.Limits().FirstOrDefault();
+    internal static Func<Dictionary<string, CpuPowerSetting>> CpuSettings { get; set; } =
+        () => new[] { CpuPowerSettings.BoostMode, CpuPowerSettings.MaxState, CpuPowerSettings.Epp }.Select(CpuPowerSettings.Read).ToDictionary(s => s.Alias);
+    internal static Func<bool> IsAdmin { get; set; } = () => Admin.IsElevated;
+
+    /// <summary>Applies a tuning profile for a game and returns what to put back afterwards. GPU parts need administrator
+    /// rights; without them only the CPU part is applied and that is reported, not hidden.</summary>
+    public static (TuningRestorePoint? restore, List<string> problems) ApplyForGame(string profileId, string gameProfileName)
+    {
+        var problems = new List<string>();
+        try
+        {
+            var gpu = GpuLimits();
+            var cpu = CpuSettings();
+            var prof = Profiles(gpu, cpu).FirstOrDefault(p => p.Id == profileId);
+            if (prof is null || prof.Settings.IsEmpty) { problems.Add($"Tuning '{profileId}' isn't available on this PC; skipped."); return (null, problems); }
+            var s = prof.Settings;
+            if (!IsAdmin() && (s.GpuPowerLimitW is not null || s.GpuClockLock is not null))
+            {
+                s = s with { GpuPowerLimitW = null, GpuClockLock = null };
+                problems.Add("GPU tuning skipped: it needs Money Tweaks running as administrator.");
+                if (s.IsEmpty) return (null, problems);
+            }
+            var st = TuningState.Load();
+            var restore = new TuningRestorePoint
+            {
+                GpuPowerLimitW = s.GpuPowerLimitW is not null ? Backend.ReadPowerLimit(st.GpuIndex) : null,
+                UnlockGpuClocks = s.GpuClockLock is not null && !st.GpuClocksLocked,
+            };
+            foreach (var (alias, v) in new[] { (CpuPowerSettings.BoostMode, s.CpuBoostMode), (CpuPowerSettings.MaxState, s.CpuMaxState), (CpuPowerSettings.Epp, s.CpuEpp) })
+                if (v is not null && Backend.ReadCpu(alias) is ({ } ac, { } dc)) restore.Cpu[alias] = [ac, dc];
+            var (ok, results) = Apply(s, st, $"{prof.Name} (gaming profile '{gameProfileName}')");
+            st.PendingConfirmation = false; // the profile session restores it, including after a crash
+            st.Save();
+            if (!ok) { problems.Add($"Tuning '{prof.Name}' wasn't applied (rolled back): " + string.Join("; ", results.Where(r => r.Status == ItemStatus.Failed).Select(r => $"{r.Item}: {r.Detail}"))); return (null, problems); }
+            return (restore, problems);
+        }
+        catch (Exception ex) { problems.Add("Tuning: " + ex.Message); return (null, problems); }
+    }
+
+    /// <summary>Puts back the values from before a gaming profile's tuning and reads them back. Empty = verified.</summary>
+    public static List<string> RestoreAfterGame(TuningRestorePoint r)
+    {
+        var problems = new List<string>();
+        var b = Backend; var st = TuningState.Load(); int gpu = st.GpuIndex;
+        try
+        {
+            if (r.UnlockGpuClocks)
+            {
+                var x = b.ResetGpu(gpu);
+                if (x.ok) { st.GpuClocksLocked = false; st.LockedMaxGpuMhz = null; } else problems.Add("GPU clocks: " + x.msg);
+            }
+            if (r.GpuPowerLimitW is { } pl)
+            {
+                var x = b.SetPowerLimit(gpu, pl);
+                if (!x.ok || b.ReadPowerLimit(gpu) is not { } now || Math.Abs(now - pl) >= 0.6) problems.Add($"GPU power limit couldn't be put back to {pl:0} W: {x.msg}");
+            }
+            foreach (var (alias, v) in r.Cpu)
+            {
+                var x = b.SetCpu(alias, v[0], v[1]);
+                if (!x.ok || b.ReadCpu(alias) is not ({ } a, { } d) || a != v[0] || d != v[1]) problems.Add($"{alias} couldn't be put back: {x.msg}");
+            }
+            if (problems.Count == 0 && st.ProfileName?.Contains("(gaming profile", StringComparison.Ordinal) == true) { st.ProfileName = null; st.AppliedAt = null; st.LastApply = []; }
+            st.Save();
+        }
+        catch (Exception ex) { problems.Add("Tuning restore: " + ex.Message); }
+        return problems;
+    }
+
+    // ---- MSI Afterburner (clock offsets, undervolt curve, thermal limit, fan) ---------------------------------------------
+
+    /// <summary>Applies through Afterburner, keeping the first control-memory copy as the backup, then checks every requested
+    /// value in Afterburner's read-back. A mismatch restores the copy taken just before this change.</summary>
+    public static (bool ok, List<TuningItemResult> results) ApplyAfterburner(Afterburner.Change c, TuningState st, string? profileName = null)
+    {
+        var results = new List<TuningItemResult>();
+        st.PendingConfirmation = true;
+        st.Save();
+        var (ok, msg, before, after) = Afterburner.Apply(c);
+        if (before is not null && st.AfterburnerBackup is null) { st.AfterburnerBackup = before; st.Save(); }
+        if (!ok || after is null)
+        {
+            results.Add(new("MSI Afterburner", Describe(c), ItemStatus.Failed, msg));
+            if (before is not null) Afterburner.Restore(before);
+            st.LastApply = results; st.Save();
+            return (false, results);
+        }
+        void Check(string item, int? want, int? got, string unit)
+        {
+            if (want is not { } w) return;
+            results.Add(new(item, $"{w}{unit}", got == w ? ItemStatus.Verified : ItemStatus.Failed, got == w ? "Read back from MSI Afterburner and matches." : $"Afterburner reports {got}{unit}."));
+        }
+        Check("GPU core clock offset", c.CoreOffsetMhz, after.CoreOffset?.Cur, " MHz");
+        Check("GPU memory clock offset", c.MemOffsetMhz, after.MemOffset?.Cur, " MHz");
+        Check("GPU power limit (Afterburner)", c.PowerLimitPercent, after.PowerLimit?.Cur, "%");
+        Check("GPU temperature limit", c.ThermalLimitC, after.ThermalLimit?.Cur, " °C");
+        Check("GPU fan speed", c.FanPercent, after.Fan?.Cur, "%");
+        if (c.FanAuto == true) results.Add(new("GPU fan", "auto", after.FanAuto ? ItemStatus.Verified : ItemStatus.Failed, after.FanAuto ? "Afterburner reports automatic fan control." : "Fan is still manual."));
+        if (c.Undervolt is { } u)
+        {
+            var top = after.Curve.Where(p => p.MilliVolts >= u.milliVolts).Select(p => p.FrequencyMhz).DefaultIfEmpty(0).Max();
+            bool v = after.CurveEnabled && Math.Abs(top - u.mhz) <= 15;
+            results.Add(new("GPU undervolt", $"{u.mhz} MHz at {u.milliVolts} mV", v ? ItemStatus.Verified : ItemStatus.Failed,
+                v ? "Curve read back: no point above that voltage boosts higher." : $"Curve read back tops out at {top} MHz above {u.milliVolts} mV."));
+        }
+        if (c.ResetCurve) results.Add(new("GPU voltage/frequency curve", "default", after.CurveEnabled ? ItemStatus.Failed : ItemStatus.Verified, "Curve offsets cleared."));
+        bool all = results.All(r => r.Status == ItemStatus.Verified);
+        if (!all)
+        {
+            Afterburner.Restore(before!);
+            results = results.Select(r => r.Status == ItemStatus.Verified ? r with { Status = ItemStatus.RolledBack, Detail = "Undone because another item didn't verify." } : r).ToList();
+        }
+        else { st.ProfileName = profileName ?? st.ProfileName ?? "Custom"; st.AppliedAt = DateTime.Now; }
+        st.LastApply = results;
+        st.Save();
+        return (all, results);
+    }
+
+    private static string Describe(Afterburner.Change c) => string.Join(", ", new[]
+    {
+        c.CoreOffsetMhz is { } a ? $"core {a:+0;-0} MHz" : null, c.MemOffsetMhz is { } b ? $"memory {b:+0;-0} MHz" : null,
+        c.PowerLimitPercent is { } p ? $"power {p}%" : null, c.ThermalLimitC is { } t ? $"temp limit {t} °C" : null,
+        c.FanPercent is { } f ? $"fan {f}%" : null, c.FanAuto == true ? "fan auto" : null,
+        c.Undervolt is { } u ? $"undervolt {u.mhz} MHz @ {u.milliVolts} mV" : null, c.ResetCurve ? "curve reset" : null,
+    }.Where(x => x is not null));
 
     // ---- profiles ----------------------------------------------------------------------------------------------------
 

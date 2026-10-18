@@ -133,6 +133,7 @@ public partial class App : Application
         OverlayService.Shutdown(); // stops the frame-timing ETW session
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile
         DisplayService.Shutdown(); // drops an unconfirmed test resolution
+        if (FanCurveService.Running) FanCurveService.Stop(); // the curve only runs while Money Tweaks does: fan back to automatic
         TrayIcon.Dispose();
         Settings.Save();
         base.OnExit(e);

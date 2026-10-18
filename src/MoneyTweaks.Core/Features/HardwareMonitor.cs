@@ -91,12 +91,20 @@ public sealed class HardwareMonitor : IDisposable
 
     private double? CpuTemp()
     {
-        if (_tempUnavailable) return null;
-        if (DateTime.UtcNow - _tempAt < TimeSpan.FromSeconds(5)) return _lastTemp; // WMI is expensive; temps change slowly
-        _tempAt = DateTime.UtcNow;
-        _lastTemp = ReadTemp();
-        return _lastTemp;
+        if (!_tempUnavailable)
+        {
+            if (DateTime.UtcNow - _tempAt < TimeSpan.FromSeconds(5)) return _lastTemp; // WMI is expensive; temps change slowly
+            _tempAt = DateTime.UtcNow;
+            _lastTemp = ReadTemp();
+            if (_lastTemp is not null) return _lastTemp;
+        }
+        // Firmware doesn't expose it (common on desktop boards): use MSI Afterburner's published CPU temperature when it
+        // runs (its documented monitoring memory; Afterburner reads the sensor with its own driver, Money Tweaks installs none).
+        return Tuning.Afterburner.CpuTemperature();
     }
+
+    /// <summary>Where the CPU temperature comes from right now.</summary>
+    public static string CpuTempSource(double? t) => t is null ? "not available" : Tuning.Afterburner.CpuTemperature() is not null ? "MSI Afterburner" : "firmware (ACPI)";
 
     private double? ReadTemp()
     {

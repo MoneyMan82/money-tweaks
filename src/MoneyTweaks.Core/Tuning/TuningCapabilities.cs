@@ -16,7 +16,7 @@ public static class TuningCapabilities
 {
     private const string NoPublicApi = "the vendor offers no public interface for other programs to change it";
 
-    public static List<TuningCapability> For(TuningInventory inv, IReadOnlyList<NvidiaGpuLimits> nv)
+    public static List<TuningCapability> For(TuningInventory inv, IReadOnlyList<NvidiaGpuLimits> nv, bool afterburnerConnected = false)
     {
         var l = new List<TuningCapability>();
         void Add(string area, string name, Support s, string why, string? tool = null, params string[] steps) => l.Add(new(area, name, s, why, tool, steps.Length == 0 ? null : steps));
@@ -69,11 +69,20 @@ public static class TuningCapabilities
             var app = inv.Tool("NVIDIA App");
             Add("GPU", "Automatic overclock (NVIDIA)", Support.Handoff, "NVIDIA's own automatic tuning scans your card and applies a tested overclock.", "NVIDIA App",
                 "NVIDIA App › System › Performance › Automatic Tuning › Start Scan (takes about 20 minutes; don't use the PC meanwhile).", "Turn it off there to go back to stock.");
-            Add("GPU", "Core/memory clock offsets, voltage-frequency curve (undervolt), fan curve", Support.Handoff,
-                "NVIDIA only exposes these to partner tools (NDA APIs). Use NVIDIA App (offsets) or MSI Afterburner (V/F curve, fans).", app?.Path is not null ? "NVIDIA App" : "MSI Afterburner",
-                "Undervolt: MSI Afterburner › Ctrl+F › pick a point (e.g. 900 mV) › raise it to your target clock › flatten everything right of it › Apply.",
-                "Test each step with a long stability test or your most demanding game before saving the profile.");
-            Add("GPU", "Temperature target", Support.Unavailable, "This driver's nvidia-smi has no temperature-target option for GeForce; use MSI Afterburner where the card supports it.");
+            if (afterburnerConnected)
+            {
+                Add("GPU", "Core/memory clock offsets, voltage-frequency curve (undervolt), fan and fan curve", Support.Direct,
+                    "Through MSI Afterburner's documented control interface (its SDK's MACM shared memory), with Afterburner's own limits, read-back and rollback.");
+                Add("GPU", "Temperature target", Support.Direct, "Through MSI Afterburner, where the card supports it.");
+            }
+            else
+            {
+                Add("GPU", "Core/memory clock offsets, voltage-frequency curve (undervolt), fan and fan curve", Support.Handoff,
+                    "NVIDIA only exposes these to partner tools. Start MSI Afterburner (and run Money Tweaks as administrator) to control them here through Afterburner's documented interface, or use NVIDIA App for offsets.", "MSI Afterburner",
+                    "Start MSI Afterburner, then reopen this page (or press Check again in the Afterburner section).",
+                    "Or in Afterburner itself: Ctrl+F › pick a point (e.g. 950 mV) › raise it to your target clock › flatten everything right of it › Apply.");
+                Add("GPU", "Temperature target", Support.Handoff, "nvidia-smi has no temperature target for GeForce; MSI Afterburner has one where the card supports it.", "MSI Afterburner");
+            }
             if (!NvidiaSmi.Available) Add("GPU", "NVIDIA controls", Support.Unavailable, "nvidia-smi wasn't found; reinstall the NVIDIA driver.");
         }
         if (inv.HasAmdGpu)

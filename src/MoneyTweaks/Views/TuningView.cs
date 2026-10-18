@@ -17,7 +17,7 @@ namespace MoneyTweaks.Views;
 /// </summary>
 public sealed class TuningView : UserControl, IPageLifecycle
 {
-    private readonly StackPanel _hw = new(), _status = new(), _auto = new(), _manual = new(), _test = new(), _caps = new(), _banner = new();
+    private readonly StackPanel _hw = new(), _status = new(), _auto = new(), _manual = new(), _test = new(), _caps = new(), _banner = new(), _ab = new();
     private readonly TextBlock _live = Ui.Muted("", 12.5);
     private readonly DispatcherTimer _liveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private TuningInventory? _inv;
@@ -41,6 +41,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
         body.Children.Add(Ui.Card(Section("Current tuning", _status, "What Money Tweaks changed, and whether each value was read back.", _live)));
         body.Children.Add(Ui.Card(Section("Auto tuning", _auto, "A quick, safe look at your hardware and a recommended profile. Profiles only use supported controls.")));
         body.Children.Add(Ui.Card(Section("Manual tuning", _manual, "Every control here changes a real setting through a documented interface, within the range the driver or Windows reports.")));
+        body.Children.Add(Ui.Card(Section("GPU offsets, undervolt and fan (MSI Afterburner)", _ab, "Through Afterburner's documented control interface (its SDK). Needs Afterburner running.")));
         body.Children.Add(Ui.Card(Section("Stability tests", _test, "Quick scan (1 minute) catches gross problems only. Extended tests run longer. Neither proves stability.")));
         body.Children.Add(Ui.Card(Section("Everything else: guided", _caps, "What can't be changed safely from here, and exactly where to do it instead.")));
         body.Children.Add(Ui.Card(Section("Read this first", new StackPanel { Children = { Ui.Muted(
@@ -96,6 +97,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
     private void RenderAll()
     {
         RenderHardware(); RenderBanner(); RenderStatus(); RenderAuto(); RenderManual(); RenderTests(); RenderCaps();
+        _ = TuningViewAfterburner.RenderAsync(_ab, _state, _inv, Gpu?.PowerLimitSupported == true, ReloadValuesAsync);
     }
 
     // ---- this PC ------------------------------------------------------------------------------------------------------
@@ -160,7 +162,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
             var nv = gpu is null ? null : await Task.Run(() => NvidiaSmi.Read(gpu.Index));
             var hw = LiveStats.Last;
             var parts = new List<string>();
-            if (hw is not null) parts.Add($"CPU {hw.CpuPercent:0}% load" + (hw.CpuTempC is { } ct ? $", {ct:0} °C" : ", temperature not exposed by firmware"));
+            if (hw is not null) parts.Add($"CPU {hw.CpuPercent:0}% load" + (hw.CpuTempC is { } ct ? $", {ct:0} °C ({HardwareMonitor.CpuTempSource(ct)})" : ", temperature not available (start MSI Afterburner to read it)"));
             if (nv is not null)
                 parts.Add($"GPU {nv.LoadPercent}% · {nv.TempC:0} °C · {nv.PowerW:0}/{nv.PowerLimitW:0} W · {nv.CoreMhz} MHz core, {nv.MemMhz} MHz memory" +
                           (nv.HardwareThrottling ? " · ⚠ thermal/power-brake throttling" : nv.PowerCapped ? " · at power limit" : ""));
@@ -449,7 +451,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
     {
         _caps.Children.Clear();
         if (_inv is null) return;
-        foreach (var area in TuningCapabilities.For(_inv, _nv).GroupBy(c => c.Area))
+        foreach (var area in TuningCapabilities.For(_inv, _nv, Afterburner.IsRunning).GroupBy(c => c.Area))
         {
             _caps.Children.Add(Ui.Text(area.Key, 13, FontWeights.SemiBold));
             foreach (var c in area)
@@ -469,7 +471,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
                 _caps.Children.Add(sp);
             }
         }
-        _caps.Children.Add(Ui.Muted("Per-game tuning: not available yet. Gaming Profiles switch power plans and tweaks per game, but not GPU limits.", 11.5));
+        _caps.Children.Add(Ui.Muted("Per-game tuning: choose a tuning profile in Gaming Profiles › Edit; it's applied while the game runs and put back afterwards.", 11.5));
     }
 
     private static void Launch(string target)

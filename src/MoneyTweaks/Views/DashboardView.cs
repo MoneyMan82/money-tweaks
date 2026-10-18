@@ -61,7 +61,7 @@ public static class LiveStats
         net.Push(s.NetDownKBps, Fmt.Rate(s.NetDownKBps), $"↑ {Fmt.Rate(s.NetUpKBps)}");
         disk.Push(s.DiskPercent, s.DiskPercent is null ? "N/A" : $"{s.DiskPercent:0}%", "active time, all disks");
         temp.Push(s.CpuTempC, s.CpuTempC is null ? "N/A" : $"{s.CpuTempC:0} °C",
-            s.CpuTempC is null ? "Firmware doesn't expose a thermal zone" : "ACPI thermal zone");
+            s.CpuTempC is null ? "Firmware doesn't expose it; start MSI Afterburner to read it" : HardwareMonitor.CpuTempSource(s.CpuTempC));
     }
 
     public static void FillRings(HardwareSnapshot s, RingGauge cpu, RingGauge gpu, RingGauge ram)
