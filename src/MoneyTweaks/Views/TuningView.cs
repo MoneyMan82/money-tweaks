@@ -17,7 +17,7 @@ namespace MoneyTweaks.Views;
 /// </summary>
 public sealed class TuningView : UserControl, IPageLifecycle
 {
-    private readonly StackPanel _hw = new(), _status = new(), _auto = new(), _manual = new(), _test = new(), _caps = new(), _banner = new(), _ab = new();
+    private readonly StackPanel _hw = new(), _status = new(), _auto = new(), _manual = new(), _test = new(), _caps = new(), _banner = new(), _ab = new(), _scan = new();
     private readonly TextBlock _live = Ui.Muted("", 12.5);
     private readonly DispatcherTimer _liveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private TuningInventory? _inv;
@@ -39,7 +39,8 @@ public sealed class TuningView : UserControl, IPageLifecycle
         body.Children.Add(_banner);
         body.Children.Add(Ui.Card(Section("This PC", _hw)));
         body.Children.Add(Ui.Card(Section("Current tuning", _status, "What Money Tweaks changed, and whether each value was read back.", _live)));
-        body.Children.Add(Ui.Card(Section("Auto tuning", _auto, "A quick, safe look at your hardware and a recommended profile. Profiles only use supported controls.")));
+        body.Children.Add(Ui.Card(Section("Auto tuning", new StackPanel { Children = { _scan, new Border { Height = 1, Background = Ui.Brush("BorderBrush"), Margin = new Thickness(0, 14, 0, 12) }, _auto } },
+            "Find your best GPU overclock automatically, or pick a ready-made profile from a quick look at your hardware.")));
         body.Children.Add(Ui.Card(Section("Manual tuning", _manual, "Every control here changes a real setting through a documented interface, within the range the driver or Windows reports.")));
         body.Children.Add(Ui.Card(Section("GPU offsets, undervolt and fan (MSI Afterburner)", _ab, "Through Afterburner's documented control interface (its SDK). Needs Afterburner running.")));
         body.Children.Add(Ui.Card(Section("Stability tests", _test, "Quick scan (1 minute) catches gross problems only. Extended tests run longer. Neither proves stability.")));
@@ -97,6 +98,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
     private void RenderAll()
     {
         RenderHardware(); RenderBanner(); RenderStatus(); RenderAuto(); RenderManual(); RenderTests(); RenderCaps();
+        if (!TuningViewAutoScan.Running) TuningViewAutoScan.Render(_scan, _state, _inv, Gpu, ReloadValuesAsync);
         _ = TuningViewAfterburner.RenderAsync(_ab, _state, _inv, Gpu?.PowerLimitSupported == true, ReloadValuesAsync);
     }
 
@@ -194,7 +196,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
             grid.Children.Add(Ui.Card(sp, new Thickness(0, 0, 10, 10)));
         }
         _auto.Children.Add(grid);
-        _auto.Children.Add(Ui.Muted("Automatic overclocking (NVIDIA App Automatic Tuning, Ryzen Master PBO/Auto OC, Intel XTU Speed Optimizer, Adrenalin Auto Overclock/Undervolt) is done by the vendor's own tool: see Everything else below.", 11.5));
+        _auto.Children.Add(Ui.Muted("These profiles only change power and clock limits, never clock offsets. For an overclock, use the automatic scan above (NVIDIA) or the vendor's own automatic tuning: NVIDIA App Automatic Tuning, Ryzen Master PBO/Auto OC, Intel XTU Speed Optimizer, Adrenalin Auto Overclock/Undervolt (see Everything else below).", 11.5));
     }
 
     private async Task AssessAsync(TextBlock result)

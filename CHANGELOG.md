@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.33 – 2026-10-18
+- **Automatic GPU overclock scan.** Auto tuning now finds your best GPU overclock: it raises the core clock offset step
+  by step under the 3D stress scene until a step fails (GPU driver reset, the load crashing, the GPU no longer
+  responding), refines once, takes a 30 MHz safety margin off, does the same for the memory clock (250 MHz margin) and
+  confirms the result with a 3-minute run (backing off once more if that fails). Fails at stock: nothing is
+  overclocked; 87 °C: the scan stops. Runs through MSI Afterburner (started for you), needs administrator rights,
+  refuses to start while a game is running, and stopping or a failed scan restores the settings from before the scan.
+  The result stays unconfirmed until an extended stability test passes.
+- CPUs: AMD and Intel offer no supported way for other apps to overclock them, so the CPU's automatic overclock stays a
+  guided step in Ryzen Master or Intel XTU.
+- 7 new tests for the scan logic (276 total).
+
 ## 1.32 – 2026-10-18
 - **Money Tweaks starts MSI Afterburner for you.** The Afterburner section on CPU & GPU Tuning now has **Connect**: it
   asks once, starts Afterburner minimized, waits until its control interface is ready and shows the controls. Tick

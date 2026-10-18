@@ -173,6 +173,13 @@ public sealed partial class TuningViewAfterburner
     /// <summary>Starts Afterburner (asking first unless "don't ask again" is on), then re-renders the section.</summary>
     private static async Task ConnectAsync(StackPanel host, Func<Task> again)
     {
+        await EnsureConnectedAsync();
+        await again();
+    }
+
+    /// <summary>Makes sure Afterburner runs (starting it the same way Connect does). True = its control memory is there.</summary>
+    public static async Task<bool> EnsureConnectedAsync()
+    {
         var (outcome, message) = await AfterburnerLauncher.EnsureRunningAsync(App.Settings.AutoStartAfterburner,
             () =>
             {
@@ -196,7 +203,7 @@ public sealed partial class TuningViewAfterburner
                 Dialog.Show("MSI Afterburner", message, DialogKind.Warning);
                 break;
         }
-        await again();
+        return outcome is LaunchOutcome.AlreadyRunning or LaunchOutcome.Started;
     }
 
     private static async Task ApplyAsync(Afterburner.Change c, TuningState st, Func<Task> refresh)
