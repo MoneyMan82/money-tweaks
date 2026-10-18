@@ -9,8 +9,16 @@ public enum DialogKind { Info, Warning, Error, Confirm }
 /// <summary>Themed modal dialog used for confirmations, warnings and errors.</summary>
 public static class Dialog
 {
-    public static bool Show(string title, string message, DialogKind kind = DialogKind.Info, string ok = "OK", string? cancel = null)
+    public static bool Show(string title, string message, DialogKind kind = DialogKind.Info, string ok = "OK", string? cancel = null) =>
+        Show(title, message, kind, ok, cancel, null, out _);
+
+    /// <summary>Confirmation with a checkbox (e.g. "Don't ask again"). <paramref name="optionChecked"/> is only meaningful when it returns true.</summary>
+    public static bool ConfirmWithOption(string title, string message, string ok, string option, out bool optionChecked, DialogKind kind = DialogKind.Confirm) =>
+        Show(title, message, kind, ok, "Cancel", option, out optionChecked);
+
+    private static bool Show(string title, string message, DialogKind kind, string ok, string? cancel, string? option, out bool optionChecked)
     {
+        CheckBox? optionBox = option is null ? null : new CheckBox { Content = option, Margin = new Thickness(0, 14, 0, 0) };
         var accent = kind switch
         {
             DialogKind.Error => (Brush)Application.Current.Resources["Danger"],
@@ -52,6 +60,7 @@ public static class Dialog
             MaxHeight = 420, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 12, 0, 0),
             Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)Application.Current.Resources["Muted"], FontSize = 13, LineHeight = 19 }
         });
+        if (optionBox is not null) body.Children.Add(optionBox);
         body.Children.Add(buttons);
 
         win.Content = new Border
@@ -64,6 +73,7 @@ public static class Dialog
         Controls.Motion.AnimateClose(win, (FrameworkElement)win.Content);
         win.MouseLeftButtonDown += (_, e) => { if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) win.DragMove(); };
         win.ShowDialog();
+        optionChecked = optionBox?.IsChecked == true;
         return result;
     }
 

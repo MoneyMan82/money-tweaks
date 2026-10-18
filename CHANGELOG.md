@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.32 – 2026-10-18
+- **Money Tweaks starts MSI Afterburner for you.** The Afterburner section on CPU & GPU Tuning now has **Connect**: it
+  asks once, starts Afterburner minimized, waits until its control interface is ready and shows the controls. Tick
+  "Don't ask again" and it connects by itself whenever you open those controls; a checkbox in the section turns that
+  off again. It is never started when Money Tweaks starts, and if Money Tweaks isn't running as administrator (needed
+  to control Afterburner) it offers that restart instead. Not installed → a link to MSI's official page (nothing is
+  downloaded for you).
+- 5 new tests for the launcher (269 total).
+
 ## 1.31 – 2026-10-18
 (1.30 is skipped: an old v1.30.0 tag already exists on an earlier commit.)
 - **GPU clock offsets, undervolt, temperature limit, fan and fan curve** on the CPU & GPU Tuning page, through MSI

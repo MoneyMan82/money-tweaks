@@ -79,7 +79,7 @@ public static class TuningCapabilities
             {
                 Add("GPU", "Core/memory clock offsets, voltage-frequency curve (undervolt), fan and fan curve", Support.Handoff,
                     "NVIDIA only exposes these to partner tools. Start MSI Afterburner (and run Money Tweaks as administrator) to control them here through Afterburner's documented interface, or use NVIDIA App for offsets.", "MSI Afterburner",
-                    "Start MSI Afterburner, then reopen this page (or press Check again in the Afterburner section).",
+                    "Press Connect in the MSI Afterburner section above: Money Tweaks starts Afterburner (asking first) and the controls appear.",
                     "Or in Afterburner itself: Ctrl+F › pick a point (e.g. 950 mV) › raise it to your target clock › flatten everything right of it › Apply.");
                 Add("GPU", "Temperature target", Support.Handoff, "nvidia-smi has no temperature target for GeForce; MSI Afterburner has one where the card supports it.", "MSI Afterburner");
             }

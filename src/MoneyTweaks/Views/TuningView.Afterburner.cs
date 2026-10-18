@@ -16,20 +16,27 @@ public sealed partial class TuningViewAfterburner
         var g = await Task.Run(Afterburner.Read);
         if (g is null)
         {
-            var tool = inv?.Tool("MSI Afterburner");
-            host.Children.Add(Ui.Muted("MSI Afterburner isn't running, or Money Tweaks isn't running as administrator (Afterburner runs elevated, so its control memory is only open to elevated apps). " +
-                "With it running, this section offers GPU core/memory clock offsets, a voltage/frequency undervolt, the temperature limit, fan control and a fan curve, and the CPU temperature appears everywhere in Money Tweaks.", 12));
-            var row = Ui.Row();
-            if (tool?.Path is { } path && path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                row.Children.Add(Ui.Btn("Start MSI Afterburner", (_, _) => { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); } catch (Exception ex) { Dialog.Show("Couldn't start it", ex.Message, DialogKind.Error); } }, "BaseButton", new Thickness(0, 8, 8, 0)));
-            else if (tool is not null)
-                row.Children.Add(Ui.Btn("Get MSI Afterburner (official site) ↗", (_, _) => { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tool.Url) { UseShellExecute = true }); } catch { } }, "GhostButton", new Thickness(0, 8, 8, 0)));
-            row.Children.Add(Ui.Btn("Check again", async (_, _) => await RenderAsync(host, st, inv, nvidiaPowerHere, refresh), "GhostButton", new Thickness(0, 8, 8, 0)));
+            Task Again() => RenderAsync(host, st, inv, nvidiaPowerHere, refresh);
+            // "Don't ask again" was chosen: connect by itself once per visit (this page only, never at app startup).
+            if (App.Settings.AutoStartAfterburner && !_autoTried && Admin.IsElevated)
+            {
+                _autoTried = true;
+                host.Children.Add(Ui.Loading("Starting MSI Afterburner…"));
+                await ConnectAsync(host, Again);
+                return;
+            }
+            host.Children.Add(Ui.Muted("MSI Afterburner isn't running. Connect starts it (minimized) so this section can offer GPU core/memory clock offsets, a voltage/frequency undervolt, " +
+                "the temperature limit, fan control and a fan curve, and so the CPU temperature appears everywhere in Money Tweaks. " +
+                (Admin.IsElevated ? "" : "Afterburner runs as administrator, so Money Tweaks needs to run as administrator too."), 12));
+            var row = Ui.Row(Ui.Btn("Connect (starts MSI Afterburner)", async (_, _) => await ConnectAsync(host, Again), "PrimaryButton", new Thickness(0, 8, 8, 0)),
+                Ui.Btn("Check again", async (_, _) => await Again(), "GhostButton", new Thickness(0, 8, 8, 0)));
             host.Children.Add(row);
+            host.Children.Add(AutoStartOption());
             return;
         }
 
         host.Children.Add(Ui.Muted($"Connected to MSI Afterburner ({(g.GpuId.Length > 0 ? g.GpuId : "master GPU")}). Values below are what Afterburner reports right now; ranges are its own limits.", 11.5));
+        host.Children.Add(AutoStartOption());
         var change = new Dictionary<string, Func<Afterburner.Change, Afterburner.Change>>();
         var resets = new List<Action>();
 
@@ -151,6 +158,45 @@ public sealed partial class TuningViewAfterburner
             }, "BaseButton", new Thickness(0, 8, 8, 0)),
             Ui.Btn("Stop (fan → automatic)", (_, _) => FanCurveService.Stop(), "GhostButton", new Thickness(0, 8, 8, 0))));
         host.Children.Add(status);
+    }
+
+    private static bool _autoTried;
+
+    /// <summary>Lets the user turn "start it without asking" on or off at any time.</summary>
+    private static CheckBox AutoStartOption()
+    {
+        var cb = new CheckBox { Content = "Start MSI Afterburner automatically when I open these controls (never when Money Tweaks starts)", IsChecked = App.Settings.AutoStartAfterburner, Margin = new Thickness(0, 8, 0, 4) };
+        cb.Click += (_, _) => { App.Settings.AutoStartAfterburner = cb.IsChecked == true; App.Settings.Save(); };
+        return cb;
+    }
+
+    /// <summary>Starts Afterburner (asking first unless "don't ask again" is on), then re-renders the section.</summary>
+    private static async Task ConnectAsync(StackPanel host, Func<Task> again)
+    {
+        var (outcome, message) = await AfterburnerLauncher.EnsureRunningAsync(App.Settings.AutoStartAfterburner,
+            () =>
+            {
+                bool start = Dialog.ConfirmWithOption("Start MSI Afterburner?",
+                    "Money Tweaks will start MSI Afterburner minimized and connect to it. Note: if you've set Afterburner to apply an overclock profile at startup, it does that as it starts.",
+                    "Start", "Don't ask again (start it automatically when I open these controls)", out var dontAsk);
+                return (start, dontAsk);
+            },
+            remember => { App.Settings.AutoStartAfterburner = remember; App.Settings.Save(); });
+        switch (outcome)
+        {
+            case LaunchOutcome.NeedsAdmin:
+                if (Dialog.Confirm("Administrator rights needed", message + " Restart Money Tweaks as administrator? Nothing has been changed.", "Restart as admin", DialogKind.Warning)
+                    && Admin.RestartElevated()) Application.Current.Shutdown();
+                break;
+            case LaunchOutcome.NotInstalled:
+                if (Dialog.Confirm("MSI Afterburner isn't installed", "Get it from MSI's official site? (Money Tweaks doesn't download or install it for you.)", "Open the official page", DialogKind.Info))
+                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.msi.com/Landing/afterburner/graphics-cards") { UseShellExecute = true }); } catch { }
+                break;
+            case LaunchOutcome.StartFailed or LaunchOutcome.TimedOut:
+                Dialog.Show("MSI Afterburner", message, DialogKind.Warning);
+                break;
+        }
+        await again();
     }
 
     private static async Task ApplyAsync(Afterburner.Change c, TuningState st, Func<Task> refresh)
