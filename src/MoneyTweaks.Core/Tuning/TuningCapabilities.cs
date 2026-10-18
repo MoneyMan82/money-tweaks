@@ -51,6 +51,14 @@ public static class TuningCapabilities
                 "Use the BIOS only, change it in small steps, and back up important data first.");
         }
 
+        Add("CPU", "CPU temperature", HwInfo.IsSharing || Afterburner.CpuTemperature() is not null ? Support.Direct : Support.Handoff,
+            HwInfo.IsSharing ? "Read from HWiNFO's shared sensor data." : Afterburner.CpuTemperature() is not null ? "Read from MSI Afterburner's monitoring data."
+                : "Windows has no public way for apps to read it. Money Tweaks reads it from MSI Afterburner or the free HWiNFO when one of them runs (read-only; they use their own signed drivers, Money Tweaks installs none).",
+            "HWiNFO",
+            "Install HWiNFO (free) and start it in \"Sensors-only\" mode.", "HWiNFO › Settings › General / User Interface › tick \"Shared Memory Support\" › OK.",
+            "Keep HWiNFO running (it can sit in the tray). The CPU temperature then shows on the Dashboard, Monitor and this page.",
+            "The free version turns Shared Memory Support off after 12 hours: tick it again (or restart HWiNFO).");
+
         // ---- GPU ---------------------------------------------------------------------------------------------------
         foreach (var g in nv)
         {

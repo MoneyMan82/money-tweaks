@@ -114,6 +114,7 @@ public static class TuningDetector
             new("Intel XTU", Find("Extreme Tuning Utility", Path.Combine(pf, @"Intel\Intel(R) Extreme Tuning Utility\Client\XtuUiLauncher.exe"), Path.Combine(pf86, @"Intel\Intel(R) Extreme Tuning Utility\Client\XtuUiLauncher.exe")), "https://www.intel.com/content/www/us/en/download/17881/intel-extreme-tuning-utility-intel-xtu.html"),
             new("NVIDIA App", Find("NVIDIA App", Path.Combine(pf, @"NVIDIA Corporation\NVIDIA App\CEF\NVIDIA App.exe")), "https://www.nvidia.com/en-us/software/nvidia-app/"),
             new("MSI Afterburner", Find("MSI Afterburner", Path.Combine(pf86, @"MSI Afterburner\MSIAfterburner.exe"), Path.Combine(pf, @"MSI Afterburner\MSIAfterburner.exe")), "https://www.msi.com/Landing/afterburner/graphics-cards"),
+            new("HWiNFO", Find("HWiNFO", Path.Combine(pf, @"HWiNFO64\HWiNFO64.exe"), Path.Combine(pf86, @"HWiNFO64\HWiNFO64.exe"), Path.Combine(pf, @"HWiNFO\HWiNFO64.exe")), HwInfo.DownloadUrl),
             new("AMD Software: Adrenalin", Find("AMD Software", Path.Combine(pf, @"AMD\CNext\CNext\RadeonSoftware.exe")), "https://www.amd.com/en/products/software/adrenalin.html"),
         ];
     }

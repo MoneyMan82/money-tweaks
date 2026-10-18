@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.34 – 2026-10-18
+- **CPU temperature from HWiNFO.** Windows has no public way for apps to read the CPU temperature, so Money Tweaks now
+  also reads it from the free HWiNFO (its documented shared memory, read-only; HWiNFO uses its own signed driver and
+  Money Tweaks installs none). Order: firmware, then MSI Afterburner, then HWiNFO. The source is shown next to the
+  value. CPU & GPU Tuning › Everything else has the setup steps and a link to HWiNFO's official site. In the free
+  version, Shared Memory Support switches itself off after 12 hours.
+- 3 new tests with byte-exact HWiNFO memory images (279 total).
+
 ## 1.33 – 2026-10-18
 - **Automatic GPU overclock scan.** Auto tuning now finds your best GPU overclock: it raises the core clock offset step
   by step under the 3D stress scene until a step fails (GPU driver reset, the load crashing, the GPU no longer

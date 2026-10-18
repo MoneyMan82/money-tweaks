@@ -164,7 +164,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
             var nv = gpu is null ? null : await Task.Run(() => NvidiaSmi.Read(gpu.Index));
             var hw = LiveStats.Last;
             var parts = new List<string>();
-            if (hw is not null) parts.Add($"CPU {hw.CpuPercent:0}% load" + (hw.CpuTempC is { } ct ? $", {ct:0} °C ({HardwareMonitor.CpuTempSource(ct)})" : ", temperature not available (start MSI Afterburner to read it)"));
+            if (hw is not null) parts.Add($"CPU {hw.CpuPercent:0}% load" + (hw.CpuTempC is { } ct ? $", {ct:0} °C ({HardwareMonitor.CpuTempSource(ct)})" : $", temperature not available ({HardwareMonitor.CpuTempHint})"));
             if (nv is not null)
                 parts.Add($"GPU {nv.LoadPercent}% · {nv.TempC:0} °C · {nv.PowerW:0}/{nv.PowerLimitW:0} W · {nv.CoreMhz} MHz core, {nv.MemMhz} MHz memory" +
                           (nv.HardwareThrottling ? " · ⚠ thermal/power-brake throttling" : nv.PowerCapped ? " · at power limit" : ""));

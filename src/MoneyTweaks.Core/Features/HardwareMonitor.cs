@@ -98,13 +98,18 @@ public sealed class HardwareMonitor : IDisposable
             _lastTemp = ReadTemp();
             if (_lastTemp is not null) return _lastTemp;
         }
-        // Firmware doesn't expose it (common on desktop boards): use MSI Afterburner's published CPU temperature when it
-        // runs (its documented monitoring memory; Afterburner reads the sensor with its own driver, Money Tweaks installs none).
-        return Tuning.Afterburner.CpuTemperature();
+        // Firmware doesn't expose it (common on desktop boards): use the CPU temperature MSI Afterburner or HWiNFO publish
+        // when they run (their documented shared memory; they read the sensor with their own drivers, Money Tweaks installs none).
+        return Tuning.Afterburner.CpuTemperature() ?? Tuning.HwInfo.CpuTemperature();
     }
 
     /// <summary>Where the CPU temperature comes from right now.</summary>
-    public static string CpuTempSource(double? t) => t is null ? "not available" : Tuning.Afterburner.CpuTemperature() is not null ? "MSI Afterburner" : "firmware (ACPI)";
+    public static string CpuTempSource(double? t) => t is null ? "not available"
+        : Tuning.Afterburner.CpuTemperature() is not null ? "MSI Afterburner"
+        : Tuning.HwInfo.CpuTemperature() is not null ? "HWiNFO" : "firmware (ACPI)";
+
+    /// <summary>What to tell the user when no CPU temperature is available.</summary>
+    public const string CpuTempHint = "start MSI Afterburner, or HWiNFO with Shared Memory Support on, to read it";
 
     private double? ReadTemp()
     {
