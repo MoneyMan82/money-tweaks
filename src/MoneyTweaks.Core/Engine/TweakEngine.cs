@@ -89,8 +89,19 @@ public static class TweakEngine
         if (TweakAudit.DisabledReason(t) is { } disabled) return new(t, false, disabled, GetState(t));
         // Nothing this tweak changes exists here (service not installed, task or app missing). Applying would change nothing,
         // save a backup anyway, and then read back as "applied" because a backup exists: a false success.
-        if (!BackupStore.Exists(t.Id) && GetState(t) == TweakState.NotApplicable)
+        var before = GetState(t);
+        if (!BackupStore.Exists(t.Id) && before == TweakState.NotApplicable)
             return new(t, false, "Not applicable on this PC: what this tweak changes isn't present, so nothing was changed.", TweakState.NotApplicable);
+        // Already in place (by Money Tweaks, another tweak with the same value, or Windows itself): don't write it again.
+        if (before == TweakState.Applied)
+            return new(t, true, "Already applied on this PC; nothing was changed.", TweakState.Applied);
+        // Compatibility engine: unsupported hardware/OS and conflicts with applied tweaks stop here, before any backup or change.
+        var blockers = Compatibility.Findings(t, SystemProfile.Current).Where(f => f.Severity == CompatSeverity.Block).ToList();
+        if (blockers.Count > 0)
+        {
+            Log.Info($"Apply '{t.Name}' blocked: {string.Join(" | ", blockers.Select(b => b.Text))}");
+            return new(t, false, "Not applied: " + string.Join(" ", blockers.Select(b => b.Text)), before);
+        }
         if (t.RequiresAdmin && !Admin.IsElevated)
             return new(t, false, "Administrator rights are required. Use 'Restart as admin'.", GetState(t));
 

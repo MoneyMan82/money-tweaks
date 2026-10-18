@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.28 – 2026-10-18
+- **Smart Tweak Compatibility Engine.** Before any tweak is applied (tweak pages, presets, profiles, scanner, benchmarks:
+  everything goes through the engine) Money Tweaks now checks it against this PC:
+  - **Real detection** (read-only, once per run, in the background): Windows build and edition, battery, RAM, whether the
+    Windows drive is an SSD or a hard disk, real GPUs (virtual/remote adapters ignored), physical printers, fingerprint/face
+    sensors, Bluetooth, Remote Desktop, wired network adapters.
+  - **Blocks** what can't work or would do nothing: Windows too old (e.g. GPU scheduling before 2004), the two-GPU Fortnite
+    setting on a one-GPU PC, Energy-Efficient Ethernet without a wired adapter, and security-weakening tweaks. Unknown
+    hardware never blocks.
+  - **Blocks dangerous combinations:** a tweak that sets the same setting differently from one that's applied (today: the
+    three DNS providers) must wait until the other is undone, because applying on top would make the other's Undo
+    restore the wrong value. Overlapping tweaks with the same value are shown as such.
+  - **Warns** before risky changes on this hardware: power tweaks on laptops, kernel-memory tweaks under 16 GB RAM,
+    prefetch/SysMain off on a hard disk, Print Spooler with printers installed, Windows Hello and Bluetooth services when
+    those devices exist, one-way undos, Store app removal.
+  - **Already applied** tweaks are detected and not written again (no duplicate change, no second backup).
+- **Safe / Advanced / Experimental tiers**: Experimental = boot configuration (bcdedit), device interrupts (MSI mode) and
+  kernel memory management; Advanced = Caution tweaks; the rest Safe. Every Recommended tweak is Safe (checked by a test).
+  Tweak lists get an Experimental badge and Advanced/Experimental filters.
+- **Pre-apply report** for Experimental tweaks, anything with a warning, and Caution tweaks (when confirmation is on):
+  tier, findings on this PC, the exact changes, the current values read from Windows, expected effect with its confidence
+  (no FPS gain is promised), risk, restart need and how it's undone. Blocked tweaks explain why and change nothing.
+  Bulk applies ask separately before including Experimental tweaks. "What changes" shows the findings for this PC.
+- Backups before changes, read-back verification and automatic rollback are unchanged and now covered by tests for
+  conflicts, unsupported settings, failed steps and rollback (12 new tests; 241 total).
+
 ## 1.27 – 2026-10-18
 Functional audit fixes (no features removed):
 - **No more false "Applied and verified"** for tweaks whose target doesn't exist on the PC (service not installed, task or

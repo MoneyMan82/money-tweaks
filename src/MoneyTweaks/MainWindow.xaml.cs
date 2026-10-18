@@ -60,6 +60,8 @@ public partial class MainWindow : Window
     {
         if (_startupDone) return;
         _startupDone = true;
+        // Compatibility engine: read this PC's profile (WMI, ~1 s) in the background so checks are instant later.
+        if (!App.BackgroundStart) _ = Task.Run(() => Core.Engine.SystemProfile.Current);
         {
             Log.Info($"[perf] startup to {(App.BackgroundStart ? "background ready" : "first frame")}: {App.StartupClock.ElapsedMilliseconds} ms");
             StartStallDetector();

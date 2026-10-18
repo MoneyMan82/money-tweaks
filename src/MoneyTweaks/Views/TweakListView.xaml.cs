@@ -124,6 +124,8 @@ public partial class TweakListView : UserControl, IPageLifecycle
             "off" => i.State == TweakState.NotApplied,
             "safe" => !i.IsCaution,
             "caution" => i.IsCaution,
+            "tier-adv" => i.IsAdvancedTier,
+            "tier-exp" => i.IsExperimental,
             "rec" => i.IsRecommended,
             "notes" => i.HasNotes,
             _ => true

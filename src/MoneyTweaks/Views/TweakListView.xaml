@@ -19,6 +19,9 @@
                             <Border x:Name="risk" Style="{StaticResource Badge}" Background="{StaticResource AccentSoft}">
                                 <TextBlock x:Name="riskText" Text="{Binding RiskLabel}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
                             </Border>
+                            <Border x:Name="tier" Style="{StaticResource Badge}" Background="{StaticResource GoldSoft}" Visibility="{Binding ShowTier, Converter={StaticResource B2V}}" ToolTip="{Binding TierTip}">
+                                <TextBlock x:Name="tierText" Text="{Binding TierLabel}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource Gold}"/>
+                            </Border>
                             <Border Style="{StaticResource Badge}" Background="#14FFFFFF" Visibility="{Binding NeedsAdmin, Converter={StaticResource B2V}}" ToolTip="Needs administrator rights">
                                 <TextBlock Text="Admin" FontSize="10.5" Foreground="{StaticResource Muted}"/>
                             </Border>
@@ -80,6 +83,10 @@
                     <Setter TargetName="risk" Property="Background" Value="{StaticResource GoldSoft}"/>
                     <Setter TargetName="riskText" Property="Foreground" Value="{StaticResource Gold}"/>
                     <Setter TargetName="strip" Property="Background" Value="{StaticResource Gold}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsExperimental}" Value="True">
+                    <Setter TargetName="tier" Property="Background" Value="{StaticResource DangerSoft}"/>
+                    <Setter TargetName="tierText" Property="Foreground" Value="{StaticResource Danger}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Applied">
                     <Setter TargetName="status" Property="Background" Value="{StaticResource SuccessSoft}"/>
@@ -152,6 +159,10 @@
                     <RadioButton Style="{StaticResource Chip}" Content="Not applied" GroupName="f" Tag="off" Checked="Filter_Changed" Margin="0,0,6,4"/>
                     <RadioButton Style="{StaticResource Chip}" Content="Safe" GroupName="f" Tag="safe" Checked="Filter_Changed" Margin="0,0,6,4"/>
                     <RadioButton Style="{StaticResource Chip}" Content="Caution" GroupName="f" Tag="caution" Checked="Filter_Changed" Margin="0,0,6,4"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Advanced" GroupName="f" Tag="tier-adv" Checked="Filter_Changed" Margin="0,0,6,4"
+                                 ToolTip="A real trade-off; read the warnings"/>
+                    <RadioButton Style="{StaticResource Chip}" Content="Experimental" GroupName="f" Tag="tier-exp" Checked="Filter_Changed" Margin="0,0,6,4"
+                                 ToolTip="Boot, device or kernel-memory changes; results vary by hardware"/>
                     <RadioButton Style="{StaticResource Chip}" Content="Recommended" GroupName="f" Tag="rec" Checked="Filter_Changed" Margin="0,0,6,4"/>
                     <RadioButton Style="{StaticResource Chip}" Content="Has notes" GroupName="f" Tag="notes" Checked="Filter_Changed" Margin="0,0,6,4"
                                  ToolTip="Tweaks with known limitations, overlaps or conflicts with other tweaks"/>

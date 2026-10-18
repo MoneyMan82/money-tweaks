@@ -17,7 +17,25 @@ public sealed class TweakItem(Tweak tweak) : Observable
     public bool NeedsAdmin => Tweak.RequiresAdmin;
     public bool NeedsReboot => Tweak.RequiresReboot;
     public bool IsRecommended => Tweak.Recommended;
-    public string Details => TweakInfo.For(Tweak).ToText() + Environment.NewLine + Environment.NewLine + (IsGuide
+    /// <summary>Safe / Advanced / Experimental, from the compatibility engine.</summary>
+    public TweakTier Tier { get; } = Compatibility.TierOf(tweak);
+    public string TierLabel => Compatibility.TierLabel(Tier);
+    public bool IsExperimental => Tier == TweakTier.Experimental;
+    public bool IsAdvancedTier => Tier == TweakTier.Advanced;
+    // Advanced = the Caution label already on the card; only Experimental needs its own badge.
+    public bool ShowTier => Tier == TweakTier.Experimental;
+    public string TierTip => $"{TierLabel}: {Compatibility.TierBlurb(Tier)}";
+
+    /// <summary>This PC's compatibility findings (hardware, OS, drivers), once the system profile has been read.</summary>
+    private string CompatText()
+    {
+        if (!SystemProfile.IsDetected || IsGuide) return "";
+        var f = Compatibility.StaticFindings(Tweak, SystemProfile.Current);
+        return $"\n\nON THIS PC ({TierLabel}): " + (f.Count == 0 ? "no compatibility issues found."
+            : string.Concat(f.Select(x => $"\n{(x.Severity switch { CompatSeverity.Block => "⛔", CompatSeverity.Warn => "⚠", _ => "ℹ" })} {x.Text}")));
+    }
+
+    public string Details => TweakInfo.For(Tweak).ToText() + CompatText() + Environment.NewLine + Environment.NewLine + (IsGuide
         ? string.Join("\n", Tweak.GuideSteps.Select((s, i) => $"{i + 1}. {s}"))
         : string.Join("\n", Tweak.Ops.Select(o => "• " + o.Describe())))
         + (_verify is null ? "" : $"\n\nTEST {_verify.At:T}: {_verify.StatusLabel}. {_verify.Summary}" + string.Concat(_verify.Evidence.Select(e => "\n  – " + e)))
@@ -70,7 +88,8 @@ public sealed class TweakItem(Tweak tweak) : Observable
     public string? Message { get => _message; set => Set(ref _message, value); }
 
     private bool _expanded;
-    public bool Expanded { get => _expanded; set => Set(ref _expanded, value); }
+    // Re-read Details on open: the "on this PC" findings appear once the system profile has been detected.
+    public bool Expanded { get => _expanded; set { if (Set(ref _expanded, value) && value) Raise(nameof(Details)); } }
 
     public string StatusText => State switch
     {
@@ -184,10 +203,24 @@ public static class TweakService
         var t = item.Tweak;
         if (apply && !item.IsGuide)
         {
-            if (!EnsureAdmin([t])) return;
-            if (t.Risk == Risk.Caution && App.Settings.ConfirmCautionTweaks &&
-                !Dialog.Confirm($"Apply “{t.Name}”?", $"{t.Description}\n\n{(t.Warning is null ? "" : "⚠ " + t.Warning + "\n\n")}You can undo this at any time from the same switch.", "Apply", DialogKind.Warning))
+            // Compatibility check on this PC first: blocked → explain and stop; risky → show the full report and confirm.
+            item.Busy = true;
+            item.Message = "Checking compatibility…";
+            CompatibilityReport report;
+            try { report = await Task.Run(() => Compatibility.Analyze(t)); }
+            finally { item.Busy = false; item.Message = null; }
+            item.State = report.State;
+            if (report.AlreadyApplied) { item.Message = "Already applied on this PC; nothing to change."; return; }
+            if (report.Blocked)
+            {
+                item.Message = "⛔ " + string.Join(" ", report.Blockers.Select(b => b.Text));
+                Dialog.Show($"“{t.Name}” can't be applied here", string.Join("\n\n", report.Blockers.Select(b => "⛔ " + b.Text)) + "\n\nNothing was changed.", DialogKind.Warning);
                 return;
+            }
+            bool confirm = report.Tier == TweakTier.Experimental || report.Warnings.Any() || (t.Risk == Risk.Caution && App.Settings.ConfirmCautionTweaks);
+            if (confirm && !Dialog.Confirm($"Apply “{t.Name}”?", report.ToText(), "Apply", report.Tier == TweakTier.Safe ? DialogKind.Confirm : DialogKind.Warning))
+                return;
+            if (!EnsureAdmin([t])) return;
             await MaybeRestorePointAsync();
         }
         else if (!apply && !item.IsGuide && !EnsureAdmin([t])) return;
@@ -226,6 +259,22 @@ public static class TweakService
         }
         if (apply) await MaybeRestorePointAsync();
         int ok = 0, failed = 0; bool reboot = false;
+        if (apply)
+        {
+            // The engine blocks unsupported tweaks and conflicts with anything applied (including an earlier item in this
+            // batch) as it goes. Experimental ones get their own confirmation on top of the caller's list.
+            progress?.Report("Checking compatibility…");
+            await Task.Run(() => _ = SystemProfile.Current);
+            var experimental = targets.Where(i => i.IsExperimental).ToList();
+            if (experimental.Count > 0 && !Dialog.Show($"Include {experimental.Count} experimental tweak(s)?",
+                    string.Join("\n", experimental.Select(i => "• " + i.Name)) + $"\n\nExperimental: {Compatibility.TierBlurb(TweakTier.Experimental)}.\n\nChoose Skip to apply only the others.",
+                    DialogKind.Warning, "Include", "Skip"))
+            {
+                foreach (var it in experimental) it.Message = "Skipped (experimental, not confirmed).";
+                targets = targets.Except(experimental).ToList();
+                if (targets.Count == 0) return (0, experimental.Count, false);
+            }
+        }
         foreach (var it in targets)
         {
             progress?.Report($"{(apply ? "Applying" : "Reverting")} {ok + failed + 1}/{targets.Count}: {it.Name}");

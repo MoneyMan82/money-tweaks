@@ -107,6 +107,9 @@ public sealed class ServiceStartOp(string service, int start) : TweakOp
 public sealed class PowerCfgOp(string subgroup, string setting, int value, string label) : TweakOp
 {
     public override bool RequiresAdmin => false;
+    /// <summary>Identifies the power setting (subgroup/setting GUIDs), for conflict detection.</summary>
+    public string SettingKey => $"{subgroup}/{setting}";
+    public int Value => value;
     /// <summary>Windows default index, used by Undo when no backup exists. Null = unknown (Undo then refuses).</summary>
     public int? DefaultValue { get; init; }
     public override string Describe() => $"Power plan: {label} = {value}";
