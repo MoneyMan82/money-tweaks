@@ -210,21 +210,8 @@ public sealed partial class BenchmarkView
         return (s, saved);
     }
 
-    private static async Task SettleAsync(Action<string> status, CancellationToken ct)
-    {
-        // Switching tweaks starts processes (powercfg, PowerShell) and Windows reacts to setting changes. Wait at least 5 s,
-        // then until total CPU stays under 15% for 2 s (max 15 s more), so that work doesn't land inside a measured run.
-        status("settling 5 s…");
-        await Task.Delay(5000, ct);
-        using var hm = new HardwareMonitor();
-        for (int i = 0, calm = 0; i < 15 && calm < 2; i++)
-        {
-            await Task.Delay(1000, ct);
-            var cpu = await Task.Run(() => hm.Sample().CpuPercent, ct);
-            calm = cpu < 15 ? calm + 1 : 0;
-            status($"waiting for background activity to settle (CPU {cpu:0}%)…");
-        }
-    }
+    /// <summary>Shared with Performance Genome: see <see cref="BenchmarkSampler.SettleAsync"/>.</summary>
+    private static Task SettleAsync(Action<string> status, CancellationToken ct) => BenchmarkSampler.SettleAsync(status, ct);
 
     private void RenderPerTweak(List<(Core.Model.Tweak t, (BenchmarkStudy s, List<BenchmarkRun> runs) res)> results, List<string> unmeasurable)
     {

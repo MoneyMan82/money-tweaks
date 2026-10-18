@@ -83,6 +83,8 @@ public partial class MainWindow : Window
             await RefreshAppliedSummaryAsync();
             if (!App.ScreenshotMode) Updater.VerifyPendingUpdate();
             if (!App.ScreenshotMode) await BenchmarkView.CheckPendingSyntheticRestoreAsync();
+            if (!App.ScreenshotMode) await GenomeView.CheckPendingAsync();
+            if (!App.ScreenshotMode && !App.BackgroundStart) _ = GenomeView.CheckForUpdatesAsync();
             if (!App.ScreenshotMode) await ProfileService.CheckPendingAsync();
             if (!App.ScreenshotMode) DisplayService.CheckPending();
             if (!App.ScreenshotMode) DisplayService.StartAutoSwitch();
@@ -443,6 +445,7 @@ public partial class MainWindow : Window
         "library" => new GameLibraryView(),
         "tweaks" => new TweakListView(),
         "tuning" => new TuningView(),
+        "genome" => new GenomeView(),
         "potato" => new PotatoView(),
         "stretched" => new StretchedView(),
         "fnstretch" => new FortniteStretchedView(),

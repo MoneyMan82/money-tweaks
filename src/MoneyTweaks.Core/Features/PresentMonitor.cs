@@ -92,6 +92,14 @@ public sealed class FrameTracker
         return new PresentStats(pid, api, fps, gaps.Average(), gaps[^1], slow > 0 ? 1000.0 / slow : 0, gaps.Length, gaps.TakeLast(graphPoints).ToArray());
     }
 
+    /// <summary>Present timestamps of one process newer than <paramref name="after100ns"/>, oldest first. Polled about once a
+    /// second, this collects every frame of a longer capture (the ring holds the last 4096).</summary>
+    public List<long> TimesAfter(int pid, long after100ns)
+    {
+        lock (_gate)
+            return _byPid.TryGetValue(pid, out var r) ? Times(r).Where(x => x > after100ns).ToList() : [];
+    }
+
     /// <summary>Forgets processes with no Present for 10 s (closed games, finished launchers).</summary>
     public void Prune(long now100ns)
     {

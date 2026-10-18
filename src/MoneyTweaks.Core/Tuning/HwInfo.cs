@@ -70,6 +70,9 @@ public static class HwInfo
 
     public static double? CpuTemperature() => CpuTemperature(Parse(Reader()));
 
+    /// <summary>All current readings (null when HWiNFO isn't sharing).</summary>
+    public static List<HwInfoReading>? Readings() => Parse(Reader());
+
     public const int TypePower = 5;
 
     /// <summary>CPU package power in watts ("CPU Package Power" on AMD and Intel, "CPU PPT" on some Ryzen readouts).</summary>

@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.36 – 2026-10-18
+- **Performance Genome** (Optimize › Performance Genome): a performance-discovery engine that learns how this PC
+  responds to combinations of supported settings from its own measurements.
+  - **Goals with hard limits:** Competitive consistency, Maximum FPS, Minimum latency (a frame-time proxy, labelled
+    as such), Lower temperatures, Quiet efficiency, or custom weights; limits for GPU/CPU temperature, FPS and 1%-low
+    loss and GPU power are never broken by a recommendation.
+  - **Adaptive experiments:** screens every setting level, then tests the most promising settings together to detect
+    interactions, repeats promising candidates to beat noise, then explores by upper confidence bound. Baseline runs
+    of your own settings at the start, after every 3 trials and at the end; each result is compared with a locally
+    weighted trend through them, so warm-up and drift cancel out. Conditions (idle CPU, processes, power source) are
+    recorded per run; the PC settles before each run.
+  - **Model:** Bayesian ridge regression per metric with main effects and pairwise interactions; noise is measured from
+    your baselines. Measured results (with 95% intervals, run counts, stability and confidence) are kept strictly
+    apart from predictions, which are labelled and never recommended.
+  - **Settings it varies:** CPU boost mode, energy preference and (optional) maximum state through Windows' power
+    settings; NVIDIA power limit and clock cap through nvidia-smi (administrator); performance-related Windows tweaks
+    you add (never security trade-offs or Experimental tweaks); game settings you change yourself when asked.
+  - **Workloads:** the built-in 3D scene, calibrated so the display's refresh rate doesn't cap FPS, or a controlled
+    manual comparison in a running game measured from its Present events (read-only, nothing injected).
+  - **Safety and history:** every change is read back; your settings are restored and read back at the end, on Stop
+    or after a failure, with crash recovery on the next start. Runs stop at 90 °C GPU / 95 °C CPU; a setting or
+    combination that fails (refused, driver reset, WHEA error, crash) is never tried again. Every run is saved; a driver,
+    Windows, BIOS or game update marks earlier results stale and screening starts again.
+  - **UI:** this PC's effect map (what each setting does here), performance frontier with Pareto front and error bars,
+    distinct recommended profiles with explanations, comparison chart, history and journal. Profiles apply through the
+    CPU & GPU Tuning path (backup, read-back, Undo all) with one-click rollback.
+- The synthetic benchmark's "wait for the PC to settle" step is now shared (BenchmarkSampler.SettleAsync).
+- 12 new tests against a simulated PC with known effects, an interaction, noise, drift, a failing setting and a driver
+  update (298 total).
+
 ## 1.35 – 2026-10-18
 - **CPU auto tuning** on CPU & GPU Tuning:
   - **CPU boost scan.** Measures four Windows boost / energy-preference combinations under real load (one thread and
