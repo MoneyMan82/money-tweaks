@@ -17,7 +17,7 @@ namespace MoneyTweaks.Views;
 /// </summary>
 public sealed class TuningView : UserControl, IPageLifecycle
 {
-    private readonly StackPanel _hw = new(), _status = new(), _auto = new(), _manual = new(), _test = new(), _caps = new(), _banner = new(), _ab = new(), _scan = new();
+    private readonly StackPanel _hw = new(), _status = new(), _auto = new(), _manual = new(), _test = new(), _caps = new(), _banner = new(), _ab = new(), _scan = new(), _cpuAuto = new();
     private readonly TextBlock _live = Ui.Muted("", 12.5);
     private readonly DispatcherTimer _liveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private TuningInventory? _inv;
@@ -41,6 +41,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
         body.Children.Add(Ui.Card(Section("Current tuning", _status, "What Money Tweaks changed, and whether each value was read back.", _live)));
         body.Children.Add(Ui.Card(Section("Auto tuning", new StackPanel { Children = { _scan, new Border { Height = 1, Background = Ui.Brush("BorderBrush"), Margin = new Thickness(0, 14, 0, 12) }, _auto } },
             "Find your best GPU overclock automatically, or pick a ready-made profile from a quick look at your hardware.")));
+        body.Children.Add(Ui.Card(Section("CPU auto tuning", _cpuAuto, "Measures and picks the best Windows boost settings, and walks you through a per-core undervolt with automatic testing.")));
         body.Children.Add(Ui.Card(Section("Manual tuning", _manual, "Every control here changes a real setting through a documented interface, within the range the driver or Windows reports.")));
         body.Children.Add(Ui.Card(Section("GPU offsets, undervolt and fan (MSI Afterburner)", _ab, "Through Afterburner's documented control interface (its SDK). Needs Afterburner running.")));
         body.Children.Add(Ui.Card(Section("Stability tests", _test, "Quick scan (1 minute) catches gross problems only. Extended tests run longer. Neither proves stability.")));
@@ -99,6 +100,7 @@ public sealed class TuningView : UserControl, IPageLifecycle
     {
         RenderHardware(); RenderBanner(); RenderStatus(); RenderAuto(); RenderManual(); RenderTests(); RenderCaps();
         if (!TuningViewAutoScan.Running) TuningViewAutoScan.Render(_scan, _state, _inv, Gpu, ReloadValuesAsync);
+        if (!TuningViewCpuAuto.Running) TuningViewCpuAuto.Render(_cpuAuto, _inv, ApplyAsync);
         _ = TuningViewAfterburner.RenderAsync(_ab, _state, _inv, Gpu?.PowerLimitSupported == true, ReloadValuesAsync);
     }
 

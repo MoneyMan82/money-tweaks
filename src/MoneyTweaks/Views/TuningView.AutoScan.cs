@@ -44,7 +44,7 @@ public static class TuningViewAutoScan
     }
 
     /// <summary>Same identity-checked detection as the Game Library and the synthetic benchmark.</summary>
-    private static List<string> RunningGames()
+    internal static List<string> RunningGames()
     {
         var games = Core.Games.GameLibrary.Items(Core.Games.GameLibrary.Current);
         return Core.Games.GameRuntime.Statuses(games).Where(s => s.status == Core.Games.GameStatus.Running).Select(s => s.game.Def.Name).ToList();
@@ -55,7 +55,7 @@ public static class TuningViewAutoScan
         string cpu = inv?.IsRyzen == true ? "AMD Ryzen Master (Precision Boost Overdrive, Curve Optimizer test or Auto Overclocking)"
             : inv?.IsIntelCpu == true ? (inv.IntelUnlocked ? "Intel XTU (Speed Optimizer)" : "nothing: this Intel CPU's multiplier is locked")
             : "the CPU vendor's tool";
-        host.Children.Add(Ui.Muted($"CPU: neither AMD nor Intel lets other apps overclock the CPU (only undocumented registers would, which Money Tweaks never touches). The CPU's own automatic overclock is in {cpu}: see Everything else below.", 11.5));
+        host.Children.Add(Ui.Muted($"CPU: see CPU auto tuning below (boost scan and the per-core undervolt assistant). AMD and Intel don't let other apps overclock the CPU directly (only undocumented registers would, which Money Tweaks never touches); the CPU's own automatic overclock is in {cpu}.", 11.5));
     }
 
     private static async Task StartAsync(Button start, Button stop, TuningState st, NvidiaGpuLimits? gpu, ProgressBar bar, TextBlock log, Func<Task> refresh)

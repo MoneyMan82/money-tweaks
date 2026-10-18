@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.35 – 2026-10-18
+- **CPU auto tuning** on CPU & GPU Tuning:
+  - **CPU boost scan.** Measures four Windows boost / energy-preference combinations under real load (one thread and
+    all threads, with temperature and package power when MSI Afterburner or HWiNFO runs). Your current settings are
+    measured first and last, so the run's own noise is known and smaller differences aren't shown as gains. It
+    recommends the coolest (or lowest-power) option that is just as fast. Your settings are put back afterwards; you
+    apply the one you want through the normal preview, backup and read-back.
+  - **Curve Optimizer assistant (Ryzen) / undervolt assistant (unlocked Intel).** Tests every core on its own (a
+    self-checking load pinned to that core, where too much undervolt shows), then tells you the next value per core:
+    passed → one step further, failed → one step back and never past it again, until every core is done. Fails on
+    wrong results, WHEA errors, 95 °C, or a crash/restart during the test (it remembers which core was running). You
+    set the values in Ryzen Master or XTU, because AMD and Intel let no other app change them.
+- 7 new tests (286 total).
+
 ## 1.34 – 2026-10-18
 - **CPU temperature from HWiNFO.** Windows has no public way for apps to read the CPU temperature, so Money Tweaks now
   also reads it from the free HWiNFO (its documented shared memory, read-only; HWiNFO uses its own signed driver and

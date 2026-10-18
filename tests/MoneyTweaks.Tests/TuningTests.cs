@@ -148,7 +148,8 @@ public class TuningTests : IDisposable
     {
         var ryzen = new TuningInventory { Cpu = "AMD Ryzen 5 7600X 6-Core Processor", CpuVendor = "AMD", Gpus = [new("NVIDIA GeForce RTX 4070 SUPER", "NVIDIA", "32.0.15.7114", "")], RamRatedMts = 6000, RamConfiguredMts = 4800 };
         var caps = TuningCapabilities.For(ryzen, [Gpu]);
-        Assert.All(caps.Where(c => c.Support == Support.Direct), c => Assert.True(c.Name.Contains("Power limit") || c.Name.Contains("clock limit") || c.Name.Contains("Boost mode")));
+        Assert.All(caps.Where(c => c.Support == Support.Direct), c => Assert.True(c.Name.Contains("Power limit") || c.Name.Contains("clock limit") || c.Name.Contains("Boost mode")
+            || c.Name == "CPU temperature")); // read-only, from Afterburner's or HWiNFO's published sensor data when one of them runs
         Assert.Equal(Support.Handoff, caps.Single(c => c.Name.StartsWith("Precision Boost Overdrive")).Support);
         Assert.Equal(Support.Handoff, caps.Single(c => c.Name.StartsWith("Curve Optimizer")).Support);
         Assert.Equal(Support.Handoff, caps.Single(c => c.Name.StartsWith("Core/memory clock offsets")).Support);

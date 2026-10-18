@@ -70,6 +70,18 @@ public static class HwInfo
 
     public static double? CpuTemperature() => CpuTemperature(Parse(Reader()));
 
+    public const int TypePower = 5;
+
+    /// <summary>CPU package power in watts ("CPU Package Power" on AMD and Intel, "CPU PPT" on some Ryzen readouts).</summary>
+    public static double? CpuPower(IReadOnlyList<HwInfoReading>? readings)
+    {
+        if (readings is null) return null;
+        foreach (var label in new[] { "CPU Package Power", "CPU PPT" })
+            foreach (var r in readings.Where(r => r.Type == TypePower && r.Sensor.StartsWith("CPU", StringComparison.OrdinalIgnoreCase) && r.Label.Equals(label, StringComparison.OrdinalIgnoreCase)))
+                if (r.Value is > 0 and < 1000) return r.Value;
+        return null;
+    }
+
     /// <summary>True when HWiNFO is running with sharing on.</summary>
     public static bool IsSharing => Parse(Reader()) is { Count: > 0 };
 
