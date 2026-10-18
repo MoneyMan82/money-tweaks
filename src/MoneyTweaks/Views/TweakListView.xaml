@@ -69,6 +69,38 @@
                                 <TextBlock Text="{Binding NotesText}" Visibility="{Binding HasNotes, Converter={StaticResource B2V}}" FontSize="11.5" Foreground="{StaticResource Gold}"
                                            TextWrapping="Wrap" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding Details}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                                <!-- Related settings elsewhere in the library (conflicts first). Click opens the tweak where it lives. -->
+                                <StackPanel Visibility="{Binding HasRelated, Converter={StaticResource B2V}}" Margin="0,12,0,0">
+                                    <TextBlock Text="RELATED SETTINGS" Style="{StaticResource Eyebrow}" Margin="0,0,0,4"/>
+                                    <ItemsControl ItemsSource="{Binding Related}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Click="Related_Click" Tag="{Binding Id}" Cursor="Hand" Margin="0,3,0,0" HorizontalContentAlignment="Stretch" ToolTip="Open this setting">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="B" Background="Transparent" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                                                <ContentPresenter/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="B" Property="Background" Value="{StaticResource CardHover}"/></Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                    <StackPanel>
+                                                        <WrapPanel>
+                                                            <Border CornerRadius="5" Padding="6,1" Margin="0,0,8,0" Background="{Binding SoftBrush}" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Badge}" FontSize="10" FontWeight="Bold" Foreground="{Binding ToneBrush}"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource Text}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding Where}" FontSize="11.5" Foreground="{StaticResource Subtle}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                        </WrapPanel>
+                                                        <TextBlock Text="{Binding Text}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>

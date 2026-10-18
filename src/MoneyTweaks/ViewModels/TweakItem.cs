@@ -89,7 +89,26 @@ public sealed class TweakItem(Tweak tweak) : Observable
 
     private bool _expanded;
     // Re-read Details on open: the "on this PC" findings appear once the system profile has been detected.
-    public bool Expanded { get => _expanded; set { if (Set(ref _expanded, value) && value) Raise(nameof(Details)); } }
+    public bool Expanded { get => _expanded; set { if (Set(ref _expanded, value) && value) { Raise(nameof(Details)); _related = null; Raise(nameof(Related)); Raise(nameof(HasRelated)); } } }
+
+    private IReadOnlyList<RelatedTweakRow>? _related;
+
+    /// <summary>
+    /// Related settings from other places in the library (Discovery): conflicts and duplicates first, then the same
+    /// area, then tweaks serving the same purpose, each with the reason. Computed when the details are opened.
+    /// </summary>
+    public IReadOnlyList<RelatedTweakRow> Related => _related ??= !_expanded ? [] : Core.Discovery.TweakKnowledge.Current.Related(Tweak.Id, 5)
+        .Select(r => new RelatedTweakRow(r.Other.Id, r.Other.Name, $"{CategoryInfo.DisplayName(r.Other.Category)}{(r.Other.Group is { } g ? " › " + g : "")}",
+            r.Kind switch
+            {
+                Core.Discovery.RelationKind.Conflict => "CONFLICT", Core.Discovery.RelationKind.Duplicate => "DUPLICATE", Core.Discovery.RelationKind.TradeOff => "ORDER MATTERS",
+                Core.Discovery.RelationKind.OverlappingEffect => "OVERLAPS", Core.Discovery.RelationKind.SameArea => "SAME AREA", _ => "WORKS WITH",
+            },
+            r.Text + (Core.Engine.BackupStore.Exists(r.Other.Id) ? " It's applied right now." : ""),
+            r.Kind switch { Core.Discovery.RelationKind.Conflict => "Danger", Core.Discovery.RelationKind.Duplicate or Core.Discovery.RelationKind.TradeOff or Core.Discovery.RelationKind.OverlappingEffect => "Gold", Core.Discovery.RelationKind.SameArea => "Violet", _ => "Accent" }))
+        .ToList();
+
+    public bool HasRelated => Related.Count > 0;
 
     public string StatusText => State switch
     {
@@ -288,4 +307,11 @@ public static class TweakService
         Changed?.Invoke();
         return (ok, failed, reboot);
     }
+}
+
+/// <summary>One related setting shown in a tweak's details; Tone is a theme brush key.</summary>
+public sealed record RelatedTweakRow(string Id, string Title, string Where, string Badge, string Text, string Tone)
+{
+    public System.Windows.Media.Brush ToneBrush => (System.Windows.Media.Brush)Application.Current.Resources[Tone];
+    public System.Windows.Media.Brush SoftBrush => (System.Windows.Media.Brush)Application.Current.Resources[Tone == "Danger" ? "DangerSoft" : Tone == "Gold" ? "GoldSoft" : Tone == "Violet" ? "VioletSoft" : "AccentSoft"];
 }

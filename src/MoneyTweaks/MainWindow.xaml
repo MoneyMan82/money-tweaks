@@ -220,7 +220,7 @@
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxHeight="32"/>
                                     </StackPanel>
                                 </DockPanel>
                             </DataTemplate>

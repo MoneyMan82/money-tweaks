@@ -283,6 +283,13 @@ public partial class TweakListView : UserControl, IPageLifecycle
     private static T? VisualTreeHelperFind<T>(DependencyObject root) where T : DependencyObject => Controls.Ui.Descendants<T>(root).FirstOrDefault();
 
     /// <summary>"What changes" opens with a short fade and rise instead of popping in.</summary>
+    /// <summary>Related setting clicked in a tweak's details: open it where it lives.</summary>
+    private void Related_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string id }) MainWindow.Current?.OpenTweak(id);
+        e.Handled = true;
+    }
+
     private void Details_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (sender is FrameworkElement el && e.NewValue is true) Controls.Motion.FadeIn(el, 0, 6, 220);

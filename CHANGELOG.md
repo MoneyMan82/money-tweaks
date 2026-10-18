@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.37 – 2026-10-18
+- **Intelligent Feature Discovery**, built on the existing search, tweak pages, compatibility engine and catalog review
+  (no second search, no Recent tab, no new favourites):
+  - **Natural-language search in Ctrl+K.** "make Fortnite smoother without increasing temperatures" is understood as
+    smoother gameplay + Fortnite + no extra heat: Fortnite's own tweaks and pages come first, then heat-neutral gaming
+    tweaks, and 6 tweaks that raise power/heat are left out (the palette says so). Ranking uses rare-word relevance,
+    purpose, game, this PC's compatibility findings and your Performance Genome goal. Every result shows why it matched;
+    known limits are stated ("limited effect: only changes TCP"). Only existing tweaks are ever returned.
+  - **Related settings in every tweak's details:** conflicts and duplicates first, then order notes, same-feature
+    overlaps, the same registry area, and tweaks serving the same purpose in other categories, each with the reason
+    and whether it's applied right now. Click opens it where it lives.
+  - **Tweak Map** (Optimization › Tweak Map): the whole library by purpose; category › group tiles sized by count;
+    hover lights up connected groups; click lists the tweaks (each opens its page); lenses for recommended, applied and
+    related; every conflict, duplicate, order note and overlap with both settings linked, and pairs that are both
+    applied pinned to the top.
+  - **Duplicate and conflict detection:** exact conflicts and duplicates from the compatibility engine (compared only
+    within shared targets, never all pairs), the catalog review's notes, power-plan order notes, and cross-category
+    overlaps of the same feature (e.g. the Superfetch tweak and the SysMain service). The real catalog has exactly the
+    three DNS conflicts, matching the existing conflict audit.
+  - **Scale:** a 1,200-entry library builds the index in about 80 ms; related lookups take 0.3 ms and searches 2 ms;
+    the map aggregates by group and pages long lists, so it stays readable.
+- 7 new tests including the 1,200-entry scale test.
+
 ## 1.36 – 2026-10-18
 - **Performance Genome** (Optimize › Performance Genome): a performance-discovery engine that learns how this PC
   responds to combinations of supported settings from its own measurements.

@@ -62,6 +62,8 @@ public partial class MainWindow : Window
         _startupDone = true;
         // Compatibility engine: read this PC's profile (WMI, ~1 s) in the background so checks are instant later.
         if (!App.BackgroundStart) _ = Task.Run(() => Core.Engine.SystemProfile.Current);
+        // Discovery index (purposes, relations, conflicts) for search, related tweaks and the map: built once, off the UI thread.
+        if (!App.BackgroundStart) _ = Task.Run(() => Core.Discovery.TweakKnowledge.Current);
         // Tuning applied in an earlier session but never confirmed (the app closed or crashed): offer to undo, never re-apply.
         try
         {
@@ -446,6 +448,7 @@ public partial class MainWindow : Window
         "tweaks" => new TweakListView(),
         "tuning" => new TuningView(),
         "genome" => new GenomeView(),
+        "map" => new TweakMapView(),
         "potato" => new PotatoView(),
         "stretched" => new StretchedView(),
         "fnstretch" => new FortniteStretchedView(),
@@ -554,6 +557,7 @@ public partial class MainWindow : Window
     private void OpenPalette(object sender, RoutedEventArgs e)
     {
         _paletteAll = BuildPaletteItems(); // rebuilt each time: games and favourites change
+        _searchCtx = null;                // this PC's profile may have been detected since
         Palette.Visibility = Visibility.Visible;
         PaletteBox.Text = "";
         PaletteFilter(null!, null!);
@@ -595,11 +599,7 @@ public partial class MainWindow : Window
         foreach (var t in TweakCatalog.All)
         {
             var tw = t;
-            list.Add(new(t.Name, $"{CategoryInfo.DisplayName(t.Category)} · {(t.Risk == Risk.Caution ? "Caution" : "Safe")}", CategoryIcons[t.Category], "Tweak", () =>
-            {
-                Navigate("cat:" + tw.Category);
-                if (Host.Content is TweakListView v) v.FocusTweak(tw.Name);
-            }, tw.Id));
+            list.Add(new(t.Name, $"{CategoryInfo.DisplayName(t.Category)} · {(t.Risk == Risk.Caution ? "Caution" : "Safe")}", CategoryIcons[t.Category], "Tweak", () => OpenTweak(tw.Id), tw.Id));
         }
         foreach (var g in GameLibrary.Items(GameLibrary.Current))
         {
@@ -618,11 +618,41 @@ public partial class MainWindow : Window
         return list;
     }
 
+    /// <summary>Opens a tweak where it lives: its category page, filtered to it (used by search, related tweaks and the map).</summary>
+    public void OpenTweak(string id)
+    {
+        if (TweakCatalog.Find(id) is not { } t) return;
+        Navigate("cat:" + t.Category);
+        if (Host.Content is TweakListView v) v.FocusTweak(t.Name);
+    }
+
+    private Core.Discovery.SearchContext? _searchCtx;
+
+    /// <summary>Personalises palette ranking: this PC's compatibility findings (once detected) and the Performance Genome goal.</summary>
+    private static Core.Discovery.SearchContext BuildSearchContext()
+    {
+        Func<Tweak, Core.Engine.CompatSeverity?>? compat = null;
+        if (Core.Engine.SystemProfile.IsDetected)
+        {
+            var profile = Core.Engine.SystemProfile.Current;
+            var cache = new Dictionary<string, Core.Engine.CompatSeverity?>();
+            compat = t =>
+            {
+                if (cache.TryGetValue(t.Id, out var v)) return v;
+                var worst = Core.Engine.Compatibility.StaticFindings(t, profile).Select(f => f.Severity).Where(s => s >= Core.Engine.CompatSeverity.Warn).DefaultIfEmpty(Core.Engine.CompatSeverity.Info).Max();
+                return cache[t.Id] = worst == Core.Engine.CompatSeverity.Info ? null : worst;
+            };
+        }
+        string? goal = null;
+        try { if (File.Exists(Core.Genome.GenomeStore.PathFor)) goal = Core.Genome.GenomeStore.Load().Goal.Preset; } catch { }
+        return new(compat, goal);
+    }
+
     private void PaletteFilter(object sender, TextChangedEventArgs e)
     {
         if (_paletteAll is null) return;
         var q = PaletteBox.Text.Trim();
-        IEnumerable<PaletteItem> hits;
+        IEnumerable<PaletteItem> hits = [];
         if (q.Length == 0)
         {
             // Favourites and recent pages first, then every page.
@@ -632,11 +662,40 @@ public partial class MainWindow : Window
             var pages = _paletteAll.Where(i => i.Kind == "Page");
             hits = fav.Concat(recent).Concat(pages).DistinctBy(i => i.Tag ?? i.Title);
         }
-        else hits = _paletteAll.Select(i => (i, score: Score(i, q))).Where(x => x.score > 0).OrderByDescending(x => x.score).Select(x => x.i);
+        Core.Discovery.SearchResult? found = null;
+        if (q.Length > 0)
+        {
+            // Natural-language discovery over the tweak library ranks tweaks by meaning, this PC and your goal; the plain
+            // title match below still finds pages, games and settings (and exact tweak names).
+            _searchCtx ??= BuildSearchContext();
+            found = Core.Discovery.TweakSearch.Search(Core.Discovery.TweakKnowledge.Current, q, _searchCtx, 60);
+            var byId = found.Hits.ToDictionary(h => h.Tweak.Id);
+            var intent = found.Intent;
+            hits = _paletteAll.Select(i =>
+            {
+                int s = Score(i, q);
+                if (i.Kind == "Tweak" && byId.TryGetValue(i.Keywords, out var h))
+                {
+                    s = Math.Max(s, (int)(h.Score * 4));
+                    i = i with { Subtitle = $"{CategoryInfo.DisplayName(h.Tweak.Category)} · {string.Join(" · ", h.Reasons.Take(4))}" };
+                }
+                else if (i.Kind == "Tweak" && intent.IsNatural && s < 60) s = 0; // natural queries: tweaks only by meaning
+                else if (intent.IsNatural && s == 0 && i.Kind is "Page" or "Section" or "Setting")
+                {
+                    var text = (i.Title + " " + i.Keywords + " " + i.Subtitle).ToLowerInvariant();
+                    int terms = intent.Terms.Count(t => text.Contains(t, StringComparison.Ordinal)) + intent.Games.Count(g => text.Contains(g.ToLowerInvariant(), StringComparison.Ordinal));
+                    s = terms * 25;
+                }
+                return (i, score: s);
+            }).Where(x => x.score > 0).OrderByDescending(x => x.score).Select(x => x.i);
+        }
         var shown = hits.Take(80).ToList();
         PaletteList.ItemsSource = shown;
         PaletteList.SelectedIndex = shown.Count > 0 ? 0 : -1;
-        PaletteCount.Text = q.Length == 0 ? $"{_paletteAll.Count} items: pages, tweaks, games and settings" : $"{shown.Count} result{(shown.Count == 1 ? "" : "s")}";
+        PaletteCount.Text = q.Length == 0 ? $"{_paletteAll.Count} items: pages, tweaks, games and settings"
+            : $"{shown.Count} result{(shown.Count == 1 ? "" : "s")}" +
+              (found is { Intent.IsNatural: true } f && f.Intent.Understood() is { Length: > 0 } u ? $" · understood: {u}" : "") +
+              (found is { HiddenBySideEffect: > 0 } f2 ? $" · {f2.HiddenBySideEffect} hidden (side effects you ruled out)" : "");
     }
 
     internal static int Score(PaletteItem i, string q)
