@@ -52,6 +52,7 @@ public static class AppNavigation
         Cat(TweakCategory.Networking, "optimize", keywords: "network tcp nagle dns latency"),
         Cat(TweakCategory.Advanced, "optimize", keywords: "advanced kernel scheduler memory"),
         Cat(TweakCategory.Bios, "optimize", keywords: "bios uefi xmp expo rebar resizable bar"),
+        new("tuning", "\uE950", "CPU & GPU Tuning", "optimize", "GPU power limit and clock cap, CPU boost and efficiency profiles, stability tests, guided PBO/Curve Optimizer/XTU/undervolt steps.", "overclock undervolt pbo curve optimizer power limit clock nvidia gpu cpu xtu ryzen master xmp expo fan efficiency quiet stability"),
 
         new("library", "\uE8B7", "Game Library", "gaming", "Installed and running games from Steam, Epic, Riot, Roblox and Minecraft, plus your own; per-game profiles and launch.", "games steam epic roblox minecraft detect launch"),
         new("profiles", "\uE7FC", "Gaming Profiles", "gaming", "One-click or automatic sets of settings while a game runs, restored when it closes.", "profile auto switch"),

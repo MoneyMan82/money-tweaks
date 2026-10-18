@@ -62,6 +62,14 @@ public partial class MainWindow : Window
         _startupDone = true;
         // Compatibility engine: read this PC's profile (WMI, ~1 s) in the background so checks are instant later.
         if (!App.BackgroundStart) _ = Task.Run(() => Core.Engine.SystemProfile.Current);
+        // Tuning applied in an earlier session but never confirmed (the app closed or crashed): offer to undo, never re-apply.
+        try
+        {
+            var ts = Core.Tuning.TuningState.Load();
+            if (ts.PendingConfirmation && ts.HasChanges)
+                ShowToast($"CPU/GPU tuning \"{ts.ProfileName}\" from {ts.AppliedAt:g} wasn't confirmed stable. Open CPU & GPU Tuning to undo or keep it.", "Gold");
+        }
+        catch (Exception ex) { Log.Warn("tuning state: " + ex.Message); }
         {
             Log.Info($"[perf] startup to {(App.BackgroundStart ? "background ready" : "first frame")}: {App.StartupClock.ElapsedMilliseconds} ms");
             StartStallDetector();
@@ -432,6 +440,7 @@ public partial class MainWindow : Window
         "profiles" => new ProfilesView(),
         "library" => new GameLibraryView(),
         "tweaks" => new TweakListView(),
+        "tuning" => new TuningView(),
         "potato" => new PotatoView(),
         "stretched" => new StretchedView(),
         "fnstretch" => new FortniteStretchedView(),

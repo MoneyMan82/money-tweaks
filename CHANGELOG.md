@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.29 – 2026-10-18
+- **New page: CPU & GPU Tuning** (Optimization group; Money Tweaks had no overclocking page before). Built only on
+  interfaces the vendors document for other programs; everything else is a guided handoff, never a fake control:
+  - **This PC**: CPU, cores/threads, motherboard, BIOS, every GPU with driver version/date, each memory module with its
+    running and reported speed, and the vendor tuning tools installed (Ryzen Master, Intel XTU, NVIDIA App, MSI
+    Afterburner, AMD Adrenalin). Detected once in the background and cached, so the page opens instantly; Rescan on demand.
+  - **Direct controls** (live values, the driver's/Windows' own ranges and steps, tooltips, Apply / Cancel / Reset):
+    NVIDIA power limit and GPU clock cap through nvidia-smi (NVIDIA's documented tool; on an RTX 4070 SUPER: 100–242 W,
+    210–3105 MHz in 15 MHz steps), and CPU boost mode, maximum processor state and energy performance preference through
+    Windows' documented power settings (any Intel or AMD CPU).
+  - **Auto tuning**: a 10-second read-only assessment (temperatures, laptop or desktop) recommends a profile;
+    Efficiency, Quiet and Maximum headroom profiles are computed from this card's real limits.
+  - **Guided handoffs** with exact steps and an Open/Get button: AMD PBO, boost override, PPT/TDC/EDC, Curve Optimizer and
+    Eco Mode (Ryzen Master/BIOS), Intel multiplier, voltage offset, PL1/PL2 and BCLK (XTU/BIOS; locked non-K CPUs are
+    shown as not available), NVIDIA automatic tuning (NVIDIA App), clock offsets/voltage-frequency curve/fan curve
+    (NVIDIA App/Afterburner), AMD Radeon tuning (Adrenalin), XMP/EXPO (BIOS, with the current speed check). Memory
+    timings and PBO/Curve Optimizer status are shown as not readable instead of guessed.
+  - **Safety**: original values backed up before the first change (and never overwritten), preview of every change,
+    confirmation with crash/data-corruption warnings, each value read back (Configured → Applied → Verified; a clock cap
+    is verified under load), all-or-nothing rollback, one-click Undo all. If the app closes or crashes before you confirm,
+    the next start offers to undo; nothing is ever applied at startup. GPU changes also reset when Windows restarts.
+  - **Stability tests**: Quick scan (1 min) and Extended (10/30/60 min), with optional GPU load from the 3D stress scene.
+    The CPU load checks its own answers (wrong results = instability), and new WHEA hardware errors, GPU driver resets,
+    GPU ≥ 87 °C or CPU ≥ 95 °C fail the test and undo the tuning automatically. A quick scan is reported as preliminary
+    only; nothing is ever called "stable".
+  - No undocumented MSR, SMU, SMBus or BIOS writes, no arbitrary voltages, no kernel drivers.
+- 13 new tests (fake backend for all writes; the real hardware is only read).
+
 ## 1.28 – 2026-10-18
 - **Smart Tweak Compatibility Engine.** Before any tweak is applied (tweak pages, presets, profiles, scanner, benchmarks:
   everything goes through the engine) Money Tweaks now checks it against this PC:
