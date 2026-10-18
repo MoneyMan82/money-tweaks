@@ -177,7 +177,7 @@ public sealed class ScannerView : UserControl, IPageLifecycle
                 SaveState();
             }
             var fails = string.Join("\n", todo.Where(i => i.State != TweakState.Applied).Select(i => $"• {i.Name}: {i.Message}"));
-            Dialog.Show(failed == 0 ? "Fixed and verified" : "Fixed with problems",
+            Dialog.Show(failed == 0 ? "Fixed and verified" : ok == 0 ? "Nothing was fixed" : "Fixed with problems",
                 $"{ok} change(s) applied and read back from Windows{(failed > 0 ? $", {failed} failed:\n{fails}" : ".")}{(reboot ? "\n\nRestart Windows to finish." : "")}",
                 failed == 0 ? DialogKind.Info : DialogKind.Warning);
         }

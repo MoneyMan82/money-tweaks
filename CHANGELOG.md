@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.27 – 2026-10-18
+Functional audit fixes (no features removed):
+- **No more false "Applied and verified"** for tweaks whose target doesn't exist on the PC (service not installed, task or
+  app missing). Presets, profiles and the scanner apply through the engine, which saved a backup, changed nothing and then
+  read back as applied because a backup existed. It now refuses with "Not applicable on this PC" and saves no backup.
+- **Presets › Undo no longer drops the run from history when nothing was undone.** Declining the administrator restart
+  returned "0 reverted, 0 failed", which counted as success. Every bulk apply/undo now reports those tweaks as not changed
+  ("Needs administrator rights; nothing was changed") so Presets, Scanner, Dashboard and tweak pages keep their undo state.
+- **Undo everything** (Backup & Restore) says what it didn't touch and why: tweaks Windows already changed back, BIOS guides
+  and backups of tweaks this version no longer has. It no longer says "Undo complete" when the administrator restart was
+  declined or when undos failed.
+- **Dashboard and category "Apply recommended"** now include partly applied tweaks, the same set the button counts (it
+  could say "Apply recommended (16)" and then "every recommended tweak is already applied").
+- **Startup Apps** lists shortcuts in the Startup folders (yours and all users'), like Task Manager; before, the page could
+  say "Nothing starts with Windows" while apps did. Each switch is read back from Windows after changing it.
+- **Game Booster:** "End boost" checks that Windows really switched back to your previous power plan (it always said
+  "restored") and puts the game's priority back; the start toast says when steps failed instead of always "Boost active";
+  a failed standby-memory clear is reported as a failure.
+- **Fortnite auto-switch off** only says "Your resolution is back to normal" when Windows actually switched back.
+- NVIDIA Fortnite restore checks that the profile Money Tweaks created is really gone before reporting "verified".
+- Settings › About links show an error with the address if the browser can't be opened (they silently did nothing).
+- 10 regression tests.
+
 ## 1.26 – 2026-10-17
 - Re-release of the safety fixes below under a correct version. They were first tagged v1.2.5, which is lower than 1.25.1,
   so GitHub listed it as the latest release while the app (correctly) saw it as older and offered no update.

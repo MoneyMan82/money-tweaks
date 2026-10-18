@@ -87,6 +87,10 @@ public static class TweakEngine
         if (t.MinBuild > 0 && OsInfo.Build < t.MinBuild)
             return new(t, false, $"Requires Windows build {t.MinBuild} or newer.", TweakState.NotApplicable);
         if (TweakAudit.DisabledReason(t) is { } disabled) return new(t, false, disabled, GetState(t));
+        // Nothing this tweak changes exists here (service not installed, task or app missing). Applying would change nothing,
+        // save a backup anyway, and then read back as "applied" because a backup exists: a false success.
+        if (!BackupStore.Exists(t.Id) && GetState(t) == TweakState.NotApplicable)
+            return new(t, false, "Not applicable on this PC: what this tweak changes isn't present, so nothing was changed.", TweakState.NotApplicable);
         if (t.RequiresAdmin && !Admin.IsElevated)
             return new(t, false, "Administrator rights are required. Use 'Restart as admin'.", GetState(t));
 

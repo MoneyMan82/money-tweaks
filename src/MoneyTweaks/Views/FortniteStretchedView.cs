@@ -257,8 +257,8 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
             {
                 a.Enabled = false;
                 DisplayService.Save();
-                DisplayService.StopAutoSwitch();
-                MainWindow.Current?.ShowToast("Auto-switch off. Your resolution is back to normal.", "Success");
+                if (DisplayService.StopAutoSwitch()) MainWindow.Current?.ShowToast("Auto-switch off. Your resolution is back to normal.", "Success");
+                else Status("Auto-switch is off, but Windows refused to switch the display back. Use Stretched Resolution › Restore original, or sign out and in.", "Danger");
             }
             BuildAuto();
         };

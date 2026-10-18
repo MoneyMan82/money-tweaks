@@ -14,6 +14,7 @@ public sealed class GameBooster
 {
     public const string HighPerformance = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
     private string? _previousScheme;
+    private readonly List<(int pid, ProcessPriorityClass prio)> _raised = [];
     public bool Active { get; private set; }
 
     /// <summary>Processes that must never be offered for closing.</summary>
@@ -45,6 +46,11 @@ public sealed class GameBooster
             .Select(g => new ProcessInfo(g.First().Pid, g.Key, g.Sum(x => x.WorkingSetMb), g.Select(x => x.Title).FirstOrDefault(t => t is not null)))
             .OrderByDescending(x => x.WorkingSetMb).ToList();
     }
+
+    /// <summary>True for report lines that describe a step that didn't do what was asked.</summary>
+    public static bool IsProblem(string line) =>
+        line.StartsWith("Could not", StringComparison.Ordinal) || line.Contains("not available", StringComparison.Ordinal)
+        || line.Contains("is not running", StringComparison.Ordinal) || line.Contains("Windows kept priority", StringComparison.Ordinal);
 
     /// <summary>Process names that may be closed: distinct, never protected, never the game being boosted.</summary>
     public static IReadOnlyList<string> CloseTargets(IEnumerable<string> closeNames, string? gameProcessName) =>
@@ -97,7 +103,12 @@ public sealed class GameBooster
             var procs = Process.GetProcessesByName(n);
             foreach (var p in procs)
             {
-                try { p.PriorityClass = ProcessPriorityClass.High; report.Add($"{n} → High priority"); }
+                try
+                {
+                    if (p.PriorityClass != ProcessPriorityClass.High) _raised.Add((p.Id, p.PriorityClass));
+                    p.PriorityClass = ProcessPriorityClass.High;
+                    report.Add(p.PriorityClass == ProcessPriorityClass.High ? $"{n} → High priority" : $"{n}: Windows kept priority {p.PriorityClass}");
+                }
                 catch (Exception ex) { report.Add($"Could not raise {n}: {ex.Message}"); }
                 finally { p.Dispose(); }
             }
@@ -106,8 +117,8 @@ public sealed class GameBooster
 
         if (purgeStandby)
         {
-            var (_, msg) = MemoryInfo.PurgeStandbyList();
-            report.Add("Memory: " + msg);
+            var (ok, msg) = MemoryInfo.PurgeStandbyList();
+            report.Add((ok ? "Memory: " : "Could not clear standby memory: ") + msg);
         }
         Active = true;
         foreach (var l in report) Log.Info("Game Booster: " + l);
@@ -117,9 +128,20 @@ public sealed class GameBooster
     public string End()
     {
         Active = false;
-        if (_previousScheme is null) return "Boost ended.";
-        ProcessRunner.Run(Path.Combine(ProcessRunner.System32, "powercfg.exe"), "/setactive " + _previousScheme);
-        Log.Info("Game Booster ended; power plan restored.");
-        return "Boost ended. Your previous power plan is restored. Closed apps can be reopened normally.";
+        var raised = _raised.Count;
+        // Put the game's priority back too; it stayed High after the boost ended before.
+        foreach (var (pid, prio) in _raised)
+        {
+            try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; } catch { /* the game has closed: nothing to restore */ }
+        }
+        _raised.Clear();
+        if (_previousScheme is null) return "Boost ended. The power plan wasn't changed by this boost.";
+        var r = ProcessRunner.Run(Path.Combine(ProcessRunner.System32, "powercfg.exe"), "/setactive " + _previousScheme);
+        var now = ActiveScheme();
+        bool restored = r.Ok && string.Equals(now, _previousScheme, StringComparison.OrdinalIgnoreCase);
+        Log.Info($"Game Booster ended; power plan {(restored ? "restored" : "NOT restored: " + r.Combined)}");
+        return (restored ? "Boost ended. Your previous power plan is restored (read back from Windows)."
+                         : $"Boost ended, but Windows didn't switch back to your previous power plan ({_previousScheme}). Choose it in Control Panel › Power Options.")
+            + (raised > 0 ? " The game's priority is back to what it was." : "") + " Closed apps can be reopened normally.";
     }
 }

@@ -329,7 +329,7 @@ public partial class TweakListView : UserControl, IPageLifecycle
 
     private async void ApplyRecommended_Click(object sender, RoutedEventArgs e)
     {
-        var rec = _items.Where(i => i.IsRecommended && i.State == TweakState.NotApplied).ToList();
+        var rec = _items.Where(i => i.IsRecommended && i.CanToggle && i.State is TweakState.NotApplied or TweakState.Partial).ToList();
         if (rec.Count == 0) { MainWindow.Current?.ShowToast("All recommended tweaks in this category are already applied."); return; }
         var names = string.Join("\n", rec.Select(r => "• " + r.Name));
         if (!Dialog.Confirm($"Apply {rec.Count} recommended tweaks?", names + "\n\nEach one is backed up and can be undone individually.", "Apply")) return;
@@ -351,6 +351,7 @@ public partial class TweakListView : UserControl, IPageLifecycle
         {
             var progress = new Progress<string>(s => CountText.Text = s);
             var (ok, failed, reboot) = await TweakService.BatchAsync(items, apply, progress);
+            if (ok + failed == 0) { CountText.Text = "Nothing to change."; return; }
             var msg = $"{ok} {(apply ? "applied" : "reverted")}" + (failed > 0 ? $", {failed} failed (see the message on each card)" : "") + (reboot ? ". Restart Windows to finish." : ".");
             MainWindow.Current?.ShowToast(msg);
         }

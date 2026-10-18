@@ -6,6 +6,7 @@ using MoneyTweaks.Controls;
 using MoneyTweaks.Core.Catalog;
 using MoneyTweaks.Core.Engine;
 using MoneyTweaks.Core.Features;
+using MoneyTweaks.Core.Model;
 using MoneyTweaks.Core.Sys;
 using MoneyTweaks.ViewModels;
 
@@ -34,9 +35,17 @@ public sealed class StartupView : UserControl, IPageLifecycle
             var sw = new ToggleButton { Style = Ui.Res<Style>("Switch"), IsChecked = e.Enabled, VerticalAlignment = VerticalAlignment.Center };
             sw.Click += (_, _) =>
             {
-                try { StartupManager.SetEnabled(e, sw.IsChecked == true); }
-                catch (UnauthorizedAccessException ex) { sw.IsChecked = e.Enabled; Dialog.Show("Administrator rights needed", ex.Message, DialogKind.Warning); }
-                catch (Exception ex) { sw.IsChecked = e.Enabled; Log.Error("Startup toggle", ex); Dialog.Show("Couldn't change startup app", ex.Message, DialogKind.Error); }
+                try
+                {
+                    bool want = sw.IsChecked == true;
+                    StartupManager.SetEnabled(e, want);
+                    // Read it back instead of trusting the write.
+                    var now = StartupManager.ReadEnabled(e);
+                    sw.IsChecked = now;
+                    if (now != want) Dialog.Show("Startup app not changed", $"Windows still reports '{e.Name}' as {(now ? "enabled" : "disabled")}.", DialogKind.Warning);
+                }
+                catch (UnauthorizedAccessException ex) { try { sw.IsChecked = StartupManager.ReadEnabled(e); } catch { sw.IsChecked = e.Enabled; }Dialog.Show("Administrator rights needed", ex.Message, DialogKind.Warning); }
+                catch (Exception ex) { try { sw.IsChecked = StartupManager.ReadEnabled(e); } catch { sw.IsChecked = e.Enabled; }Log.Error("Startup toggle", ex); Dialog.Show("Couldn't change startup app", ex.Message, DialogKind.Error); }
             };
             DockPanel.SetDock(sw, Dock.Right);
             row.Children.Add(sw);
@@ -122,15 +131,33 @@ public sealed class RestoreView : UserControl, IPageLifecycle
 
     private async void UndoAll(object s, RoutedEventArgs e)
     {
-        var items = BackupStore.AllIds().Select(TweakCatalog.Find).Where(t => t is not null).Select(t => new TweakItem(t!)).ToList();
-        if (items.Count == 0) { MainWindow.Current?.ShowToast("Nothing to undo."); return; }
+        var ids = BackupStore.AllIds().ToList();
+        var orphans = ids.Where(id => TweakCatalog.Find(id) is null).ToList();
+        var items = ids.Select(TweakCatalog.Find).Where(t => t is not null).Select(t => new TweakItem(t!)).ToList();
+        if (items.Count == 0 && orphans.Count == 0) { MainWindow.Current?.ShowToast("Nothing to undo."); return; }
         if (!Dialog.Confirm($"Undo all {items.Count} tweaks?", "Every tweak goes back to the value that was backed up before Money Tweaks changed it. Removed Store apps are re-registered where Windows still has their files.", "Undo everything", DialogKind.Warning)) return;
         IsEnabled = false;
         try
         {
             await TweakService.RefreshStatesAsync(items);
-            var (ok, failed, reboot) = await TweakService.BatchAsync(items, false);
-            Dialog.Show("Undo complete", $"{ok} reverted{(failed > 0 ? $", {failed} could not be reverted automatically (see Activity Log)" : "")}.{(reboot ? "\n\nRestart Windows to finish." : "")}");
+            var guides = items.Where(i => i.IsGuide).ToList();
+            var targets = items.Where(i => !i.IsGuide && i.CanToggle && i.State is TweakState.Applied or TweakState.Partial).ToList();
+            var notOn = items.Except(guides).Except(targets).ToList();
+            var (ok, failed, reboot) = await TweakService.BatchAsync(targets, false);
+            if (targets.Count > 0 && ok == 0 && failed == targets.Count && !Admin.IsElevated && targets.Any(t => t.Tweak.RequiresAdmin))
+            {
+                Dialog.Show("Nothing was undone", "Undoing these tweaks needs administrator rights and the restart as administrator was declined. Nothing was changed.", DialogKind.Warning);
+                return;
+            }
+            // Say what wasn't touched and why, instead of silently leaving those backups in the list.
+            var notes = new List<string>();
+            if (notOn.Count > 0) notes.Add($"{notOn.Count} already read as not applied (Windows or another tool changed them back), so they were left alone: {string.Join(", ", notOn.Take(5).Select(i => i.Name))}{(notOn.Count > 5 ? "…" : "")}. Undo them one by one if you want their backed-up values written back.");
+            if (guides.Count > 0) notes.Add($"{guides.Count} BIOS guide(s) stay marked as done; firmware settings can only be changed in the BIOS.");
+            if (orphans.Count > 0) notes.Add($"{orphans.Count} backup(s) belong to tweaks this version no longer has ({string.Join(", ", orphans.Take(5))}); they're kept in the backup folder untouched.");
+            Dialog.Show(failed > 0 ? "Undo finished with problems" : "Undo complete",
+                $"{ok} reverted{(failed > 0 ? $", {failed} could not be reverted automatically (see each tweak's message and the Activity Log)" : "")}." +
+                (notes.Count > 0 ? "\n\n" + string.Join("\n\n", notes) : "") + (reboot ? "\n\nRestart Windows to finish." : ""),
+                failed > 0 ? DialogKind.Warning : DialogKind.Info);
         }
         finally { IsEnabled = true; Reload(); }
     }
@@ -301,7 +328,8 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
 
     private static void Open(string url)
     {
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { }
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch (Exception ex) { Dialog.Show("Couldn't open your browser", $"{ex.Message}\n\nThe address is: {url}", DialogKind.Error); }
     }
 
     public void OnShown() { }

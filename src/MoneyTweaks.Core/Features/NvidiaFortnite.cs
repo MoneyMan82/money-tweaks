@@ -283,6 +283,14 @@ public static class NvidiaFortnite
             var bad = Verify(b.Settings.ToDictionary(kv => kv.Key, kv => kv.Value.InProfile ? kv.Value.Value : (uint?)null), exe);
             if (bad.Count > 0) { log.AddRange(bad); return (false, "Restored, but the driver reports different values: " + string.Join("; ", bad), log); }
         }
+        else
+        {
+            // "Verified" has to mean something here too: the profile Money Tweaks created must really be gone.
+            using var s2 = new NvApi.Session();
+            var left = s2.FindProfileForApp(exe);
+            if (left != IntPtr.Zero && s2.ProfileName(left) == OwnProfileName)
+                return (false, $"The '{OwnProfileName}' profile Money Tweaks created is still in the driver; the backup was kept so you can try again.", log);
+        }
         state.Backup = null;
         state.Values = Preset("Default");
         state.Preset = "Default";

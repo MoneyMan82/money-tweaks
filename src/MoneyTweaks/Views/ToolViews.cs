@@ -606,7 +606,8 @@ public sealed class BoosterView : UserControl, IPageLifecycle
         var lines = await Task.Run(() => _booster.Start(close, App.Settings.BoosterGameProcess, App.Settings.BoosterPurgeStandby));
         _report.Text = string.Join("\n", lines);
         _end.IsEnabled = true;
-        MainWindow.Current?.ShowToast("Boost active. Good luck!");
+        bool problems = lines.Any(GameBooster.IsProblem);
+        MainWindow.Current?.ShowToast(problems ? "Boost started, but some steps didn't work. See the report." : "Boost active. Good luck!", problems ? "Gold" : "Success");
         LoadProcs();
     }
 

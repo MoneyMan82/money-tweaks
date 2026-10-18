@@ -218,7 +218,12 @@ public static class TweakService
     {
         var targets = items.Where(i => i.CanToggle && !i.IsGuide && (apply ? i.State != TweakState.Applied : i.State is TweakState.Applied or TweakState.Partial)).ToList();
         if (targets.Count == 0) return (0, 0, false);
-        if (!EnsureAdmin(targets.Select(t => t.Tweak))) return (0, 0, false);
+        if (!EnsureAdmin(targets.Select(t => t.Tweak)))
+        {
+            // Not "0 failed": callers treat that as success (Presets dropped the run from its undo history).
+            foreach (var it in targets) it.Message = "⚠ Needs administrator rights; nothing was changed.";
+            return (0, targets.Count, false);
+        }
         if (apply) await MaybeRestorePointAsync();
         int ok = 0, failed = 0; bool reboot = false;
         foreach (var it in targets)

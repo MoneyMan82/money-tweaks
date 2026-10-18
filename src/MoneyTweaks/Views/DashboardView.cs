@@ -278,7 +278,8 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
         try
         {
             await TweakService.RefreshStatesAsync(items);
-            var todo = items.Where(i => i.State == TweakState.NotApplied).ToList();
+            // Same set the button counts: everything recommended that isn't fully on, partly applied ones included.
+            var todo = items.Where(i => i.State is TweakState.NotApplied or TweakState.Partial && i.CanToggle).ToList();
             if (todo.Count == 0) { MainWindow.Current?.ShowToast("Every recommended tweak is already applied.", "Success"); return; }
             var list = string.Join("\n", todo.GroupBy(t => CategoryInfo.DisplayName(t.Tweak.Category)).Select(g => $"{g.Key}: {g.Count()}"));
             if (!Dialog.Confirm($"Apply {todo.Count} recommended tweaks?",

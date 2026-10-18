@@ -112,11 +112,16 @@ public static class DisplayService
         Log.Info($"Fortnite auto-resolution watcher started ({State.AutoFortnite.Width}×{State.AutoFortnite.Height})");
     }
 
-    public static void StopAutoSwitch()
+    /// <summary>Stops watching Fortnite and puts a switched display back. False only if that revert failed.</summary>
+    public static bool StopAutoSwitch()
     {
         _auto?.Cancel();
         _auto = null;
-        if (_autoDevice is { } dev) { DisplayManager.RevertToSaved(dev); _autoDevice = null; ClearPending(); AutoChanged?.Invoke(); }
+        if (_autoDevice is not { } dev) return true; // nothing was switched
+        var r = DisplayManager.RevertToSaved(dev);
+        if (r != ChangeResult.Ok) return false; // keep the crash-recovery record so it's offered again
+        _autoDevice = null; ClearPending(); AutoChanged?.Invoke();
+        return true;
     }
 
     private static void Toast(System.Windows.Threading.Dispatcher ui, string text, string tone) =>
