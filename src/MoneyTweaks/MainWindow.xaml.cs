@@ -449,6 +449,7 @@ public partial class MainWindow : Window
         "tuning" => new TuningView(),
         "genome" => new GenomeView(),
         "map" => new TweakMapView(),
+        "cleaner" => new CleanerView(),
         "potato" => new PotatoView(),
         "stretched" => new StretchedView(),
         "fnstretch" => new FortniteStretchedView(),

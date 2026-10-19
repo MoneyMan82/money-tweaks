@@ -55,7 +55,8 @@ public sealed class GameBooster
     /// <summary>Process names that may be closed: distinct, never protected, never the game being boosted.</summary>
     public static IReadOnlyList<string> CloseTargets(IEnumerable<string> closeNames, string? gameProcessName) =>
         closeNames.Select(n => Path.GetFileNameWithoutExtension(n.Trim()))
-            .Where(n => n.Length > 0 && !Protected.Contains(n) && !string.Equals(n, gameProcessName, StringComparison.OrdinalIgnoreCase))
+            .Where(n => n.Length > 0 && !Protected.Contains(n) && !string.Equals(n, gameProcessName, StringComparison.OrdinalIgnoreCase)
+                        && !Cleaner.ProcessCleaner.IsProtected(n)) // security, anti-cheat, audio, controllers, VPN, streaming, installers
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
     private static string? ActiveScheme()

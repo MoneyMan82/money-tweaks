@@ -45,6 +45,7 @@ public static class AppNavigation
 
         new("scanner", "\uE721", "Smart Scanner", "optimize", "Reads this PC and lists evidence-based fixes with backup and undo.", "scan fix recommend analyze"),
         new("tweaks", "\uE8FD", "All Tweaks", "optimize", "Every tweak in one library: search, filters, sorting, categories, status, risk, dependencies and undo.", "tweak library list all registry"),
+        new("cleaner", "\uEA99", "PC Cleaner", "optimize", "Close background apps you don't need while playing (Quick, Custom, Clean & Play) and remove verifiably disposable files, with review, quarantine and measured results.", "clean cleaner junk temp storage disk space cache recycle bin background apps processes close ram cpu quarantine dump"),
         new("map", "\uE81E", "Tweak Map", "optimize", "The whole tweak library by purpose, how settings connect, and every conflict, duplicate or overlap, with links to each setting.", "map overview purpose conflicts overlaps duplicates related relationships library"),
         new("presets", "\uE8F1", "Presets", "optimize", "Apply curated or your own sets of tweaks in one go.", "bundle recommended preset"),
         Cat(TweakCategory.General, "optimize", "Windows Settings", "general windows settings game mode power"),

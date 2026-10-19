@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.38 – 2026-10-19
+- **PC Cleaner** (Optimization › PC Cleaner): Performance Cleanup and Storage Cleanup on one page, with live CPU/RAM,
+  reclaimable space, quarantine and cleanup history.
+  - **Performance Cleanup:** this user's running apps measured right now (CPU over 1.5 s, RAM), each classified Safe to
+    Close (a curated list of background sync, updaters and optional extras), Review First (browsers, voice chat,
+    launchers, music, peripheral software, unknown apps) or Protected (Windows, security software, anti-cheat, driver
+    helpers, embedded browser engines, audio, controllers, networking/VPN, streaming/recording, installers, Money Tweaks,
+    the game, and anything whose file can't be checked). Quick Clean, Custom Clean and Clean & Play (per-game cleanup
+    saved per library game; optional cleaning whenever the game is launched from Money Tweaks). Apps are asked to close
+    first (WM_CLOSE to their windows); force-close only if allowed and the app ignored it; one process at a time, never
+    its children, only this session. Re-checked right before closing. CPU/RAM before and after are measured and the
+    result says what each app did; no FPS claims. Exclusions per app.
+  - **Storage Cleanup:** Scan → Review files → Clean selected. Categories with size, file count, locations, why it's
+    safe and what was left out: old user/Windows temp files, large leftover temp files, crash dumps and error reports
+    older than 14 days, rotated servicing logs, thumbnail cache, Delivery Optimization cache (Microsoft's own cmdlet),
+    Windows Update component cleanup (DISM /StartComponentCleanup, with Analyze), Recycle Bin (shell API, separate
+    confirmation) and optional GPU shader caches (off by default; rebuild stutter explained). Prefetch, browser data,
+    personal folders, Installer/WinSxS, restore points and Windows.old are deliberately not offered.
+  - **Safety:** approved roots only; links and junctions are never followed or deleted; a hard deny list applies to
+    every file; hidden is never a reason to delete and system files are skipped; every file is re-checked at clean time
+    (exists, unchanged, not read-only, not in use, inside its root, not excluded); files are quarantined for 7 days on
+    the same drive (restorable) unless you turn it off; deletions are verified; cancellation is safe and reported.
+- Game Booster now uses the same protection, so it can't close security software, anti-cheat, audio, controller,
+  VPN, streaming or installer processes even if they're on its list.
+- 10 new tests: real files, junctions, locked/changed/read-only files, quarantine restore/purge, cancellation, the
+  deny list, classification and a real windowless process closed politely/forcibly (315 total).
+
 ## 1.37 – 2026-10-18
 - **Intelligent Feature Discovery**, built on the existing search, tweak pages, compatibility engine and catalog review
   (no second search, no Recent tab, no new favourites):

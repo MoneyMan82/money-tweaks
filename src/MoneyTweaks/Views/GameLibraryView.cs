@@ -231,9 +231,25 @@ public sealed class GameLibraryView : UserControl, IPageLifecycle
         ProfileService.StartWatcher();
     }
 
-    private static void Launch(LibraryGame g, GameInstall? i)
+    /// <summary>
+    /// Starts a game the way its launcher expects. If the user set up a cleanup rule for this game with "clean when I
+    /// launch it", the approved apps are closed first (PC Cleaner › Clean &amp; Play), with a measured report.
+    /// </summary>
+    internal static async void Launch(LibraryGame g, GameInstall? i)
     {
         if (i is null) return;
+        var cleaner = Core.Cleaner.CleanerSettings.Load();
+        if (cleaner.RuleFor(g.Key) is { CleanOnLaunch: true, Close.Count: > 0 } rule)
+        {
+            try
+            {
+                MainWindow.Current?.ShowToast($"Closing {rule.Close.Count} approved app(s) before {g.Def.Name}…", "Accent");
+                var report = await Core.Cleaner.ProcessCleaner.CleanAsync(rule.Close, rule.ForceIfIgnored, "Clean & Play", g.Def.ExeNames.FirstOrDefault(), cleaner.ProcessExclusions);
+                cleaner.AddHistory(Core.Cleaner.ProcessCleaner.Summarize(report) + $" (before {g.Def.Name})");
+                cleaner.Save();
+            }
+            catch (Exception ex) { Log.Warn("clean before launch: " + ex.Message); }
+        }
         try
         {
             if (i.LaunchUri is not null) Process.Start(new ProcessStartInfo(i.LaunchUri) { UseShellExecute = true });
