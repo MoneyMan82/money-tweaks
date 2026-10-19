@@ -71,6 +71,7 @@ public static class AppNavigation
 
         new("monitor", "\uE9D9", "Hardware Monitor", "monitor", "Live CPU, GPU, memory, network, disk and temperature readings.", "cpu gpu ram temperature usage"),
         new("monitor#health", "\uE95E", "Driver & Windows Health", "monitor", "Driver, Windows Update and stability checks, SFC/DISM and safe repairs.", "drivers health windows update sfc dism crash bsod"),
+        new("advisor", "\uE9D9", "Upgrade Advisor", "monitor", "Finds what holds your game back (CPU, GPU, memory, storage, heat, frame cap) from real measurements, then ranks the three smartest fixes and upgrades by benefit per euro.", "bottleneck upgrade advisor fps goal target cpu gpu ram ssd budget price buy recommend diagnose limit"),
         new("benchmark", "\uE916", "Test & Benchmark", "monitor", "Measure with and without tweaks, synthetic stress scene, history and comparisons.", "benchmark fps test compare graph history"),
 
         new("startup", "\uE7E8", "Startup Apps", "tools", "Turn apps that launch at sign-in on or off.", "autostart sign in boot"),

@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.39 – 2026-10-19
+- **Upgrade Advisor** (Monitoring & Benchmarks › Upgrade Advisor): "What are the three smartest ways to get closer to
+  my FPS goal on my PC without wasting money?"
+  - **Setup:** game (from your library), resolution, graphics settings, current FPS, target FPS and an optional budget.
+    This PC from Windows: CPU and socket/platform, GPU and VRAM, RAM type/size/sticks/slots/channel mode and XMP/EXPO
+    status, storage (SSD/HDD, NVMe/SATA, which disk the game is on), motherboard and BIOS. What Windows can't know
+    (power supply, case clearance, cooler) is listed, never guessed.
+  - **Measurement while playing** (frame timing from Present events, administrator) or with the built-in 3D benchmark:
+    GPU load, clocks, temperature, power vs. limit and throttle reasons, VRAM; per-core CPU load, CPU clock vs. base,
+    temperature; available and committed memory, hard page faults; disk response and queue; game vs. background CPU;
+    FPS, 1% lows, 99th percentile frame time, stutter and frame caps. Lightweight (nvidia-smi every 2 s).
+  - **Diagnosis** needs several agreeing signals: frame cap, GPU (with power/thermal limits), CPU (main thread or all
+    cores), CPU below base clock, CPU heat, memory pressure, full VRAM, storage-related stutter, background apps, or
+    "no clear hardware limit". Mixed results are called mixed. Evidence is shown in words for each.
+  - **The three smartest moves**, ranked by expected benefit × confidence per euro: free fixes (remove a frame cap,
+    lighter settings/upscaling, raise the GPU power limit, XMP/EXPO, close background apps, CPU clocks, free RAM,
+    lower textures, move the game to an SSD), low-cost (cooling, a second RAM stick for dual channel) and hardware
+    (GPU/CPU/RAM/SSD with socket, BIOS, RAM type, PSU and clearance requirements). Hardware is left out when a free fix
+    is projected to reach the goal; over-budget options are listed separately; fewer than three only with a reason;
+    nothing when you already reach the target. Each card links to the matching Money Tweaks feature.
+  - **Prices are never fetched or invented:** cards open searches at reputable stores for your country (e.g.
+    Verkkokauppa.com, Jimm's, Proshop, Hintaopas in Finland) and you enter the price you find, kept with source and date.
+  - **Goal simulator and upgrade planner:** measured vs. projected (striped ranges from measured headroom, e.g. "the
+    most a GPU upgrade can give before the CPU limits"), performance per €100 once prices are entered.
+- **PC Cleaner: clear standby memory**, measured from Windows (standby cache and free memory before/after), with an
+  option to do it after every cleanup. The page explains that standby memory already counts as available and that
+  clearing it doesn't raise FPS by itself.
+- 11 new tests: scenario captures (GPU-, CPU-, cap-, memory-, storage-limited, uncertain), ranking/budget/price rules,
+  socket inference, and read-only checks of real hardware, telemetry counters and standby memory (326 total).
+
 ## 1.38 – 2026-10-19
 - **PC Cleaner** (Optimization › PC Cleaner): Performance Cleanup and Storage Cleanup on one page, with live CPU/RAM,
   reclaimable space, quarantine and cleanup history.

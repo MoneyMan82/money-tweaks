@@ -42,6 +42,8 @@ public sealed class CleanerSettings
     public List<string> StorageExclusions { get; set; } = [];
     public bool Quarantine { get; set; } = true;
     public bool ForceIfIgnored { get; set; } = true;
+    /// <summary>Also clear the standby (cached) memory list after closing apps (administrator).</summary>
+    public bool ClearStandby { get; set; }
     public List<string> History { get; set; } = [];
 
     public static string PathFor => System.IO.Path.Combine(AppPaths.Root, "cleaner.json");

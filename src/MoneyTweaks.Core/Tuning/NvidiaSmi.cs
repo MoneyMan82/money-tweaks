@@ -93,6 +93,15 @@ public static class NvidiaSmi
         return new(Num(c[0]), Num(c[1]), Num(c[2]), (int?)Num(c[3]), (int?)Num(c[4]), (int?)Num(c[5]), reasons);
     }
 
+    /// <summary>Video memory in use and total, in MB.</summary>
+    public static (double usedMb, double totalMb)? ReadMemory(int index)
+    {
+        var r = Run($"-i {index} --query-gpu=memory.used,memory.total --format=csv,noheader,nounits", 5000);
+        if (!r.Ok) return null;
+        var c = r.StdOut.Trim().Split(',').Select(x => x.Trim()).ToArray();
+        return c.Length >= 2 && Num(c[0]) is { } u && Num(c[1]) is { } t ? (u, t) : null;
+    }
+
     private static double? Num(string s) => double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
 
     // ---- write (admin) ---------------------------------------------------------------------------------------------

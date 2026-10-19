@@ -42,7 +42,7 @@ public sealed partial class CleanerView
         _storage.Children.Add(_review);
         _storage.Children.Add(_storageResult);
         _storage.Children.Add(_quarantinePanel);
-        var notOffered = new Expander { Header = Ui.Text("Not offered, on purpose", 12.5, FontWeights.SemiBold), Margin = new Thickness(0, 12, 0, 0) };
+        var notOffered = new Expander { Header = Ui.Text("Not offered, on purpose", 12.5, FontWeights.SemiBold), Margin = new Thickness(0, 12, 0, 0), Foreground = Ui.Brush("Text") };
         var no = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
         foreach (var (what, why) in StorageCleaner.NotOffered) no.Children.Add(Ui.Muted($"• {what}: {why}", 11.5));
         notOffered.Content = no;

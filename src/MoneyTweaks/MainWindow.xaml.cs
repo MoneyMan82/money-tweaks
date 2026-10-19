@@ -450,6 +450,7 @@ public partial class MainWindow : Window
         "genome" => new GenomeView(),
         "map" => new TweakMapView(),
         "cleaner" => new CleanerView(),
+        "advisor" => new AdvisorView(),
         "potato" => new PotatoView(),
         "stretched" => new StretchedView(),
         "fnstretch" => new FortniteStretchedView(),

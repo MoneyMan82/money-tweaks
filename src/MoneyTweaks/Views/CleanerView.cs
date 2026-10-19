@@ -139,6 +139,7 @@ public sealed partial class CleanerView : UserControl, IPageLifecycle
         else buttons.Add(Ui.Btn(_mode == "quick" ? "Quick Clean" : "Clean selected", async (_, _) => await CleanAsync(launchAfter: false), "PrimaryButton", new Thickness(0, 10, 8, 0)));
         _perf.Children.Add(Ui.Row(buttons.ToArray()));
         _perf.Children.Add(_perfStatus);
+        _perf.Children.Add(StandbyPanel());
         _perf.Children.Add(_appList);
         _perf.Children.Add(_perfResult);
         RenderExclusions(_perf, "Never close (your exclusions)", _s.ProcessExclusions, "process name, e.g. Spotify", async () => await ScanAppsAsync());
@@ -283,6 +284,13 @@ public sealed partial class CleanerView : UserControl, IPageLifecycle
                 _s.Save();
                 ShowPerfReport(report);
             }
+            if (_s.ClearStandby && Admin.IsElevated)
+            {
+                var sb = await Task.Run(StandbyMemory.Clear);
+                _s.AddHistory(StandbyMemory.Describe(sb)); _s.Save();
+                _perfResult.Children.Add(Ui.Muted(StandbyMemory.Describe(sb), 12));
+                RefreshStandby();
+            }
             if (launchAfter && _game is not null) GameLibraryView.Launch(_game, _gameInstall);
         }
         catch (OperationCanceledException) { _perfStatus.Text = "Stopped."; }
@@ -322,6 +330,50 @@ public sealed partial class CleanerView : UserControl, IPageLifecycle
         sp.Children.Add(Ui.Muted("No FPS change is claimed. If you want to know whether it helped your games, compare in Test & Benchmark.", 11.5));
         _perfResult.Children.Add(new Border { Style = Ui.Res<Style>("CardBorder"), Margin = new Thickness(0, 10, 0, 0), Child = sp });
         _perfStatus.Text = ProcessCleaner.Summarize(r);
+    }
+
+    // ---- standby memory ----------------------------------------------------------------------------------------------------
+
+    private readonly TextBlock _standbyText = Ui.Muted("", 12);
+
+    /// <summary>Standby (cached) memory, measured from Windows, with a Clear button and an "every cleanup" option.</summary>
+    private UIElement StandbyPanel()
+    {
+        var sp = new StackPanel();
+        var head = new WrapPanel();
+        head.Children.Add(Ui.Text("Standby memory (cached RAM)", 13, FontWeights.SemiBold));
+        if (!Admin.IsElevated) { head.Children.Add(new Border { Width = 8 }); head.Children.Add(Ui.Tag("NEEDS ADMIN", "Gold")); }
+        sp.Children.Add(head);
+        sp.Children.Add(_standbyText);
+        sp.Children.Add(Ui.Muted("Standby memory is Windows' cache of recently used files. It already counts as available: any game that needs RAM gets it instantly. " +
+            "Clearing it turns cache into free memory, which can help if a game hitches while Windows repurposes cache; the cost is that recently used files load from disk again. It won't raise FPS on its own.", 11.5));
+        var clear = Ui.Btn("Clear standby memory", async (s, _) =>
+        {
+            if (!Admin.IsElevated)
+            {
+                if (Dialog.Confirm("Administrator rights needed", "Windows only lets administrators clear the standby list. Restart Money Tweaks as administrator? Nothing has been changed.", "Restart as admin", DialogKind.Warning) && Admin.RestartElevated())
+                    Application.Current.Shutdown();
+                return;
+            }
+            ((Button)s).IsEnabled = false;
+            var r = await Task.Run(StandbyMemory.Clear);
+            ((Button)s).IsEnabled = true;
+            _s.AddHistory(StandbyMemory.Describe(r)); _s.Save();
+            _standbyText.Text = StandbyMemory.Describe(r);
+            RenderHistory();
+        }, "BaseButton", new Thickness(0, 8, 12, 0));
+        var every = new CheckBox { Content = "Also clear it after every cleanup", IsChecked = _s.ClearStandby, IsEnabled = Admin.IsElevated, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
+        every.Click += (_, _) => { _s.ClearStandby = every.IsChecked == true; _s.Save(); };
+        sp.Children.Add(Ui.Row(clear, every));
+        RefreshStandby();
+        return new Border { Style = Ui.Res<Style>("CardBorder"), Margin = new Thickness(0, 10, 0, 4), Child = sp };
+    }
+
+    private async void RefreshStandby()
+    {
+        var s = await Task.Run(StandbyMemory.Snapshot);
+        _standbyText.Text = s is null ? "Windows didn't report the memory lists on this PC."
+            : $"Now: {StorageCleaner.Size(s.StandbyBytes)} standby (cache) · {StorageCleaner.Size(s.FreeBytes)} free · {StorageCleaner.Size(s.AvailableBytes)} available of {StorageCleaner.Size(s.TotalBytes)} (read from Windows).";
     }
 
     // ---- shared: exclusions editor, history ---------------------------------------------------------------------------------
