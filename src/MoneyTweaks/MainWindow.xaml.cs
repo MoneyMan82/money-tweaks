@@ -459,6 +459,7 @@ public partial class MainWindow : Window
         "input" => new InputDelayView(),
         "ping" => new PingView(),
         "crosshair" => new CrosshairView(),
+        "community" => new CommunityHubView(),
         "startup" => new StartupView(),
         "monitor" => new MonitorView(),
         "overlay" => new OverlayView(),

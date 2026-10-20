@@ -2,8 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/MoneyTweaks.Core/MoneyTweaks.Core.csproj" />
     <Project Path="src/MoneyTweaks/MoneyTweaks.csproj" />
+    <Project Path="src/MoneyTweaks.Community.Shared/MoneyTweaks.Community.Shared.csproj" />
+    <Project Path="src/MoneyTweaks.Community.Server/MoneyTweaks.Community.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MoneyTweaks.Tests/MoneyTweaks.Tests.csproj" />
+    <Project Path="tests/MoneyTweaks.Community.Tests/MoneyTweaks.Community.Tests.csproj" />
   </Folder>
 </Solution>

@@ -222,6 +222,7 @@ public static class CrosshairTemplates
         return p;
     }
 
+#if !MT_COMMUNITY_SERVER
     /// <summary>The single crosshair saved by Money Tweaks 1.40 and earlier, as a profile that looks the same.</summary>
     public static CrosshairProfile FromLegacy(Features.CrosshairSettings s)
     {
@@ -248,4 +249,5 @@ public static class CrosshairTemplates
         }
         return p;
     }
+#endif
 }

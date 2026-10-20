@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased – Community Hub (built, not deployed)
+- **Community Hub** page (Gaming tools): discover, search, like, bookmark, rate and report shared game settings,
+  crosshairs, gaming profiles and presets; preview everything and import it into your library (never applied by itself);
+  publish and edit your own posts with screenshots; moderation tools for moderators. Off until a server address is set.
+- **Community Hub server** (`src/MoneyTweaks.Community.Server`): GitHub sign-in, SQLite, S3/R2 or disk image storage,
+  2 image uploads per account per UTC day enforced by the database, safe re-encoding of PNG/JPEG/WebP, server-drawn
+  crosshair previews, reports and review queues. See `COMMUNITY_RELEASE_CHECKLIST.md`.
+- Custom Crosshair: "crosshair x" removed from the page's search keywords (another product's name).
+- 33 new tests (27 server, 6 import).
+
 ## 1.41 – 2026-10-20
 - **Custom Crosshair rebuilt as a full editor** (Gaming tools › Custom Crosshair). Your saved crosshair becomes the
   first profile automatically and looks the same.

@@ -66,7 +66,8 @@ public static class AppNavigation
         new("potato", "\uE790", "Potato Graphics", "gaming", "Low-poly Fortnite and other games' settings, NVIDIA texture presets.", "fortnite low graphics fps nvidia lod bias"),
         new("stretched", "\uE7F4", "Stretched Resolution", "gaming", "Custom resolutions with driver checks and countdown rollback.", "resolution display 4:3"),
         new("fnstretch", "\uE740", "Fortnite Stretched", "gaming", "Fortnite's resolution file, 2288×1440 preset, auto-switch while Fortnite runs.", "fortnite stretched 2288 ini"),
-        new("crosshair", "\uE710", "Custom Crosshair", "gaming", "Layered crosshair editor with profiles, firing animation and a click-through overlay.", "aim reticle crosshair x layers profiles share code bloom png image per-game"),
+        new("crosshair", "\uE710", "Custom Crosshair", "gaming", "Layered crosshair editor with profiles, firing animation and a click-through overlay.", "aim reticle crosshair layers profiles share code bloom png image per-game"),
+        new("community", "\uE716", "Community Hub", "gaming", "Discover, rate and import settings, gaming profiles, presets and crosshairs shared by other players, or publish your own with screenshots.", "community hub share import publish download upload settings sensitivity keybinds crosshair profile preset rating likes bookmarks screenshots"),
         new("overlay", "\uE9D2", "Performance Overlay", "gaming", "FPS, frame time, CPU/GPU, RAM and temperatures over your game.", "fps frametime overlay presentmon"),
 
         new("monitor", "\uE9D9", "Hardware Monitor", "monitor", "Live CPU, GPU, memory, network, disk and temperature readings.", "cpu gpu ram temperature usage"),

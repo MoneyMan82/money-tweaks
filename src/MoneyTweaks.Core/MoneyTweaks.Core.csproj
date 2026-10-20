@@ -10,6 +10,9 @@
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MoneyTweaks.Community.Shared\MoneyTweaks.Community.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="MoneyTweaks.Tests" />
   </ItemGroup>
 </Project>

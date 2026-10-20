@@ -7,3 +7,7 @@ dist/
 TestResults/
 *.secret
 .claude/
+
+# Community Hub server local data
+src/MoneyTweaks.Community.Server/data/
+src/MoneyTweaks.Community.Server/data-dev/

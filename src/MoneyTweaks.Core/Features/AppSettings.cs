@@ -56,6 +56,10 @@ public sealed class AppSettings
     public List<string> FavouritePages { get; set; } = [];
     /// <summary>Most recently opened pages, newest first.</summary>
     public List<string> RecentPages { get; set; } = [];
+    /// <summary>Community Hub server address (https). Empty until the official server is online; can point at a self-hosted one.</summary>
+    public string CommunityServer { get; set; } = "";
+    /// <summary>Community guidelines version the user accepted before publishing (0 = not yet).</summary>
+    public int CommunityGuidelinesAccepted { get; set; }
     /// <summary>Dashboard cards the user hid.</summary>
     public List<string> DashboardHidden { get; set; } = [];
 
