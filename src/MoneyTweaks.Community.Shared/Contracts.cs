@@ -230,6 +230,8 @@ public sealed class ServerConfig
     public string[] ReportReasons { get; set; } = Taxonomy.ReportReasons;
     public string Guidelines { get; set; } = CommunityGuidelines.Text;
     public bool DevSignIn { get; set; }
+    /// <summary>Server parts that aren't set up yet (e.g. "GITHUB_CLIENT_SECRET secret"). Empty when everything works.</summary>
+    public List<string> NotConfigured { get; set; } = [];
 }
 
 public sealed class UploadResult

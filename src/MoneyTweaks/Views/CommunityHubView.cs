@@ -182,6 +182,9 @@ public sealed partial class CommunityHubView : UserControl, IPageLifecycle
             text.Children.Add(Ui.Muted(QuotaText(me.Quota), 12));
             bar.Children.Add(text);
         }
+        if (CommunityClient.Config.NotConfigured.Count > 0)
+            _account.Children.Add(Note("This Community Hub server isn't fully set up yet, so some things won't work: " + string.Join(", ", CommunityClient.Config.NotConfigured) +
+                ". Browsing works; signing in or uploading may be refused until the owner finishes the setup.", "Gold"));
         _account.Children.Add(Ui.Card(bar, new Thickness(0, 0, 0, 12)));
         if (_device is { } d) _account.Children.Add(Ui.Card(DevicePanel(d), new Thickness(0, 0, 0, 12)));
     }

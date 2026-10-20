@@ -3,11 +3,21 @@
 Status: **built and tested locally, not deployed.** Nothing below has been done on any public service. Each step that
 creates an account, costs money or makes something public needs the owner's go-ahead.
 
+## 0. Chosen hosting: Cloudflare (serverless)
+The Community Hub API runs in the same Cloudflare Worker as the website (`worker/`, `wrangler.jsonc`): D1 for data, R2
+(or KV) for images, Cloudflare Images for re-encoding. **Step-by-step setup: `worker/README.md`.** The .NET server in
+`src/MoneyTweaks.Community.Server` stays available for self-hosting; both speak the same API.
+
+- [ ] D1 created, `database_id` in `wrangler.jsonc`, `npm run migrate:remote` done.
+- [ ] R2 bucket (or KV namespace) created and private.
+- [ ] GitHub OAuth App with Device Flow; `GITHUB_CLIENT_ID` in vars; `GITHUB_CLIENT_SECRET` via `wrangler secret put`.
+- [ ] `ADMIN_GITHUB_IDS` set.
+- [ ] `/healthz` on the deployed Worker shows nothing missing.
+- [ ] Deploying from a branch with the placeholder `database_id` fails: finish the setup before merging into the branch
+      Cloudflare deploys from.
+
 ## 1. Decisions for the owner
-- [ ] Where to host the API (needs a persistent disk for SQLite: e.g. a small VPS, Fly.io/Render with a volume). Cloudflare
-      Workers can't run this .NET server.
-- [ ] Image storage: Cloudflare R2 (free tier: 10 GB, no egress fees) or the server's disk.
-- [ ] Official server address (e.g. `https://community.<domain>`), to ship as the app's default.
+- [ ] Official address: the Worker's workers.dev address (or a custom domain later), to ship as the app's default.
 - [ ] Moderators (GitHub numeric ids) and who reviews the image queue daily.
 - [ ] Image review mode: keep `pre` (recommended at launch) or `post`.
 - [ ] Privacy policy and terms text for the website (what's stored: GitHub id/name/avatar, posts, images, reports; how to

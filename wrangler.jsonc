@@ -1,12 +1,55 @@
-// Cloudflare static site config: serves the docs/ folder. Used by `npx wrangler deploy`
-// (Workers & Pages Git integration) and ignored by classic Pages projects.
+// Cloudflare Worker: serves the website (docs/) and the Community Hub API (/api/v1/*, /media/*).
+// Used by `npx wrangler deploy` (Workers & Pages Git integration) and ignored by classic Pages projects.
+// The website keeps working without any of the Community Hub resources: the API then answers
+// "503 not_configured" and explains what's missing. Setup steps: worker/README.md.
 {
   "name": "money-tweaks",
+  "main": "worker/src/index.ts",
   "compatibility_date": "2025-09-01",
   // Publish on <name>.<account>.workers.dev (otherwise the dashboard shows "No URLs enabled").
   "workers_dev": true,
   "preview_urls": true,
   "assets": {
-    "directory": "./docs"
-  }
+    "directory": "./docs",
+    "binding": "ASSETS",
+    // Only these paths run the Worker; every other request is served straight from docs/ as before.
+    "run_worker_first": ["/api/*", "/media/*", "/healthz"]
+  },
+  // Community Hub data. Create it with `npx wrangler d1 create money-tweaks-community` and paste the database_id it prints.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "money-tweaks-community",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+  // Image files. Create with `npx wrangler r2 bucket create money-tweaks-community-media`.
+  // (No card on file? Remove this block and add the KV block below instead: see worker/README.md.)
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "money-tweaks-community-media" }
+  ],
+  // "kv_namespaces": [ { "binding": "MEDIA_KV", "id": "<id from: npx wrangler kv namespace create MEDIA_KV>" } ],
+  // Cloudflare Images: decodes, re-encodes and resizes uploads (no Worker CPU used). Uploads are refused without it.
+  "images": { "binding": "IMAGES" },
+  // Cleanup of unused uploads, removed posts and expired sessions.
+  "triggers": { "crons": ["17 */1 * * *"] },
+  "vars": {
+    // Public OAuth client id of your GitHub OAuth App (not secret). The secret goes in with:
+    //   npx wrangler secret put GITHUB_CLIENT_SECRET
+    "GITHUB_CLIENT_ID": "",
+    // Numeric GitHub user ids of moderators, comma separated.
+    "ADMIN_GITHUB_IDS": "",
+    "DAILY_UPLOAD_LIMIT": "2",
+    "MAX_UPLOAD_BYTES": "5242880",
+    "MAX_IMAGE_DIMENSION": "4096",
+    "MIN_IMAGE_DIMENSION": "16",
+    "IMAGE_REVIEW": "pre",
+    "MIN_ACCOUNT_AGE_DAYS": "7",
+    "POSTS_PER_DAY": "5",
+    "REPORTS_PER_DAY": "20",
+    "REPORT_HIDE_THRESHOLD": "3",
+    "MAX_TOTAL_STORAGE_BYTES": "9000000000"
+  },
+  "observability": { "enabled": true }
 }

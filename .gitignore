@@ -11,3 +11,11 @@ TestResults/
 # Community Hub server local data
 src/MoneyTweaks.Community.Server/data/
 src/MoneyTweaks.Community.Server/data-dev/
+
+# Cloudflare Worker
+worker/node_modules/
+worker/.wrangler/
+.wrangler/
+.dev.vars
+worker/.dev.vars
+.wrangler-dev.log
