@@ -131,6 +131,7 @@ public partial class App : Application
     {
         MacroService.Shutdown(); // releases any keys a macro is holding
         OverlayService.Shutdown(); // stops the frame-timing ETW session
+        CrosshairService.Shutdown(); // saves profiles, releases the crosshair hotkeys
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile
         DisplayService.Shutdown(); // drops an unconfirmed test resolution
         if (FanCurveService.Running) FanCurveService.Stop(); // the curve only runs while Money Tweaks does: fan back to automatic

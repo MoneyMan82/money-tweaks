@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.41 – 2026-10-20
+- **Custom Crosshair rebuilt as a full editor** (Gaming tools › Custom Crosshair). Your saved crosshair becomes the
+  first profile automatically and looks the same.
+  - **Layers:** lines (each arm on/off, length, thickness, gap, round ends), centre dot (square/round), circle and your
+    own PNG image, each with colour, opacity, outline (colour/thickness), X/Y offset and rotation. Add, duplicate,
+    reorder, hide and delete layers.
+  - **Live editing:** large preview (dark/grey/sky/grass or your own screenshot as background, 1×–8× zoom, pixel grid),
+    exact value boxes with ± nudges next to every slider, undo/redo (Ctrl+Z / Ctrl+Y). Every change redraws the real
+    overlay immediately.
+  - **Pixel-exact drawing:** shapes are drawn in physical screen pixels at any Windows scaling and snapped so thin
+    lines stay sharp and left/right stay mirror images.
+  - **Firing animation:** spread (bloom), fade and colour flash while the left/right mouse button is held, with rise
+    and recovery times; optional hide while aiming. Detected by reading the mouse button state through Windows only
+    while the crosshair is shown (no hooks, nothing injected). It follows the button, not actual shots.
+  - **Profiles:** unlimited, with templates, duplicate, rename, delete, export/import files (.mtcrosshair, images
+    included) and shareable MTX1 codes. Imports are validated and clamped.
+  - **Overlay:** click-through, always on top, never takes focus; monitor choice or follow the game's monitor,
+    position offset, scale, opacity, optional show at start. Three global hotkeys (show/hide, next/previous profile),
+    recorded by pressing them, now working from app start without opening the page; conflicts are refused and the
+    old hotkey kept.
+  - **Per-game profiles:** a listed game in front switches to its profile and can show the crosshair; it hides while
+    the game isn't in front and the previous profile returns when the game closes. Exclusive fullscreen (where no
+    overlay can be drawn) is reported instead of pretending it works.
+- Saved in crosshair.json with atomic writes; a damaged file is kept aside and your previous crosshair restored.
+- 19 new tests (geometry and snapping, bloom, migration of every old style, save/restart, share codes, import
+  limits, PNG checks, undo/redo); the overlay was also checked on a real desktop by reading back screen pixels.
+
 ## 1.40 – 2026-10-20
 - **Performance Genome is much simpler to use.** The page now starts with one card: 1) choose what you want (five
   plain goals), 2) press Start and wait (with the real time estimate), 3) apply the winner. Start, Stop and progress

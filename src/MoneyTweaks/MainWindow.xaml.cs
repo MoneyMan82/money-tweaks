@@ -79,6 +79,7 @@ public partial class MainWindow : Window
             StartStallDetector();
             MacroService.Init(this);
             OverlayService.Init(this); // overlay hotkey + optional game watcher (also in background mode)
+            if (!App.ScreenshotMode) CrosshairService.Init(this); // crosshair hotkeys + per-game switching, without opening the page
             if (!App.BackgroundStart) StartAmbient();
             Activated += (_, _) => _ambient?.Resume(Ambient);
             Deactivated += (_, _) => _ambient?.Pause(Ambient);
