@@ -46,5 +46,24 @@
     // Images live in D1 (free plan: 5 GB total). Uploads pause when stored images reach this size.
     "MAX_TOTAL_STORAGE_BYTES": "3000000000"
   },
+  // Branch previews (Cloudflare runs `wrangler preview` for non-main branches). They get the same settings but NO database:
+  // test versions must never write to the real Community Hub data. A preview's /api/community/health therefore reports
+  // the database as missing; that's expected. Cron triggers don't run in previews.
+  "previews": {
+    "vars": {
+      "GITHUB_CLIENT_ID": "Ov23liOxIcOjmL53Kzxt",
+      "ADMIN_GITHUB_IDS": "195931038",
+      "DAILY_UPLOAD_LIMIT": "2",
+      "MAX_UPLOAD_BYTES": "5242880",
+      "MAX_IMAGE_DIMENSION": "4096",
+      "MIN_IMAGE_DIMENSION": "16",
+      "IMAGE_REVIEW": "pre",
+      "MIN_ACCOUNT_AGE_DAYS": "7",
+      "POSTS_PER_DAY": "5",
+      "REPORTS_PER_DAY": "20",
+      "REPORT_HIDE_THRESHOLD": "3",
+      "MAX_TOTAL_STORAGE_BYTES": "3000000000"
+    }
+  },
   "observability": { "enabled": true }
 }
