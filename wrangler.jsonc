@@ -31,9 +31,9 @@
   "vars": {
     // SET THIS: Client ID of your GitHub OAuth App (public). The client SECRET goes in the dashboard as a Secret
     // named GITHUB_CLIENT_SECRET, never in this file (worker/README.md, step 5).
-    "GITHUB_CLIENT_ID": "",
+    "GITHUB_CLIENT_ID": "Ov23liOxIcOjmL53Kzxt",
     // SET THIS: your numeric GitHub user id (moderator). Several: "123,456".
-    "ADMIN_GITHUB_IDS": "",
+    "ADMIN_GITHUB_IDS": "195931038",
     "DAILY_UPLOAD_LIMIT": "2",
     "MAX_UPLOAD_BYTES": "5242880",
     "MAX_IMAGE_DIMENSION": "4096",
