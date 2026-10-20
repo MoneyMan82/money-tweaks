@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased – Community Hub (built, not deployed)
+## 1.42 – 2026-10-20
 - **Community Hub** page (Gaming tools): discover, search, like, bookmark, rate and report shared game settings,
   crosshairs, gaming profiles and presets; preview everything and import it into your library (never applied by itself);
   publish and edit your own posts with screenshots; moderation tools for moderators. Off until a server address is set.
