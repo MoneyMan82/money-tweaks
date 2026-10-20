@@ -1,0 +1,52 @@
+// Money Tweaks Community Hub API: a separate Cloudflare Worker (not the website).
+// Setup guide: community-api/README.md. Values marked "SET THIS" must be filled in before deploying.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "money-tweaks-community-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  // Gives the Worker an address like https://money-tweaks-community-api.<your-subdomain>.workers.dev
+  "workers_dev": true,
+  "preview_urls": false,
+
+  // Posts and accounts. SET THIS: replace the zeros with the "database_id" from creating the D1 database (README step 3).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "money-tweaks-community",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Image files. The bucket must exist with exactly this name (README step 4).
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "money-tweaks-community-media" }
+  ],
+
+  // Cloudflare Images: decodes, re-encodes and resizes uploads. Nothing to create; free plan: 5,000 transformations/month.
+  "images": { "binding": "IMAGES" },
+
+  // Hourly cleanup: unused uploads, images of removed posts, expired sign-ins.
+  "triggers": { "crons": ["17 * * * *"] },
+
+  "vars": {
+    // SET THIS: the Client ID of your GitHub OAuth App (README step 5). It's public, not a secret.
+    // The Client SECRET is NOT put here: add it in the Cloudflare dashboard as a Secret named GITHUB_CLIENT_SECRET.
+    "GITHUB_CLIENT_ID": "",
+    // SET THIS: your numeric GitHub user id (moderator). Several: "123,456".
+    "ADMIN_GITHUB_IDS": "",
+    "DAILY_UPLOAD_LIMIT": "2",
+    "MAX_UPLOAD_BYTES": "5242880",
+    "MAX_IMAGE_DIMENSION": "4096",
+    "MIN_IMAGE_DIMENSION": "16",
+    "IMAGE_REVIEW": "pre",
+    "MIN_ACCOUNT_AGE_DAYS": "7",
+    "POSTS_PER_DAY": "5",
+    "REPORTS_PER_DAY": "20",
+    "REPORT_HIDE_THRESHOLD": "3",
+    "MAX_TOTAL_STORAGE_BYTES": "9000000000"
+  },
+
+  "observability": { "enabled": true }
+}

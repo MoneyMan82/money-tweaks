@@ -8,11 +8,11 @@
   2 image uploads per account per UTC day enforced by the database, safe re-encoding of PNG/JPEG/WebP, server-drawn
   crosshair previews, reports and review queues. See `COMMUNITY_RELEASE_CHECKLIST.md`.
 - Custom Crosshair: "crosshair x" removed from the page's search keywords (another product's name).
-- **Cloudflare version of the Community Hub API** (`worker/`): runs in the website's own Worker with D1, R2 or KV, and
-  Cloudflare Images; same API, so the app works with either. Website unchanged (only `/api/*`, `/media/*`, `/healthz`
-  reach the Worker code). Setup steps in `worker/README.md`.
+- **Cloudflare version of the Community Hub API** (`community-api/`): a separate Worker with D1, R2 and Cloudflare
+  Images, plus a `/health` connection test; same API, so the app works with either server. The website and its
+  Cloudflare config are unchanged. Beginner setup guide in `community-api/README.md`.
 - The Hub page says which server parts aren't set up yet instead of failing silently.
-- 33 new tests (27 server, 6 import) + 33 Worker tests.
+- 33 new tests (27 server, 6 import) + 34 Worker tests.
 
 ## 1.41 – 2026-10-20
 - **Custom Crosshair rebuilt as a full editor** (Gaming tools › Custom Crosshair). Your saved crosshair becomes the

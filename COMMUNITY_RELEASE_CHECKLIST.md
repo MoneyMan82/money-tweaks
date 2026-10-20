@@ -4,17 +4,17 @@ Status: **built and tested locally, not deployed.** Nothing below has been done 
 creates an account, costs money or makes something public needs the owner's go-ahead.
 
 ## 0. Chosen hosting: Cloudflare (serverless)
-The Community Hub API runs in the same Cloudflare Worker as the website (`worker/`, `wrangler.jsonc`): D1 for data, R2
-(or KV) for images, Cloudflare Images for re-encoding. **Step-by-step setup: `worker/README.md`.** The .NET server in
+The Community Hub API is a separate Cloudflare Worker in `community-api/` (`money-tweaks-community-api`): D1 for data,
+R2 for images, Cloudflare Images for re-encoding. The website Worker is unchanged. **Step-by-step setup:
+`community-api/README.md`.** The .NET server in
 `src/MoneyTweaks.Community.Server` stays available for self-hosting; both speak the same API.
 
 - [ ] D1 created, `database_id` in `wrangler.jsonc`, `npm run migrate:remote` done.
 - [ ] R2 bucket (or KV namespace) created and private.
 - [ ] GitHub OAuth App with Device Flow; `GITHUB_CLIENT_ID` in vars; `GITHUB_CLIENT_SECRET` via `wrangler secret put`.
 - [ ] `ADMIN_GITHUB_IDS` set.
-- [ ] `/healthz` on the deployed Worker shows nothing missing.
-- [ ] Deploying from a branch with the placeholder `database_id` fails: finish the setup before merging into the branch
-      Cloudflare deploys from.
+- [ ] `/health` on the deployed Worker shows `"ok": true`.
+- [ ] Workers Builds connected with root directory `community-api` and build watch path `community-api/*`.
 
 ## 1. Decisions for the owner
 - [ ] Official address: the Worker's workers.dev address (or a custom domain later), to ship as the app's default.

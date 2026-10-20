@@ -1,14 +1,16 @@
 {
-  "name": "money-tweaks-worker",
+  "name": "money-tweaks-community-api",
   "private": true,
-  "description": "Money Tweaks website + Community Hub API on Cloudflare Workers (D1, R2/KV, Images).",
+  "description": "Money Tweaks Community Hub API: a separate Cloudflare Worker (D1, R2, Images).",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --config ../wrangler.jsonc --local",
+    "dev": "wrangler dev --local",
     "test": "vitest run",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit && vitest run && wrangler deploy --dry-run --outdir .wrangler/dry",
     "typecheck": "tsc --noEmit",
-    "migrate:local": "wrangler d1 migrations apply DB --local --config ../wrangler.jsonc",
-    "migrate:remote": "wrangler d1 migrations apply DB --remote --config ../wrangler.jsonc"
+    "migrate:local": "wrangler d1 migrations apply DB --local",
+    "migrate:remote": "wrangler d1 migrations apply DB --remote"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.22.0",

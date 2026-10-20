@@ -27,11 +27,11 @@ jobs:
             }
           }
   worker:
-    # Website + Community Hub API on Cloudflare Workers: typecheck and tests in the Workers runtime (no Cloudflare account used).
+    # Community Hub API Worker (community-api/): typecheck and tests in the Workers runtime (no Cloudflare account used).
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: worker
+        working-directory: community-api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

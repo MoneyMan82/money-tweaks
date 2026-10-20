@@ -1,5 +1,5 @@
-// Money Tweaks Worker: the website (docs/, served by the assets binding exactly as before) plus the Community Hub API.
-// Only /api/v1/*, /media/* and /healthz reach this code (see run_worker_first in wrangler.jsonc).
+// Money Tweaks Community Hub API: a separate Cloudflare Worker (the website is not part of it).
+// Routes: /health, /api/v1/*, /media/{id}/{full|thumb}.
 
 import { authenticate, createSession, quotaInfo, requireUser, signInDev, signInGitHub, signOut, type User } from "./auth";
 import { ApiError, type Env, type Limits, json, limits, missing } from "./env";
@@ -59,12 +59,42 @@ async function session(env: Env, u: User, lim: Limits) {
 const ok = (v: unknown) => json(v);
 const done = () => new Response(null, { status: 204 });
 
+/**
+ * Connection test: actually queries D1 and R2 and reports each part. "ok" is true only when everything the Hub needs
+ * is reachable and configured. Never reveals secret values, only whether they're set.
+ */
+async function health(env: Env): Promise<Response> {
+  const checks: Record<string, { ok: boolean; detail: string }> = {};
+  if (!env.DB) checks.database = { ok: false, detail: "D1 binding DB is missing (check d1_databases in wrangler.jsonc)." };
+  else {
+    try {
+      const t = await env.DB.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name IN ('users','posts','images','upload_slots')").first<{ n: number }>();
+      checks.database = (t?.n ?? 0) === 4
+        ? { ok: true, detail: "Connected; tables present." }
+        : { ok: false, detail: "Connected, but the tables are missing: apply migrations/0001_community.sql (README step 6)." };
+    } catch (e) { checks.database = { ok: false, detail: "Couldn't query D1: " + String((e as Error).message ?? e).slice(0, 200) }; }
+  }
+  if (!env.MEDIA) checks.imageStorage = { ok: false, detail: "R2 binding MEDIA is missing (check r2_buckets in wrangler.jsonc)." };
+  else {
+    try { await env.MEDIA.head("health-check-probe"); checks.imageStorage = { ok: true, detail: "R2 bucket reachable." }; }
+    catch (e) { checks.imageStorage = { ok: false, detail: "Couldn't reach the R2 bucket: " + String((e as Error).message ?? e).slice(0, 200) }; }
+  }
+  checks.imageProcessing = env.IMAGES ? { ok: true, detail: "Images binding present." } : { ok: false, detail: "Images binding IMAGES is missing." };
+  checks.githubSignIn = env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+    ? { ok: true, detail: "Client ID and secret are set." }
+    : { ok: false, detail: `Missing: ${[!env.GITHUB_CLIENT_ID && "GITHUB_CLIENT_ID variable", !env.GITHUB_CLIENT_SECRET && "GITHUB_CLIENT_SECRET secret"].filter(Boolean).join(", ")}.` };
+  checks.moderators = env.ADMIN_GITHUB_IDS ? { ok: true, detail: "Set." } : { ok: false, detail: "ADMIN_GITHUB_IDS is empty: nobody can approve images." };
+  const ok = Object.values(checks).every((c) => c.ok);
+  return json({ ok, service: "money-tweaks-community-api", time: new Date().toISOString(), checks }, ok ? 200 : 503);
+}
+
 async function route(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname, method = request.method;
   const lim = limits(env);
 
-  if (path === "/healthz") return json({ ok: true, configured: missing(env) });
+  if (path === "/health" && method === "GET") return health(env);
+  if (path === "/" && method === "GET") return json({ service: "Money Tweaks Community Hub API", health: "/health" });
 
   // Config works even before D1 exists, so the app can explain what's missing.
   if (path === "/api/v1/config" && method === "GET") {
@@ -152,8 +182,6 @@ async function route(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const path = new URL(request.url).pathname;
-    if (!(path.startsWith("/api/") || path.startsWith("/media/") || path === "/healthz")) return env.ASSETS.fetch(request); // the website, unchanged
     let resp: Response;
     try { resp = await route(request, env); }
     catch (e) {

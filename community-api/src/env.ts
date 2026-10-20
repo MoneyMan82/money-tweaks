@@ -1,7 +1,6 @@
 // Bindings, configuration and small shared helpers.
 
 export interface Env {
-  ASSETS: Fetcher;
   DB?: D1Database;
   MEDIA?: R2Bucket;
   MEDIA_KV?: KVNamespace;

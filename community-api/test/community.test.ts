@@ -53,12 +53,32 @@ async function r2Count() { return (await env.MEDIA.list()).objects.length; }
 
 afterEach(() => { setClockForTests(null); vi.unstubAllGlobals(); });
 
-describe("website", () => {
-  it("still serves the existing site from docs/", async () => {
-    const r = await call("GET", "/");
-    expect(r.status).toBe(200);
-    expect(await r.text()).toContain("Money Tweaks");
-    expect((await call("GET", "/assets/logo-512.png")).status).toBe(200);
+describe("service", () => {
+  it("answers on / and /health, and reports each part honestly", async () => {
+    expect((await j(await call("GET", "/"))).health).toBe("/health");
+    const h = await call("GET", "/health");
+    expect(h.status).toBe(200);
+    const body = await j(h);
+    expect(body.ok).toBe(true);
+    expect(Object.keys(body.checks)).toEqual(["database", "imageStorage", "imageProcessing", "githubSignIn", "moderators"]);
+    expect(JSON.stringify(body)).not.toContain("test-secret"); // never reveals secret values
+    const broken = await call("GET", "/health", { env: { DB: undefined, MEDIA: undefined, GITHUB_CLIENT_SECRET: undefined, ADMIN_GITHUB_IDS: "" } });
+    expect(broken.status).toBe(503);
+    const b = await j(broken);
+    expect(b.ok).toBe(false);
+    expect(b.checks.database.detail).toContain("D1 binding DB is missing");
+    expect(b.checks.imageStorage.ok).toBe(false);
+    expect(b.checks.githubSignIn.detail).toContain("GITHUB_CLIENT_SECRET secret");
+    expect(b.checks.moderators.ok).toBe(false);
+    expect((await call("GET", "/somewhere-else")).status).toBe(404);
+  });
+
+  it("health notices missing tables", async () => {
+    const empty = {
+      prepare: () => ({ first: async () => ({ n: 0 }) }),
+    };
+    const b = await j(await call("GET", "/health", { env: { DB: empty } }));
+    expect(b.checks.database.detail).toContain("tables are missing");
   });
 
   it("reports configuration honestly", async () => {
