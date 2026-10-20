@@ -52,7 +52,7 @@ public static class CommunityClient
     /// Empty until that Worker is deployed with the Hub; then this is its address, e.g.
     /// "https://money-tweaks.&lt;subdomain&gt;.workers.dev". Users can still enter another server in the Hub's settings.
     /// </summary>
-    public const string OfficialServer = "";
+    public const string OfficialServer = "https://money-tweaks.barkgdd.workers.dev";
 
     /// <summary>The server in use: the user's own choice if set, otherwise the official one. Null when neither is set or allowed.</summary>
     public static Uri? BaseUri => Validate(App.Settings.CommunityServer.Length > 0 ? App.Settings.CommunityServer : OfficialServer, out _);
