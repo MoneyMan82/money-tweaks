@@ -15,13 +15,12 @@
     // Only /api/* runs the Worker code; the website files are served directly.
     "run_worker_first": ["/api/*"]
   },
-  // Your existing D1 database. SET THESE TWO before deploying (worker/README.md, step 2): the name and the
-  // "Database ID" shown on the database's page in the Cloudflare dashboard. Deploying with the zeros fails safely.
+  // Your existing D1 database (name and Database ID from the Cloudflare dashboard). Hub tables: worker/migrations.
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "SET-YOUR-D1-DATABASE-NAME",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "money-tweaks-community-db",
+      "database_id": "a8ddb559-effb-4bf6-b137-f9e341f49a99",
       "migrations_dir": "worker/migrations"
     }
   ],
