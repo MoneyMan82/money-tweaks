@@ -17,7 +17,8 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
 {
     private readonly GenomeStore _store = GenomeStore.Load();
     private readonly GenomeSystem _backend = new();
-    private readonly StackPanel _hero = new(), _goal = new(), _experiment = new(), _results = new(), _history = new(), _banner = new();
+    private readonly StackPanel _hero = new(), _goal = new(), _experiment = new(), _results = new(), _history = new(), _banner = new(), _quick = new(), _answer = new(), _details = new();
+    private readonly Expander _advanced = new() { Margin = new Thickness(0, 0, 0, 14) };
     private Fingerprint? _fp;
     private Dictionary<string, string> _now = [];
     private GenomeAnalysis? _a;
@@ -30,16 +31,22 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
     {
         _refresh = Ui.Btn("Re-read settings", async (_, _) => await LoadAsync(), "BaseButton", new Thickness(0));
         var (root, body) = Ui.Page("Performance Genome",
-            "Learns how this PC responds to combinations of supported CPU, GPU, Windows and game settings, from its own measurements: not generic advice. " +
-            "Pick a goal, let it run controlled experiments, and get profiles backed by measured results with their uncertainty.", _refresh, icon: "\uE9D2");
+            "Finds the best settings for your PC by actually testing them, instead of guessing. Pick what you want, press Start, and come back in about 10 minutes.", _refresh, icon: "\uE9D2");
         body.Children.Add(_banner);
-        body.Children.Add(Ui.Card(_hero));
-        body.Children.Add(Ui.Card(_goal));
-        body.Children.Add(Ui.Card(_experiment));
-        body.Children.Add(_results);
-        body.Children.Add(Ui.Card(_history));
+        body.Children.Add(Ui.Card(_quick));
+        body.Children.Add(_answer);
+        // Everything else is optional: the advanced controls are collapsed, the details appear once there are results.
+        _advanced.Header = Ui.Text("More options: goal weights, limits and what gets tested", 13, FontWeights.SemiBold);
+        _advanced.Foreground = Ui.Brush("Text");
+        _advanced.Content = new StackPanel { Margin = new Thickness(0, 10, 0, 0), Children = { Ui.Card(_goal), Ui.Card(_experiment) } };
+        body.Children.Add(_advanced);
+        _details.Children.Add(new TextBlock { Text = "DETAILS", Style = Ui.Res<Style>("Eyebrow"), Margin = new Thickness(0, 4, 0, 6) });
+        _details.Children.Add(Ui.Card(_hero));
+        _details.Children.Add(_results);
+        _details.Children.Add(Ui.Card(_history));
+        body.Children.Add(_details);
         Content = root;
-        _hero.Children.Add(Ui.Loading("Reading this PC's settings, sensors and drivers…"));
+        _quick.Children.Add(Ui.Loading("Reading this PC's settings…"));
     }
 
     public async void OnShown() { if (!_loaded) await LoadAsync(); }
@@ -70,7 +77,7 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
             Analyze();
             RenderAll();
         }
-        catch (Exception ex) { Log.Error("genome load", ex); _hero.Children.Clear(); _hero.Children.Add(Ui.Muted("Couldn't read this PC's settings: " + ex.Message)); }
+        catch (Exception ex) { Log.Error("genome load", ex); _quick.Children.Clear(); _quick.Children.Add(Ui.Muted("Couldn't read this PC's settings: " + ex.Message)); }
         finally { _refresh.IsEnabled = true; }
     }
 
@@ -88,7 +95,120 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
 
     private void RenderAll()
     {
-        RenderBanner(); RenderHero(); RenderGoal(); RenderExperiment(); RenderResults(); RenderHistory();
+        RenderBanner(); RenderQuick(); RenderAnswer(); RenderHero(); RenderGoal(); RenderExperiment(); RenderResults(); RenderHistory();
+        bool hasData = _a is not null && _store.Trials.Any(t => t.WorkloadId == _a.Workload.Id);
+        _details.Visibility = hasData ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ---- quick start: the whole feature in three steps ------------------------------------------------------------------
+
+    private void RenderQuick()
+    {
+        _quick.Children.Clear();
+        if (_store.ActiveWorkload is not { } w) return;
+        _quick.Children.Add(Ui.Text("Find the best settings for this PC", 18, FontWeights.Bold));
+        _quick.Children.Add(Ui.Muted("Three steps. You only choose a goal and press Start; Money Tweaks does the testing.", 12.5));
+
+        var steps = new Grid { Margin = new Thickness(0, 14, 0, 0) };
+        for (int i = 0; i < 3; i++) steps.ColumnDefinitions.Add(new ColumnDefinition());
+        int minutes = (int)Math.Ceiling((GenomeRunner.TotalRuns(_budget) * (w.DurationSec + (w.IsGame ? GameGenomeWorkload.CountdownSec + 20 : 13)) + 30) / 60.0);
+        UIElement Step(int n, string title, string text, UIElement? extra = null)
+        {
+            var sp = new StackPanel { Margin = new Thickness(0, 0, 14, 0) };
+            var head = new StackPanel { Orientation = Orientation.Horizontal };
+            head.Children.Add(new Border { Width = 26, Height = 26, CornerRadius = new CornerRadius(13), Background = Ui.Brush("Accent"), Margin = new Thickness(0, 0, 8, 0),
+                Child = new TextBlock { Text = n.ToString(CultureInfo.InvariantCulture), FontWeight = FontWeights.Bold, Foreground = Ui.Brush("OnAccent"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } });
+            head.Children.Add(Ui.Text(title, 14, FontWeights.SemiBold));
+            sp.Children.Add(head);
+            sp.Children.Add(Ui.Muted(text, 12));
+            if (extra is not null) sp.Children.Add(extra);
+            return sp;
+        }
+        var goalBox = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
+        foreach (var p in GenomeGoals.Presets)
+        {
+            var rb = new RadioButton { Content = p.Name, GroupName = "genomegoal", IsChecked = _store.Goal.Preset == p.Id, Margin = new Thickness(0, 3, 0, 0), ToolTip = p.Blurb, Foreground = Ui.Brush("Text") };
+            var id = p.Id;
+            rb.Checked += (_, _) => { if (_store.Goal.Preset != id) SetPreset(id); };
+            goalBox.Children.Add(rb);
+        }
+        if (_store.Goal.Preset == "custom") goalBox.Children.Add(Ui.Muted("(Custom weights set under More options.)", 11.5));
+        var s1 = Step(1, "Choose what you want", "What should \"better\" mean on this PC?", goalBox);
+        var s2 = Step(2, $"Press Start, wait ~{minutes} min",
+            $"Money Tweaks tries different CPU and GPU settings one at a time and runs a short 3D test ({w.DurationSec} s) for each, measuring FPS, temperatures and power. " +
+            "A test window keeps popping up: don't use the PC meanwhile. Your own settings are put back at the end, even if you stop early.");
+        var s3 = Step(3, "Apply the winner", "You get the best measured settings for your goal right here, with one Apply button and an Undo. Nothing changes permanently unless you press Apply.");
+        Grid.SetColumn(s2, 1); Grid.SetColumn(s3, 2);
+        steps.Children.Add(s1); steps.Children.Add(s2); steps.Children.Add(s3);
+        _quick.Children.Add(steps);
+
+        if (!Admin.IsElevated && _store.Factors.Any(f => f.Enabled && f.NeedsAdmin))
+        {
+            var row = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+            row.Children.Add(new TextBlock { Text = "Not running as administrator: GPU settings can't be tested, so only CPU settings will be. ", FontSize = 12, Foreground = Ui.Brush("Gold"), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+            row.Children.Add(Ui.Btn("Restart as admin", (_, _) => { if (Admin.RestartElevated()) Application.Current.Shutdown(); }, "GhostButton"));
+            _quick.Children.Add(row);
+        }
+        _start = Ui.Btn(_cts is null ? "▶  Start" : "Testing…", async (_, _) => await StartAsync(), "PrimaryButton", new Thickness(0, 14, 8, 0));
+        _start.IsEnabled = _cts is null;
+        _start.FontSize = 14; _start.Padding = new Thickness(22, 9, 22, 9);
+        _stop = Ui.Btn("■  Stop (puts your settings back)", (_, _) => _cts?.Cancel(), "DangerButton", new Thickness(0, 14, 8, 0));
+        _stop.IsEnabled = _cts is not null;
+        _stop.ToolTip = $"Also {MacroService.EmergencyHotkeyText} anywhere, or Esc in the 3D window";
+        var more = Ui.Btn("More options", (_, _) => { _advanced.IsExpanded = !_advanced.IsExpanded; if (_advanced.IsExpanded) Ui.ScrollTo(_advanced); }, "GhostButton", new Thickness(0, 14, 8, 0));
+        _quick.Children.Add(Ui.Row(_start, _stop, more));
+        foreach (var e in new UIElement[] { _bar, _status, _log }) if (e is FrameworkElement fe && fe.Parent is Panel old) old.Children.Remove(e);
+        _quick.Children.Add(_bar);
+        _quick.Children.Add(_status);
+        _quick.Children.Add(_log);
+    }
+
+    private void SetPreset(string id)
+    {
+        var keep = _store.Goal;
+        _store.Goal = GenomeGoals.FromPreset(id);
+        _store.Goal.MaxCpuTempC ??= keep.MaxCpuTempC; _store.Goal.MaxGpuPowerW ??= keep.MaxGpuPowerW;
+        if (keep.MaxGpuTempC is not null && GenomeGoals.Find(id)?.MaxGpuTempC is null) _store.Goal.MaxGpuTempC = keep.MaxGpuTempC;
+        _store.Save();
+        RenderGoal(); RenderAnswer(); RenderResults();
+    }
+
+    /// <summary>The answer, in one card: the best measured settings for the chosen goal, with Apply.</summary>
+    private void RenderAnswer()
+    {
+        _answer.Children.Clear();
+        if (_a is null || !_store.Trials.Any(t => t.WorkloadId == _a.Workload.Id)) return;
+        var goalName = GenomeGoals.Find(_store.Goal.Preset)?.Name ?? "your custom goal";
+        var rec = _a.Recommend(_store.Goal).FirstOrDefault(r => r.Goals.Contains("Your goal"));
+        var sp = new StackPanel();
+        sp.Children.Add(new TextBlock { Text = "YOUR RESULT", Style = Ui.Res<Style>("Eyebrow") });
+        if (rec is null)
+        {
+            sp.Children.Add(Ui.Text("Not enough results yet", 16, FontWeights.SemiBold));
+            sp.Children.Add(Ui.Muted("A setting only counts once it has been measured at least twice without problems. Press Start again to keep going; each run builds on the earlier ones.", 12.5));
+        }
+        else if (rec.Evidence is { IsReference: true })
+        {
+            sp.Children.Add(Ui.Text($"Keep your current settings for {goalName.ToLowerInvariant()}", 16, FontWeights.SemiBold));
+            sp.Children.Add(Ui.Muted(rec.Verdict, 12.5));
+        }
+        else
+        {
+            sp.Children.Add(Ui.Text($"Best for {goalName.ToLowerInvariant()}: {GenomeAnalysis.Describe(_store, rec.Config, _a.Reference)}", 16, FontWeights.SemiBold));
+            var lines = new List<string>();
+            foreach (var key in new[] { "fps", "low1", "gputemp", "cputemp", "gpupower" })
+                if (rec.Evidence?.Measured.GetValueOrDefault(key) is { } m)
+                {
+                    var metric = GenomeMetrics.Get(key);
+                    bool clear = m.Low > 0 || m.High < 0;
+                    lines.Add($"{metric.Label}: {metric.Change(m.Mean)}{(clear ? "" : " (within the noise)")}");
+                }
+            sp.Children.Add(new TextBlock { Text = string.Join("   ·   ", lines), FontSize = 13, Foreground = Ui.Brush("Text"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
+            sp.Children.Add(Ui.Muted($"Measured {rec.Evidence?.N} times on this PC · {rec.Confidence.ToLowerInvariant()} confidence. {rec.Verdict}", 12));
+            sp.Children.Add(Ui.Row(Ui.Btn("Apply these settings…", async (_, _) => await ApplyProfileAsync(rec), "PrimaryButton", new Thickness(0, 10, 8, 0)),
+                Ui.Btn("See all results", (_, _) => Ui.ScrollTo(_details), "GhostButton", new Thickness(0, 10, 8, 0))));
+        }
+        _answer.Children.Add(new Border { Style = Ui.Res<Style>("CardBorder"), BorderBrush = Ui.Brush("Accent"), Margin = new Thickness(0, 0, 0, 14), Child = sp });
     }
 
     // ---- banner: stale results / applied profile ------------------------------------------------------------------------
@@ -276,9 +396,9 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
         // Duration and budget.
         var row = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
         var dur = new SegmentedPicker([("15 s", "15", null), ("20 s", "20", null), ("30 s", "30", null), ("60 s", "60", null)], w.DurationSec.ToString(CultureInfo.InvariantCulture));
-        dur.Changed += v => { w.DurationSec = int.Parse(v, CultureInfo.InvariantCulture); _store.Save(); RenderExperiment(); };
+        dur.Changed += v => { w.DurationSec = int.Parse(v, CultureInfo.InvariantCulture); _store.Save(); RenderExperiment(); RenderQuick(); };
         var bud = new SegmentedPicker([("6 trials", "6", null), ("12 trials", "12", null), ("24 trials", "24", null), ("40 trials", "40", null)], _budget.ToString(CultureInfo.InvariantCulture));
-        bud.Changed += v => { _budget = int.Parse(v, CultureInfo.InvariantCulture); RenderExperiment(); };
+        bud.Changed += v => { _budget = int.Parse(v, CultureInfo.InvariantCulture); RenderExperiment(); RenderQuick(); };
         row.Children.Add(Labeled("Per run", dur));
         row.Children.Add(Labeled("This session", bud));
         _experiment.Children.Add(row);
@@ -339,15 +459,7 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
         }
 
         // Controls.
-        _start = Ui.Btn(_cts is null ? "Start experiment" : "Running…", async (_, _) => await StartAsync(), "PrimaryButton", new Thickness(0, 12, 8, 0));
-        _start.IsEnabled = _cts is null;
-        _stop = Ui.Btn("■  Stop (restores your settings)", (_, _) => _cts?.Cancel(), "DangerButton", new Thickness(0, 12, 8, 0));
-        _stop.IsEnabled = _cts is not null;
-        _stop.ToolTip = $"Also {MacroService.EmergencyHotkeyText} anywhere, or Esc in the 3D window";
-        _experiment.Children.Add(Ui.Row(_start, _stop));
-        _experiment.Children.Add(_bar);
-        _experiment.Children.Add(_status);
-        _experiment.Children.Add(_log);
+        _experiment.Children.Add(Ui.Muted("Start, Stop and progress are in the card at the top of the page.", 11.5));
     }
 
     private static StackPanel Labeled(string label, UIElement e)
@@ -386,9 +498,17 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
         if (factors.Count == 0) { Dialog.Show("Nothing to vary", "Tick at least one setting under \"Settings it may vary\"."); return; }
         if (factors.Any(f => f.NeedsAdmin) && !Admin.IsElevated)
         {
-            if (Dialog.Confirm("Administrator rights needed", $"{string.Join(", ", factors.Where(f => f.NeedsAdmin).Select(f => f.Name))} can only be changed by an administrator. Restart Money Tweaks as administrator? (Or untick them.) Nothing has been changed.", "Restart as admin", DialogKind.Warning)
-                && Admin.RestartElevated()) Application.Current.Shutdown();
-            return;
+            var adminOnly = factors.Where(f => f.NeedsAdmin).ToList();
+            if (Dialog.Confirm("Include GPU settings?", $"{string.Join(", ", adminOnly.Select(f => f.Name))} can only be changed by an administrator. Restart Money Tweaks as administrator to include them? Nothing has been changed.", "Restart as admin", DialogKind.Info))
+            {
+                if (Admin.RestartElevated()) Application.Current.Shutdown();
+                return;
+            }
+            if (!Dialog.Confirm("Test CPU settings only?", "Without administrator rights Money Tweaks can still test the CPU settings. You can include the GPU settings later by running as administrator.", "Test CPU settings", DialogKind.Info)) return;
+            foreach (var f in adminOnly) f.Enabled = false;
+            _store.Save();
+            factors = factors.Except(adminOnly).ToList();
+            if (factors.Count == 0) { Dialog.Show("Nothing to test", "Every selected setting needs administrator rights."); return; }
         }
         if (!w.IsGame)
         {
@@ -399,12 +519,10 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
 
         int runs = GenomeRunner.TotalRuns(_budget);
         var changes = string.Join("\n", factors.Select(f => $"• {f.Name}: {string.Join(", ", f.Levels.Where(l => l.Id != Reference().GetValueOrDefault(f.Id)).Select(l => l.Label))}"));
-        if (!Dialog.Confirm("Start the experiment?",
-                $"{runs} measured runs on {w.Name}. Settings that may be changed temporarily:\n{changes}\n\n" +
-                "Only through documented interfaces (Windows power settings, NVIDIA's nvidia-smi, Money Tweaks' verified tweaks); no voltages or clock offsets. " +
-                "Every change is read back. Your settings are restored and read back at the end, when you press Stop, or after a failure; if Money Tweaks closes mid-session it offers the restore on the next start. " +
-                $"A run stops for safety at {TrialSensors.GpuSafetyC:0} °C GPU / {TrialSensors.CpuSafetyC:0} °C CPU, and a setting that fails is never tried again.\n\n" +
-                (w.IsGame ? "You'll be asked to get into position before each capture." : "Don't use the PC meanwhile; the 3D window appears for each run."), "Start", DialogKind.Warning)) return;
+        if (!Dialog.Confirm("Start testing?",
+                $"Money Tweaks will run {runs} short tests (about {Math.Ceiling(runs * (w.DurationSec + (w.IsGame ? GameGenomeWorkload.CountdownSec + 20 : 13)) / 60.0):0} minutes), changing these settings between them:\n{changes}\n\n" +
+                (w.IsGame ? "You'll be asked to get into position in the game before each test." : "A 3D test window opens for each test. Don't use the PC until it's done.") +
+                "\n\nYour settings are put back at the end, when you press Stop, or if something fails. Tests stop on their own if the PC gets too hot.", "Start", DialogKind.Info)) return;
 
         _cts = new CancellationTokenSource();
         void OnHotkey() => Dispatcher.BeginInvoke(() => _cts?.Cancel());

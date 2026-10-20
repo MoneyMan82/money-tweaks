@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.40 – 2026-10-20
+- **Performance Genome is much simpler to use.** The page now starts with one card: 1) choose what you want (five
+  plain goals), 2) press Start and wait (with the real time estimate), 3) apply the winner. Start, Stop and progress
+  live in that card. When results exist, a "Your result" card says in plain words what's best for your goal (or that
+  your current settings are already best) with one Apply button. Goal weights, limits, test length, workloads and the
+  list of tested settings moved under a collapsed "More options"; the effect map, frontier, profiles and history are
+  under Details and only appear once there's something to show.
+- Without administrator rights, Start now offers to test the CPU settings only instead of stopping.
+
 ## 1.39 – 2026-10-19
 - **Upgrade Advisor** (Monitoring & Benchmarks › Upgrade Advisor): "What are the three smartest ways to get closer to
   my FPS goal on my PC without wasting money?"
