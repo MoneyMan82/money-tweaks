@@ -4,6 +4,7 @@ import worker from "../src/index";
 import { setClockForTests } from "../src/env";
 import { readHeader, sniff } from "../src/images";
 import { bytes } from "./fixtures";
+import { encodePng } from "../src/png";
 
 type Env = typeof env & Record<string, unknown>;
 let counter = 0;
@@ -24,14 +25,14 @@ async function call(method: string, path: string, o: { token?: string; json?: un
 const j = async (r: Response) => (await r.json()) as Record<string, any>;
 
 async function signIn(login = uniq("user"), accountAgeDays = 365, e?: Record<string, unknown>) {
-  const r = await call("POST", "/api/v1/auth/dev", { json: { login, accountAgeDays }, env: e });
+  const r = await call("POST", "/api/community/auth/dev", { json: { login, accountAgeDays }, env: e });
   expect(r.status).toBe(200);
   const s = await j(r);
   return { token: s.token as string, me: s.me, login };
 }
 
-const upload = (token: string, data: Uint8Array, type = "image/png", e?: Record<string, unknown>) => call("POST", "/api/v1/images", { token, body: data, type, env: e });
-const quota = async (token: string, e?: Record<string, unknown>) => (await j(await call("GET", "/api/v1/me", { token, env: e }))).quota;
+const upload = (token: string, data: Uint8Array, type = "image/png", e?: Record<string, unknown>) => call("POST", "/api/community/images", { token, body: data, type, env: e });
+const quota = async (token: string, e?: Record<string, unknown>) => (await j(await call("GET", "/api/community/me", { token, env: e }))).quota;
 
 function publishBody(extra: Record<string, unknown> = {}) {
   return {
@@ -45,24 +46,38 @@ const crosshair = (imageFile?: string) => ({
   layers: [{ kind: "Lines", color: "#FFFF00FF", thickness: 2, length: 10, gap: 4, outline: false }, ...(imageFile ? [{ kind: "Image", imageFile, size: 40 }] : [])],
 });
 async function publish(token: string, extra: Record<string, unknown> = {}) {
-  const r = await call("POST", "/api/v1/posts", { token, json: publishBody(extra) });
+  const r = await call("POST", "/api/community/posts", { token, json: publishBody(extra) });
   expect(r.status, await r.clone().text()).toBe(200);
   return j(r);
 }
-async function r2Count() { return (await env.MEDIA.list()).objects.length; }
+async function storedImages() { return (await env.DB.prepare("SELECT COUNT(*) AS n FROM media_blobs").first<{ n: number }>())!.n; } // images stored in D1
 
 afterEach(() => { setClockForTests(null); vi.unstubAllGlobals(); });
 
-describe("service", () => {
-  it("answers on / and /health, and reports each part honestly", async () => {
-    expect((await j(await call("GET", "/"))).health).toBe("/health");
-    const h = await call("GET", "/health");
+describe("website and service", () => {
+  it("the entry module exports only the Worker handler (Cloudflare refuses other exports)", async () => {
+    const mod = await import("../src/index");
+    expect(Object.keys(mod)).toEqual(["default"]);
+  });
+
+  it("still serves the existing website from docs/", async () => {
+    const r = await call("GET", "/");
+    expect(r.status).toBe(200);
+    expect(await r.text()).toContain("Money Tweaks");
+    expect((await call("GET", "/assets/logo-512.png")).status).toBe(200);
+    expect((await call("GET", "/api/other")).status).toBe(404); // only /api/community/ is the Hub
+  });
+
+  it("answers on /api/community/ and /api/community/health, reporting each part honestly", async () => {
+    expect((await j(await call("GET", "/api/community/"))).health).toBe("/api/community/health");
+    const h = await call("GET", "/api/community/health");
     expect(h.status).toBe(200);
     const body = await j(h);
     expect(body.ok).toBe(true);
+    expect(body.checks.imageStorage.detail).toContain("D1");
     expect(Object.keys(body.checks)).toEqual(["database", "imageStorage", "imageProcessing", "githubSignIn", "moderators"]);
     expect(JSON.stringify(body)).not.toContain("test-secret"); // never reveals secret values
-    const broken = await call("GET", "/health", { env: { DB: undefined, MEDIA: undefined, GITHUB_CLIENT_SECRET: undefined, ADMIN_GITHUB_IDS: "" } });
+    const broken = await call("GET", "/api/community/health", { env: { DB: undefined, GITHUB_CLIENT_SECRET: undefined, ADMIN_GITHUB_IDS: "" } });
     expect(broken.status).toBe(503);
     const b = await j(broken);
     expect(b.ok).toBe(false);
@@ -70,24 +85,33 @@ describe("service", () => {
     expect(b.checks.imageStorage.ok).toBe(false);
     expect(b.checks.githubSignIn.detail).toContain("GITHUB_CLIENT_SECRET secret");
     expect(b.checks.moderators.ok).toBe(false);
-    expect((await call("GET", "/somewhere-else")).status).toBe(404);
   });
 
   it("health notices missing tables", async () => {
     const empty = {
       prepare: () => ({ first: async () => ({ n: 0 }) }),
     };
-    const b = await j(await call("GET", "/health", { env: { DB: empty } }));
+    const b = await j(await call("GET", "/api/community/health", { env: { DB: empty } }));
     expect(b.checks.database.detail).toContain("tables are missing");
   });
 
+  it("health notices unrelated tables that happen to use the same names", async () => {
+    const clash = {
+      prepare: (sql: string) => ({ first: async () => ({ n: 5 }), sql }),
+      batch: async () => { throw new Error("no such column: provider_id"); },
+    };
+    const b = await j(await call("GET", "/api/community/health", { env: { DB: clash } }));
+    expect(b.checks.database.ok).toBe(false);
+    expect(b.checks.database.detail).toContain("different columns");
+  });
+
   it("reports configuration honestly", async () => {
-    const c = await j(await call("GET", "/api/v1/config"));
+    const c = await j(await call("GET", "/api/community/config"));
     expect(c.dailyUploadLimit).toBe(2);
     expect(c.notConfigured).toEqual([]);
-    const missing = await j(await call("GET", "/api/v1/config", { env: { DB: undefined, IMAGES: undefined, GITHUB_CLIENT_SECRET: undefined } }));
+    const missing = await j(await call("GET", "/api/community/config", { env: { DB: undefined, IMAGES: undefined, GITHUB_CLIENT_SECRET: undefined } }));
     expect(missing.notConfigured.join(" ")).toMatch(/D1 database binding DB.*Images binding IMAGES|GITHUB_CLIENT_SECRET/);
-    const r = await call("GET", "/api/v1/posts", { env: { DB: undefined } });
+    const r = await call("GET", "/api/community/posts", { env: { DB: undefined } });
     expect(r.status).toBe(503);
     expect((await j(r)).error).toBe("not_configured");
   });
@@ -117,6 +141,23 @@ describe("uploads", () => {
     expect(jp.image.hasAlpha).toBe(false);
   });
 
+  it("shrinks big, detailed screenshots so they fit in D1", async () => {
+    const { token } = await signIn();
+    const w = 2400, h = 1600, rgb = new Uint8Array(w * h * 3);
+    for (let o = 0; o < rgb.length; o += 65536) crypto.getRandomValues(rgb.subarray(o, Math.min(rgb.length, o + 65536)));
+    for (let i = 0; i < rgb.length; i++) rgb[i] = (rgb[i] & 3) * 85; // 2 bits of noise per channel: detailed, ~3 MB as PNG
+    const big = await encodePng(rgb, w, h);
+    expect(big.length).toBeGreaterThan(1_800_000);
+    expect(big.length).toBeLessThan(5 * 1048576);
+    const r = await upload(token, big);
+    expect(r.status, await r.clone().text()).toBe(200);
+    const up = await j(r);
+    expect(Math.max(up.image.width, up.image.height)).toBeLessThanOrEqual(1920);
+    const row = await env.DB.prepare("SELECT MAX(bytes) AS n FROM media_blobs").first<{ n: number }>();
+    expect(row!.n).toBeLessThanOrEqual(1_800_000);
+    expect((await call("GET", up.image.url, { token })).status).toBe(200);
+  });
+
   it("converts WebP for every client", async () => {
     const { token } = await signIn();
     const r = await upload(token, bytes("webp"), "image/webp");
@@ -139,11 +180,11 @@ describe("uploads", () => {
     ["empty", "image/png", 400, () => new Uint8Array(0)],
   ])("rejects %s without using the quota", async (_n, type, status, data) => {
     const { token } = await signIn();
-    const before = await r2Count();
+    const before = await storedImages();
     const r = await upload(token, data(), type);
     expect(r.status).toBe(status);
     expect((await quota(token)).remaining).toBe(2);
-    expect(await r2Count()).toBe(before);
+    expect(await storedImages()).toBe(before);
   });
 
   it("rejects files over the size limit", async () => {
@@ -169,7 +210,7 @@ describe("uploads", () => {
     expect(body.error).toBe("quota_exceeded");
     expect(body.quota.remaining).toBe(0);
     // Deleting doesn't refund; a new session doesn't reset it; another account has its own allowance.
-    expect((await call("DELETE", `/api/v1/images/${a.image.id}`, { token })).status).toBe(204);
+    expect((await call("DELETE", `/api/community/images/${a.image.id}`, { token })).status).toBe(204);
     expect((await upload(token, bytes("pngAlpha"))).status).toBe(429);
     const again = await signIn(login);
     expect((await upload(again.token, bytes("pngAlpha"))).status).toBe(429);
@@ -184,13 +225,13 @@ describe("uploads", () => {
   it("parallel uploads can't exceed the limit", async () => {
     const { token, login } = await signIn();
     const second = await signIn(login); // a second session of the same account
-    const before = await r2Count();
+    const before = await storedImages();
     const results = await Promise.all(Array.from({ length: 12 }, (_, i) => upload(i % 2 ? second.token : token, bytes("pngOpaque"))));
     const statuses = results.map((r) => r.status);
     expect(statuses.filter((s) => s === 200)).toHaveLength(2);
     expect(statuses.filter((s) => s === 429)).toHaveLength(10);
     expect(await quota(token)).toMatchObject({ used: 2, remaining: 0 });
-    expect(await r2Count()).toBe(before + 4); // 2 images + 2 thumbnails
+    expect(await storedImages()).toBe(before + 4); // 2 images + 2 thumbnails
   });
 
   it("needs a real, signed-in, established account", async () => {
@@ -204,7 +245,7 @@ describe("uploads", () => {
 
   it("refuses uploads clearly when image processing or storage isn't configured", async () => {
     const { token } = await signIn();
-    for (const e of [{ IMAGES: undefined }, { MEDIA: undefined, MEDIA_KV: undefined }]) {
+    for (const e of [{ IMAGES: undefined }, { DB: undefined }]) {
       const r = await upload(token, bytes("pngOpaque"), "image/png", e);
       expect(r.status).toBe(503);
       expect((await j(r)).error).toBe("not_configured");
@@ -224,8 +265,8 @@ describe("uploads", () => {
     expect((await quota(token)).remaining).toBe(2);
   });
 
-  it("works with KV storage instead of R2", async () => {
-    const e = { MEDIA: undefined };
+  it("can use a KV namespace instead of D1 for images if one is bound", async () => {
+    const e = { MEDIA_KV: (env as Env).MEDIA_KV_TEST };
     const { token } = await signIn(undefined, 365, e);
     const up = await j(await upload(token, bytes("pngAlpha"), "image/png", e));
     const r = await call("GET", up.image.url, { token, env: e });
@@ -238,25 +279,25 @@ describe("uploads", () => {
     const owner = await signIn(undefined, 365, e), stranger = await signIn(undefined, 365, e), admin = await signIn(uniq("admin"), 365, e);
     const up = await j(await upload(owner.token, bytes("pngOpaque"), "image/png", e));
     expect(up.image.status).toBe("pending");
-    const post = await j(await call("POST", "/api/v1/posts", { token: owner.token, json: publishBody({ imageIds: [up.image.id] }), env: e }));
+    const post = await j(await call("POST", "/api/community/posts", { token: owner.token, json: publishBody({ imageIds: [up.image.id] }), env: e }));
     expect((await call("GET", up.image.url, { token: owner.token, env: e })).status).toBe(200);
     expect((await call("GET", up.image.url, { token: admin.token, env: e })).status).toBe(200);
     expect((await call("GET", up.image.url, { token: stranger.token, env: e })).status).toBe(404);
     expect((await call("GET", up.image.url, { env: e })).status).toBe(404);
-    const seen = await j(await call("GET", `/api/v1/posts/${post.id}`, { env: e }));
+    const seen = await j(await call("GET", `/api/community/posts/${post.id}`, { env: e }));
     expect(seen.images.some((i: { id: string }) => i.id === up.image.id)).toBe(false);
-    expect((await call("POST", `/api/v1/admin/images/${up.image.id}/approve`, { token: owner.token, env: e })).status).toBe(403);
-    const q = await j(await call("GET", "/api/v1/admin/queue", { token: admin.token, env: e }));
+    expect((await call("POST", `/api/community/admin/images/${up.image.id}/approve`, { token: owner.token, env: e })).status).toBe(403);
+    const q = await j(await call("GET", "/api/community/admin/queue", { token: admin.token, env: e }));
     expect(q.pendingImages.some((i: { image: { id: string } }) => i.image.id === up.image.id)).toBe(true);
-    expect((await call("POST", `/api/v1/admin/images/${up.image.id}/approve`, { token: admin.token, env: e })).status).toBe(204);
+    expect((await call("POST", `/api/community/admin/images/${up.image.id}/approve`, { token: admin.token, env: e })).status).toBe(204);
     const pub = await call("GET", up.image.url, { env: e });
     expect(pub.status).toBe(200);
     expect(pub.headers.get("x-content-type-options")).toBe("nosniff");
     expect(pub.headers.get("cache-control")).toContain("public");
     const up2 = await j(await upload(owner.token, bytes("pngAlpha"), "image/png", e));
-    const before = await r2Count();
-    expect((await call("POST", `/api/v1/admin/images/${up2.image.id}/reject`, { token: admin.token, env: e })).status).toBe(204);
-    expect(await r2Count()).toBe(before - 2); // rejected files deleted at once
+    const before = await storedImages();
+    expect((await call("POST", `/api/community/admin/images/${up2.image.id}/reject`, { token: admin.token, env: e })).status).toBe(204);
+    expect(await storedImages()).toBe(before - 2); // rejected files deleted at once
   });
 
   it("media URLs can't reach anything else", async () => {
@@ -269,13 +310,13 @@ describe("posts", () => {
   it("publish, edit and delete with author-only permissions; files cleaned up", async () => {
     const alice = await signIn(), bob = await signIn();
     const up = await j(await upload(alice.token, bytes("pngOpaque")));
-    const before = await r2Count();
+    const before = await storedImages();
     const post = await publish(alice.token, { imageIds: [up.image.id], content: { settings: { fpsCap: 240 }, crosshair: crosshair() } });
     expect(post.sections).toEqual(expect.arrayContaining(["Game settings", "Crosshair"]));
     expect(post.canEdit).toBe(true);
     const preview = post.images.find((i: { kind: string }) => i.kind === "crosshair-preview");
     expect(preview.status).toBe("approved");
-    expect(await r2Count()).toBe(before + 2); // generated preview (+ its thumb) added
+    expect(await storedImages()).toBe(before + 2); // generated preview (+ its thumb) added
     expect((await quota(alice.token)).remaining).toBe(1); // the preview is free
 
     const png = new Uint8Array(await (await call("GET", preview.url)).arrayBuffer());
@@ -283,17 +324,17 @@ describe("posts", () => {
     expect(readHeader(png)).toMatchObject({ width: 256, height: 256 });
 
     const edit = publishBody({ title: "Bob was here" });
-    expect((await call("PUT", `/api/v1/posts/${post.id}`, { token: bob.token, json: edit })).status).toBe(403);
-    expect((await call("DELETE", `/api/v1/posts/${post.id}`, { token: bob.token })).status).toBe(403);
-    expect((await call("DELETE", `/api/v1/posts/${post.id}`)).status).toBe(401);
-    const upd = await call("PUT", `/api/v1/posts/${post.id}`, { token: alice.token, json: publishBody({ title: "Updated: Fortnite settings" }) });
+    expect((await call("PUT", `/api/community/posts/${post.id}`, { token: bob.token, json: edit })).status).toBe(403);
+    expect((await call("DELETE", `/api/community/posts/${post.id}`, { token: bob.token })).status).toBe(403);
+    expect((await call("DELETE", `/api/community/posts/${post.id}`)).status).toBe(401);
+    const upd = await call("PUT", `/api/community/posts/${post.id}`, { token: alice.token, json: publishBody({ title: "Updated: Fortnite settings" }) });
     expect(upd.status).toBe(200);
     const u = await j(upd);
     expect(u.title).toBe("Updated: Fortnite settings");
     expect(u.images).toHaveLength(0); // image dropped and no crosshair any more: files deleted
-    expect(await r2Count()).toBe(before - 2);
-    expect((await call("DELETE", `/api/v1/posts/${post.id}`, { token: alice.token })).status).toBe(204);
-    expect((await call("GET", `/api/v1/posts/${post.id}`)).status).toBe(404);
+    expect(await storedImages()).toBe(before - 2);
+    expect((await call("DELETE", `/api/community/posts/${post.id}`, { token: alice.token })).status).toBe(204);
+    expect((await call("GET", `/api/community/posts/${post.id}`)).status).toBe(404);
   });
 
   it("draws the crosshair preview from the configuration, and skips it for extreme crosshairs", async () => {
@@ -324,18 +365,18 @@ describe("posts", () => {
 
   it("deleting a post deletes its image files but not the quota use", async () => {
     const a = await signIn();
-    const before = await r2Count();
+    const before = await storedImages();
     const up = await j(await upload(a.token, bytes("pngOpaque")));
     const post = await publish(a.token, { imageIds: [up.image.id], content: { crosshair: crosshair() } });
-    expect(await r2Count()).toBe(before + 4);
-    expect((await call("DELETE", `/api/v1/posts/${post.id}`, { token: a.token })).status).toBe(204);
-    expect(await r2Count()).toBe(before);
+    expect(await storedImages()).toBe(before + 4);
+    expect((await call("DELETE", `/api/community/posts/${post.id}`, { token: a.token })).status).toBe(204);
+    expect(await storedImages()).toBe(before);
     expect((await quota(a.token)).remaining).toBe(1);
   });
 
   it("rejects invalid posts and clamps crosshairs", async () => {
     const c = await signIn(), other = await signIn();
-    const bad = async (body: unknown) => (await call("POST", "/api/v1/posts", { token: c.token, json: body })).status;
+    const bad = async (body: unknown) => (await call("POST", "/api/community/posts", { token: c.token, json: body })).status;
     const ok = { settings: { fpsCap: 240 } };
     expect(await bad({ title: "hi", game: "Fortnite", category: "Other", content: ok })).toBe(400);
     expect(await bad({ title: "Valid title", game: "Nope", category: "Other", content: ok })).toBe(400);
@@ -346,7 +387,7 @@ describe("posts", () => {
     expect(await bad({ title: "Valid title", game: "Fortnite", category: "Other", content: ok, imageIds: ["0123456789abcdef0123456789abcdef"] })).toBe(400);
     const theirs = await j(await upload(other.token, bytes("pngOpaque")));
     expect(await bad({ title: "Valid title", game: "Fortnite", category: "Other", content: ok, imageIds: [theirs.image.id] })).toBe(400);
-    const raw = await call("POST", "/api/v1/posts", { token: c.token, json: "{not json" as unknown });
+    const raw = await call("POST", "/api/community/posts", { token: c.token, json: "{not json" as unknown });
     expect(raw.status).toBe(400);
     const post = await publish(c.token, {
       content: { crosshair: { name: "x", layers: [{ kind: "Lines", thickness: 1e9, gap: 5, color: "nope" }, { kind: "Image", imageFile: "0123456789012345678901234567890123456789.png" }] } },
@@ -360,28 +401,28 @@ describe("posts", () => {
     const a = await signIn(uniq("author")), v1 = await signIn(), v2 = await signIn();
     const p1 = await publish(a.token, { title: "Geometry wave settings zq" + counter });
     const p2 = await publish(a.token, { title: "Fortnite stretched 1440 zq" + counter });
-    expect((await j(await call("PUT", `/api/v1/posts/${p2.id}/like`, { token: v1.token }))).liked).toBe(true);
-    await call("PUT", `/api/v1/posts/${p2.id}/like`, { token: v1.token });
-    await call("PUT", `/api/v1/posts/${p2.id}/like`, { token: v2.token });
-    await call("PUT", `/api/v1/posts/${p1.id}/bookmark`, { token: v1.token });
-    await call("PUT", `/api/v1/posts/${p2.id}/helpful`, { token: v1.token, json: { helpful: true } });
-    await call("PUT", `/api/v1/posts/${p2.id}/helpful`, { token: v2.token, json: { helpful: false } });
-    await call("PUT", `/api/v1/posts/${p2.id}/helpful`, { token: v2.token, json: { helpful: true } });
-    expect((await call("PUT", `/api/v1/posts/${p2.id}/helpful`, { token: a.token, json: { helpful: true } })).status).toBe(400);
-    await call("POST", `/api/v1/posts/${p1.id}/imported`, { token: v1.token });
-    await call("POST", `/api/v1/posts/${p1.id}/imported`, { token: v1.token });
-    const d2 = await j(await call("GET", `/api/v1/posts/${p2.id}`));
+    expect((await j(await call("PUT", `/api/community/posts/${p2.id}/like`, { token: v1.token }))).liked).toBe(true);
+    await call("PUT", `/api/community/posts/${p2.id}/like`, { token: v1.token });
+    await call("PUT", `/api/community/posts/${p2.id}/like`, { token: v2.token });
+    await call("PUT", `/api/community/posts/${p1.id}/bookmark`, { token: v1.token });
+    await call("PUT", `/api/community/posts/${p2.id}/helpful`, { token: v1.token, json: { helpful: true } });
+    await call("PUT", `/api/community/posts/${p2.id}/helpful`, { token: v2.token, json: { helpful: false } });
+    await call("PUT", `/api/community/posts/${p2.id}/helpful`, { token: v2.token, json: { helpful: true } });
+    expect((await call("PUT", `/api/community/posts/${p2.id}/helpful`, { token: a.token, json: { helpful: true } })).status).toBe(400);
+    await call("POST", `/api/community/posts/${p1.id}/imported`, { token: v1.token });
+    await call("POST", `/api/community/posts/${p1.id}/imported`, { token: v1.token });
+    const d2 = await j(await call("GET", `/api/community/posts/${p2.id}`));
     expect([d2.likes, d2.helpfulYes, d2.helpfulNo]).toEqual([2, 2, 0]);
-    expect((await j(await call("GET", `/api/v1/posts/${p1.id}`))).imports).toBe(1);
-    const mine = (path: string) => call("GET", `/api/v1/posts?author=${a.login}&${path}`).then(j);
+    expect((await j(await call("GET", `/api/community/posts/${p1.id}`))).imports).toBe(1);
+    const mine = (path: string) => call("GET", `/api/community/posts?author=${a.login}&${path}`).then(j);
     expect((await mine("sort=top")).items[0].id).toBe(p2.id);
     expect((await mine("sort=imports")).items[0].id).toBe(p1.id);
-    const found = await j(await call("GET", "/api/v1/posts?q=geometr"));
+    const found = await j(await call("GET", "/api/community/posts?q=geometr"));
     expect(found.items.map((i: { id: string }) => i.id)).toContain(p1.id);
     expect(found.items.map((i: { id: string }) => i.id)).not.toContain(p2.id);
-    expect((await call("GET", "/api/v1/posts?q=%22)%20OR%201%3D1%20--")).status).toBe(200); // query syntax is neutralized
-    expect((await j(await call("GET", "/api/v1/me/bookmarks", { token: v1.token }))).items.map((i: { id: string }) => i.id)).toEqual([p1.id]);
-    const author = await j(await call("GET", `/api/v1/users/${a.login}`));
+    expect((await call("GET", "/api/community/posts?q=%22)%20OR%201%3D1%20--")).status).toBe(200); // query syntax is neutralized
+    expect((await j(await call("GET", "/api/community/me/bookmarks", { token: v1.token }))).items.map((i: { id: string }) => i.id)).toEqual([p1.id]);
+    const author = await j(await call("GET", `/api/community/users/${a.login}`));
     expect([author.postCount, author.likesReceived]).toEqual([2, 2]);
   });
 
@@ -390,30 +431,30 @@ describe("posts", () => {
     const post = await publish(a.token);
     for (let i = 0; i < 3; i++) {
       const r = await signIn();
-      expect((await call("POST", `/api/v1/posts/${post.id}/report`, { token: r.token, json: { reason: "Spam or advertising", details: "ad" } })).status).toBe(204);
-      if (i === 0) expect((await call("POST", `/api/v1/posts/${post.id}/report`, { token: r.token, json: { reason: "Spam or advertising" } })).status).toBe(409);
+      expect((await call("POST", `/api/community/posts/${post.id}/report`, { token: r.token, json: { reason: "Spam or advertising", details: "ad" } })).status).toBe(204);
+      if (i === 0) expect((await call("POST", `/api/community/posts/${post.id}/report`, { token: r.token, json: { reason: "Spam or advertising" } })).status).toBe(409);
     }
-    expect((await call("GET", `/api/v1/posts/${post.id}`)).status).toBe(404);
-    expect((await j(await call("GET", `/api/v1/posts/${post.id}`, { token: a.token }))).status).toBe("hidden");
-    const q = await j(await call("GET", "/api/v1/admin/queue", { token: admin.token }));
+    expect((await call("GET", `/api/community/posts/${post.id}`)).status).toBe(404);
+    expect((await j(await call("GET", `/api/community/posts/${post.id}`, { token: a.token }))).status).toBe("hidden");
+    const q = await j(await call("GET", "/api/community/admin/queue", { token: admin.token }));
     expect(q.hiddenPosts.some((p: { id: string }) => p.id === post.id)).toBe(true);
-    await call("POST", `/api/v1/admin/posts/${post.id}/restore`, { token: admin.token });
-    expect((await call("GET", `/api/v1/posts/${post.id}`)).status).toBe(200);
-    await call("POST", `/api/v1/admin/posts/${post.id}/remove`, { token: admin.token, json: { note: "rules" } });
-    expect((await call("GET", `/api/v1/posts/${post.id}`)).status).toBe(404);
-    expect((await call("PUT", `/api/v1/posts/${post.id}`, { token: a.token, json: publishBody() })).status).toBe(403);
+    await call("POST", `/api/community/admin/posts/${post.id}/restore`, { token: admin.token });
+    expect((await call("GET", `/api/community/posts/${post.id}`)).status).toBe(200);
+    await call("POST", `/api/community/admin/posts/${post.id}/remove`, { token: admin.token, json: { note: "rules" } });
+    expect((await call("GET", `/api/community/posts/${post.id}`)).status).toBe(404);
+    expect((await call("PUT", `/api/community/posts/${post.id}`, { token: a.token, json: publishBody() })).status).toBe(403);
     const post2 = await publish(a.token, { title: "Another post here" });
-    expect((await call("POST", `/api/v1/admin/users/${a.me.user.id}`, { token: admin.token, json: { banned: true, reason: "spam" } })).status).toBe(204);
-    expect((await call("GET", "/api/v1/me", { token: a.token })).status).toBe(401);
-    expect((await call("GET", `/api/v1/posts/${post2.id}`)).status).toBe(404);
-    expect((await call("POST", "/api/v1/auth/dev", { json: { login: a.login } })).status).toBe(403);
-    expect((await call("GET", "/api/v1/admin/queue", { token: (await signIn()).token })).status).toBe(403);
+    expect((await call("POST", `/api/community/admin/users/${a.me.user.id}`, { token: admin.token, json: { banned: true, reason: "spam" } })).status).toBe(204);
+    expect((await call("GET", "/api/community/me", { token: a.token })).status).toBe(401);
+    expect((await call("GET", `/api/community/posts/${post2.id}`)).status).toBe(404);
+    expect((await call("POST", "/api/community/auth/dev", { json: { login: a.login } })).status).toBe(403);
+    expect((await call("GET", "/api/community/admin/queue", { token: (await signIn()).token })).status).toBe(403);
   });
 
   it("limits posts per day and refuses duplicates", async () => {
     const e = { POSTS_PER_DAY: "2" };
     const c = await signIn(undefined, 365, e);
-    const post = (title: string) => call("POST", "/api/v1/posts", { token: c.token, json: publishBody({ title }), env: e });
+    const post = (title: string) => call("POST", "/api/community/posts", { token: c.token, json: publishBody({ title }), env: e });
     expect((await post("First real post")).status).toBe(200);
     expect((await post("First real post")).status).toBe(409);
     expect((await post("Second real post")).status).toBe(200);
@@ -433,7 +474,7 @@ describe("sign-in", () => {
         ? JSON.stringify({ id: 4242, login: "octo", avatar_url: "https://avatars.githubusercontent.com/u/4242", created_at: "2015-01-01T00:00:00Z" })
         : JSON.stringify({ id: 1 }), { status: 200 });
     });
-    const r = await call("POST", "/api/v1/auth/github", { json: { accessToken: "gho_good_token" } });
+    const r = await call("POST", "/api/community/auth/github", { json: { accessToken: "gho_good_token" } });
     expect(r.status).toBe(200);
     const s = await j(r);
     expect(s.me.user.login).toBe("octo");
@@ -441,13 +482,13 @@ describe("sign-in", () => {
     expect(calls).toContain("POST /applications/Iv1.testclient/token");
     const stored = await env.DB.prepare("SELECT COUNT(*) AS n FROM sessions WHERE token_hash LIKE '%gho_good%'").first<{ n: number }>();
     expect(stored!.n).toBe(0);
-    expect((await call("POST", "/api/v1/auth/github", { json: { accessToken: "gho_bad_token1" } })).status).toBe(401);
-    expect((await call("POST", "/api/v1/auth/github", { json: { accessToken: "gho_good_token" }, env: { GITHUB_CLIENT_SECRET: undefined } })).status).toBe(503);
+    expect((await call("POST", "/api/community/auth/github", { json: { accessToken: "gho_bad_token1" } })).status).toBe(401);
+    expect((await call("POST", "/api/community/auth/github", { json: { accessToken: "gho_good_token" }, env: { GITHUB_CLIENT_SECRET: undefined } })).status).toBe(503);
   });
 
   it("test sign-in only works locally and only when enabled", async () => {
-    expect((await call("POST", "/api/v1/auth/dev", { json: { login: "x" }, host: "money-tweaks.example.workers.dev" })).status).toBe(404);
-    expect((await call("POST", "/api/v1/auth/dev", { json: { login: "x" }, env: { DEV_SIGN_IN: undefined } })).status).toBe(404);
+    expect((await call("POST", "/api/community/auth/dev", { json: { login: "x" }, host: "money-tweaks.example.workers.dev" })).status).toBe(404);
+    expect((await call("POST", "/api/community/auth/dev", { json: { login: "x" }, env: { DEV_SIGN_IN: undefined } })).status).toBe(404);
   });
 });
 
@@ -456,12 +497,12 @@ describe("cleanup", () => {
     setClockForTests(new Date("2026-10-20T10:00:00Z"));
     const c = await signIn();
     const up = await j(await upload(c.token, bytes("pngOpaque")));
-    const before = await r2Count();
+    const before = await storedImages();
     setClockForTests(new Date("2026-10-21T11:00:00Z"));
     const ctx = createExecutionContext();
     await worker.scheduled!(createScheduledController(), env as never, ctx);
     await waitOnExecutionContext(ctx);
-    expect(await r2Count()).toBe(before - 2);
+    expect(await storedImages()).toBe(before - 2);
     expect((await call("GET", up.image.url, { token: c.token })).status).toBe(404);
   });
 });

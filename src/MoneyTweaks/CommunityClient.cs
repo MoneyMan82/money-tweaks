@@ -47,8 +47,15 @@ public static class CommunityClient
 
     private static string SessionFile => Path.Combine(AppPaths.Root, "community-session.dat");
 
-    /// <summary>The configured server, or null when none is set or the address isn't allowed.</summary>
-    public static Uri? BaseUri => Validate(App.Settings.CommunityServer, out _);
+    /// <summary>
+    /// The official Community Hub: the Money Tweaks website's own Cloudflare Worker (the API is under /api/community/).
+    /// Empty until that Worker is deployed with the Hub; then this is its address, e.g.
+    /// "https://money-tweaks.&lt;subdomain&gt;.workers.dev". Users can still enter another server in the Hub's settings.
+    /// </summary>
+    public const string OfficialServer = "";
+
+    /// <summary>The server in use: the user's own choice if set, otherwise the official one. Null when neither is set or allowed.</summary>
+    public static Uri? BaseUri => Validate(App.Settings.CommunityServer.Length > 0 ? App.Settings.CommunityServer : OfficialServer, out _);
 
     public static Uri? Validate(string? address, out string? problem)
     {
@@ -163,14 +170,14 @@ public static class CommunityClient
 
     public static async Task<ServerConfig> LoadConfigAsync()
     {
-        Config = await Get<ServerConfig>("api/v1/config");
+        Config = await Get<ServerConfig>("api/community/config");
         return Config;
     }
 
     public static async Task<MeInfo?> RefreshMeAsync()
     {
         if (!SignedIn) { Me = null; Changed?.Invoke(); return null; }
-        try { Me = await Get<MeInfo>("api/v1/me"); }
+        try { Me = await Get<MeInfo>("api/community/me"); }
         catch (CommunityApiException e) when (e.Status == 401) { Me = null; }
         Changed?.Invoke();
         return Me;
@@ -184,7 +191,7 @@ public static class CommunityClient
     }
 
     /// <summary>Local test servers only (the server refuses this outside development).</summary>
-    public static async Task SignInDevAsync(string login) => Accept(await Post<SessionInfo>("api/v1/auth/dev", new { login }));
+    public static async Task SignInDevAsync(string login) => Accept(await Post<SessionInfo>("api/community/auth/dev", new { login }));
 
     public static async Task<DeviceSignIn> StartGitHubSignInAsync()
     {
@@ -218,7 +225,7 @@ public static class CommunityClient
             var r = doc.RootElement;
             if (r.TryGetProperty("access_token", out var tok))
             {
-                Accept(await Post<SessionInfo>("api/v1/auth/github", new { accessToken = tok.GetString() }));
+                Accept(await Post<SessionInfo>("api/community/auth/github", new { accessToken = tok.GetString() }));
                 return;
             }
             var error = r.TryGetProperty("error", out var e) ? e.GetString() : null;
@@ -231,7 +238,7 @@ public static class CommunityClient
 
     public static async Task SignOutAsync()
     {
-        try { if (SignedIn) await Post<bool>("api/v1/auth/signout"); } catch { }
+        try { if (SignedIn) await Post<bool>("api/community/auth/signout"); } catch { }
         SaveToken(null);
         Me = null;
         Changed?.Invoke();
@@ -240,7 +247,7 @@ public static class CommunityClient
     /// <summary>Uploads a PNG/JPEG/WebP. Waits for the server's go-ahead first, so a refused upload (limit reached) isn't sent at all.</summary>
     public static async Task<UploadResult> UploadAsync(byte[] data, string mime)
     {
-        var req = Request(HttpMethod.Post, "api/v1/images");
+        var req = Request(HttpMethod.Post, "api/community/images");
         req.Content = new ByteArrayContent(data);
         req.Content.Headers.ContentType = new MediaTypeHeaderValue(mime);
         req.Headers.ExpectContinue = true;

@@ -306,7 +306,7 @@ public sealed partial class CommunityHubView
             cell.Children.Add(Ui.Btn("Remove", async (_, _) => await Try(async () =>
             {
                 if (!Dialog.Confirm("Remove this image?", "It's deleted from the Community Hub. It still counts toward today's upload limit.", "Remove", DialogKind.Warning)) return;
-                await CommunityClient.Delete<bool>($"api/v1/images/{i.Id}");
+                await CommunityClient.Delete<bool>($"api/community/images/{i.Id}");
                 _uploads.Remove(i);
                 Render();
             }), "GhostButton"));
@@ -396,8 +396,8 @@ public sealed partial class CommunityHubView
         try
         {
             var saved = _editingId is null
-                ? await CommunityClient.Post<PostDetail>("api/v1/posts", input)
-                : await CommunityClient.Put<PostDetail>($"api/v1/posts/{_editingId}", input);
+                ? await CommunityClient.Post<PostDetail>("api/community/posts", input)
+                : await CommunityClient.Put<PostDetail>($"api/community/posts/{_editingId}", input);
             MainWindow.Current?.ShowToast(_editingId is null ? "Published." : "Saved.", "Success");
             ResetEditor();
             _detail = saved;
@@ -434,8 +434,8 @@ public sealed partial class CommunityHubView
             cell.Children.Add(Ui.Muted(i.PostTitle is null ? "Not attached to a post yet" : "Post: " + i.PostTitle, 11.5));
             var id = i.Image.Id;
             cell.Children.Add(Ui.Row(
-                Ui.Btn("Approve", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/images/{id}/approve"); await LoadQueueAsync(); }), "PrimaryButton"),
-                Ui.Btn("Reject", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/images/{id}/reject"); await LoadQueueAsync(); }), "DangerButton")));
+                Ui.Btn("Approve", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/images/{id}/approve"); await LoadQueueAsync(); }), "PrimaryButton"),
+                Ui.Btn("Reject", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/images/{id}/reject"); await LoadQueueAsync(); }), "DangerButton")));
             wrap.Children.Add(cell);
         }
         if (q.PendingImages.Count == 0) imgs.Children.Add(Ui.Muted("Nothing to review.", 12));
@@ -450,8 +450,8 @@ public sealed partial class CommunityHubView
             var postId = r.PostId; var rid = r.Id;
             var acts = Ui.Row(
                 Ui.Btn("Open", async (_, _) => await OpenAsync(postId), "BaseButton"),
-                Ui.Btn("Dismiss", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/reports/{rid}/dismiss"); await LoadQueueAsync(); }), "GhostButton"),
-                Ui.Btn("Remove post", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/posts/{postId}/remove", new { note = r.Reason }); await LoadQueueAsync(); }), "DangerButton"));
+                Ui.Btn("Dismiss", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/reports/{rid}/dismiss"); await LoadQueueAsync(); }), "GhostButton"),
+                Ui.Btn("Remove post", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/posts/{postId}/remove", new { note = r.Reason }); await LoadQueueAsync(); }), "DangerButton"));
             DockPanel.SetDock(acts, Dock.Right);
             row.Children.Add(acts);
             var t = new StackPanel();
@@ -471,8 +471,8 @@ public sealed partial class CommunityHubView
             var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
             var acts = Ui.Row(
                 Ui.Btn("Open", async (_, _) => await OpenAsync(id)),
-                Ui.Btn("Restore", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/posts/{id}/restore"); await LoadQueueAsync(); }), "PrimaryButton"),
-                Ui.Btn("Remove", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/posts/{id}/remove", new { note = "After review" }); await LoadQueueAsync(); }), "DangerButton"));
+                Ui.Btn("Restore", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/posts/{id}/restore"); await LoadQueueAsync(); }), "PrimaryButton"),
+                Ui.Btn("Remove", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/posts/{id}/remove", new { note = "After review" }); await LoadQueueAsync(); }), "DangerButton"));
             DockPanel.SetDock(acts, Dock.Right);
             row.Children.Add(acts);
             row.Children.Add(Ui.Text($"{p.Title} · by {p.Author.Login}", 13));
@@ -484,7 +484,7 @@ public sealed partial class CommunityHubView
 
     private async Task LoadQueueAsync()
     {
-        try { _queue = await CommunityClient.Get<AdminQueue>("api/v1/admin/queue"); }
+        try { _queue = await CommunityClient.Get<AdminQueue>("api/community/admin/queue"); }
         catch (CommunityApiException e) { _queue = new AdminQueue(); Dialog.Show("Moderation", e.Message, DialogKind.Warning); }
         if (_tab == "moderation" && _detail is null) Render();
     }

@@ -1,6 +1,7 @@
 // Bindings, configuration and small shared helpers.
 
 export interface Env {
+  ASSETS: Fetcher;
   DB?: D1Database;
   MEDIA?: R2Bucket;
   MEDIA_KV?: KVNamespace;
@@ -86,7 +87,6 @@ export function json(body: unknown, status = 200, headers: Record<string, string
 export function missing(env: Env): { data: string[]; uploads: string[]; signIn: string[] } {
   const data = env.DB ? [] : ["D1 database binding DB"];
   const uploads = [...data];
-  if (!env.MEDIA && !env.MEDIA_KV) uploads.push("R2 bucket binding MEDIA (or KV namespace MEDIA_KV)");
   if (!env.IMAGES) uploads.push("Cloudflare Images binding IMAGES");
   const signIn = [...data];
   if (!env.GITHUB_CLIENT_ID) signIn.push("GITHUB_CLIENT_ID variable");

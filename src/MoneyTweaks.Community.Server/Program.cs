@@ -67,7 +67,10 @@ public static class CommunityApp
             catch (JsonException) { await Error(ctx, 400, "invalid_json", "The request isn't valid JSON."); }
             catch (BadHttpRequestException e) { await Error(ctx, e.StatusCode, "bad_request", "The request couldn't be read."); }
         });
-        Map(app, o);
+        // Same API on both paths: /api/community/ (what the app uses, like the Cloudflare Worker) and /api/v1/ (earlier builds).
+        Map(app, o, "/api/community", "/api/community/media/{id}/{variant}");
+        Map(app, o, "/api/v1", "/media/{id}/{variant}");
+        app.MapGet("/healthz", () => Results.Ok(new { ok = true }));
         return app;
     }
 
@@ -101,10 +104,10 @@ public static class CommunityApp
     private static async Task<T> Body<T>(HttpContext ctx) where T : class =>
         await ctx.Request.ReadFromJsonAsync<T>(Api.Json) ?? throw new CommunityError(400, "invalid", "Missing request body.");
 
-    private static void Map(WebApplication app, CommunityOptions o)
+    private static void Map(WebApplication app, CommunityOptions o, string prefix, string mediaRoute)
     {
-        var api = app.MapGroup("/api/v1");
-        app.MapGet("/healthz", () => Results.Ok(new { ok = true }));
+        var api = app.MapGroup(prefix);
+        api.MapGet("/health", () => Results.Ok(new { ok = true }));
 
         api.MapGet("/config", (IHostEnvironment env) => new ServerConfig
         {
@@ -153,7 +156,7 @@ public static class CommunityApp
             await svc.DeleteImageAsync(Require(auth, ctx), id);
             return Results.NoContent();
         });
-        app.MapGet("/media/{id}/{variant}", async (string id, string variant, HttpContext ctx, AuthService auth, CommunityService svc) =>
+        app.MapGet(mediaRoute, async (string id, string variant, HttpContext ctx, AuthService auth, CommunityService svc) =>
         {
             var m = await svc.MediaAsync(auth.Authenticate(ctx), id, variant, ctx.RequestAborted);
             if (m is null) return Results.NotFound();

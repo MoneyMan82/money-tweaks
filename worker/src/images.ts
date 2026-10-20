@@ -3,6 +3,7 @@
 // → the output is checked again and stripped of any metadata chunks/segments. Nothing of the original file is stored.
 
 import { ApiError, type Env, type Limits } from "./env";
+import { D1_MAX_BLOB } from "./storage";
 
 export type Mime = "image/png" | "image/jpeg" | "image/webp";
 
@@ -132,10 +133,16 @@ export async function processUpload(env: Env, lim: Limits, data: Uint8Array, dec
   const outMime: Mime = h.alpha ? "image/png" : "image/jpeg";
   let full: Uint8Array, thumb: Uint8Array;
   try {
-    full = await bytesOf((await env.IMAGES.input(stream(data)).output({ format: outMime, quality: 88, anim: false })).image());
+    // Stored size: at most 1920 px on the longest side, and small enough for one D1 row (see storage.ts).
+    const encode = async (side: number, quality: number) => bytesOf((await env.IMAGES!.input(stream(data))
+      .transform({ width: side, height: side, fit: "scale-down" }).output({ format: outMime, quality, anim: false })).image());
+    full = await encode(1920, 85);
+    if (full.length > D1_MAX_BLOB) full = await encode(1280, 75);
+    if (full.length > D1_MAX_BLOB) throw new ApiError(413, "too_detailed", "This image is too detailed to store even after shrinking it. Try a smaller screenshot or a JPEG.");
     thumb = await bytesOf((await env.IMAGES.input(stream(data)).transform({ width: lim.thumbSize, height: lim.thumbSize, fit: "scale-down" })
       .output({ format: outMime, quality: 80, anim: false })).image());
   } catch (e) {
+    if (e instanceof ApiError) throw e;
     // 9422: the Cloudflare Images free plan's 5,000 transformations for this month are used up (never charged).
     if (String((e as Error)?.message ?? e).includes("9422"))
       throw new ApiError(503, "processing_limit", "Image uploads are paused until next month: the Community Hub has used this month's free image processing. Posts without images still work.");
@@ -144,5 +151,7 @@ export async function processUpload(env: Env, lim: Limits, data: Uint8Array, dec
   if (sniff(full) !== outMime || sniff(thumb) !== outMime) throw new ApiError(500, "processing_failed", "The image couldn't be processed.");
   full = stripMetadata(full);
   thumb = stripMetadata(thumb);
-  return { full, fullMime: outMime, thumb, thumbMime: outMime, width: h.width, height: h.height, alpha: h.alpha };
+  const stored = readHeader(full);
+  if (!stored) throw new ApiError(500, "processing_failed", "The image couldn't be processed.");
+  return { full, fullMime: outMime, thumb, thumbMime: outMime, width: stored.width, height: stored.height, alpha: h.alpha };
 }

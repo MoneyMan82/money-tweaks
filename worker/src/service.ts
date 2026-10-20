@@ -15,7 +15,7 @@ const suspended = () => new ApiError(403, "not_allowed", "This account is suspen
 
 function store(env: Env): MediaStore {
   const s = mediaStore(env);
-  if (!s) throw new ApiError(503, "not_configured", "Image storage isn't set up on this server (R2 bucket binding MEDIA or KV namespace MEDIA_KV).");
+  if (!s) throw new ApiError(503, "not_configured", "Image storage isn't available: the D1 database (binding DB) is missing.");
   return s;
 }
 
@@ -23,7 +23,7 @@ function store(env: Env): MediaStore {
 
 const imageInfo = (r: Row) => ({
   id: r.id as string, width: r.width as number, height: r.height as number, kind: r.kind as string, status: r.status as string,
-  hasAlpha: r.has_alpha === 1, url: `/media/${r.id}/full`, thumbUrl: `/media/${r.id}/thumb`,
+  hasAlpha: r.has_alpha === 1, url: `/api/community/media/${r.id}/full`, thumbUrl: `/api/community/media/${r.id}/thumb`,
 });
 
 export async function upload(env: Env, lim: Limits, u: User, data: Uint8Array, contentType: string | null) {
@@ -224,7 +224,7 @@ function summary(r: Row) {
     id: r.id, title: r.title, game: r.game, category: r.category, tags: JSON.parse(r.tags as string),
     author: { id: r.author_id, login: r.login, avatarUrl: r.avatar_url ?? null, joinedUtc: r.joined_utc, postCount: 0, likesReceived: 0 },
     createdUtc: r.created_utc, updatedUtc: r.updated_utc, likes: r.likes, helpfulYes: r.helpful_yes, helpfulNo: r.helpful_no, imports: r.imports,
-    liked: false, bookmarked: false, thumbUrl: r.thumb_id ? `/media/${r.thumb_id}/thumb` : null, sections: JSON.parse(r.sections as string), status: r.status,
+    liked: false, bookmarked: false, thumbUrl: r.thumb_id ? `/api/community/media/${r.thumb_id}/thumb` : null, sections: JSON.parse(r.sections as string), status: r.status,
   } as Record<string, unknown> & { id: string; author: Record<string, unknown> };
 }
 

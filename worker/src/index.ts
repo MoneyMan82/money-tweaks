@@ -1,10 +1,12 @@
-// Money Tweaks Community Hub API: a separate Cloudflare Worker (the website is not part of it).
-// Routes: /health, /api/v1/*, /media/{id}/{full|thumb}.
+// Money Tweaks Worker: the website (docs/, served by the assets binding exactly as before) plus the Community Hub API
+// under /api/community/ (health, config, auth, posts, images, media, moderation). Only /api/* runs this code
+// (run_worker_first in wrangler.jsonc); every other address is served straight from docs/.
 
 import { authenticate, createSession, quotaInfo, requireUser, signInDev, signInGitHub, signOut, type User } from "./auth";
 import { ApiError, type Env, type Limits, json, limits, missing } from "./env";
 import { CATEGORIES, GAMES, GUIDELINES, REPORT_REASONS } from "./rules";
 import * as svc from "./service";
+import { mediaStore } from "./storage";
 
 const SECURITY = {
   "x-content-type-options": "nosniff",
@@ -56,11 +58,14 @@ async function session(env: Env, u: User, lim: Limits) {
   return { token: s.token, expiresUtc: s.expires.toISOString(), me: await me(env, u, lim) };
 }
 
+/** All Community Hub endpoints live under this path on the website's own address. */
+const PREFIX = "/api/community";
+
 const ok = (v: unknown) => json(v);
 const done = () => new Response(null, { status: 204 });
 
 /**
- * Connection test: actually queries D1 and R2 and reports each part. "ok" is true only when everything the Hub needs
+ * Connection test: actually queries D1 (tables and image storage) and reports each part. "ok" is true only when everything the Hub needs
  * is reachable and configured. Never reveals secret values, only whether they're set.
  */
 async function health(env: Env): Promise<Response> {
@@ -68,24 +73,36 @@ async function health(env: Env): Promise<Response> {
   if (!env.DB) checks.database = { ok: false, detail: "D1 binding DB is missing (check d1_databases in wrangler.jsonc)." };
   else {
     try {
-      const t = await env.DB.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name IN ('users','posts','images','upload_slots')").first<{ n: number }>();
-      checks.database = (t?.n ?? 0) === 4
-        ? { ok: true, detail: "Connected; tables present." }
-        : { ok: false, detail: "Connected, but the tables are missing: apply migrations/0001_community.sql (README step 6)." };
+      const t = await env.DB.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name IN ('users','posts','images','upload_slots','media_blobs')").first<{ n: number }>();
+      if ((t?.n ?? 0) !== 5) checks.database = { ok: false, detail: "Connected, but the Community Hub tables are missing: apply the migrations (worker/README.md, step 6)." };
+      else {
+        // The tables must be the Hub's own (an existing database could have unrelated tables with the same names).
+        try {
+          await env.DB.batch([
+            env.DB.prepare("SELECT provider_id, is_banned FROM users LIMIT 0"),
+            env.DB.prepare("SELECT content_hash, helpful_score FROM posts LIMIT 0"),
+            env.DB.prepare("SELECT storage_key, thumb_key FROM images LIMIT 0"),
+            env.DB.prepare("SELECT slot, reserved_utc FROM upload_slots LIMIT 0"),
+            env.DB.prepare("SELECT content_type, data FROM media_blobs LIMIT 0"),
+          ]);
+          checks.database = { ok: true, detail: "Connected; Community Hub tables present." };
+        } catch {
+          checks.database = { ok: false, detail: "A table with a Community Hub name exists but has different columns (it belongs to something else). Don't apply changes; see worker/README.md, step 3." };
+        }
+      }
     } catch (e) { checks.database = { ok: false, detail: "Couldn't query D1: " + String((e as Error).message ?? e).slice(0, 200) }; }
   }
-  if (!env.MEDIA) checks.imageStorage = { ok: false, detail: "R2 binding MEDIA is missing (check r2_buckets in wrangler.jsonc)." };
-  else {
-    try { await env.MEDIA.head("health-check-probe"); checks.imageStorage = { ok: true, detail: "R2 bucket reachable." }; }
-    catch (e) { checks.imageStorage = { ok: false, detail: "Couldn't reach the R2 bucket: " + String((e as Error).message ?? e).slice(0, 200) }; }
-  }
+  const store = mediaStore(env);
+  checks.imageStorage = !store ? { ok: false, detail: "No image storage: the D1 binding DB is missing." }
+    : store.kind === "d1" ? { ok: checks.database.ok, detail: checks.database.ok ? "Images are stored in D1 (media_blobs)." : "Images are stored in D1, which isn't ready yet." }
+    : { ok: true, detail: `Images are stored in ${store.kind.toUpperCase()}.` };
   checks.imageProcessing = env.IMAGES ? { ok: true, detail: "Images binding present." } : { ok: false, detail: "Images binding IMAGES is missing." };
   checks.githubSignIn = env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
     ? { ok: true, detail: "Client ID and secret are set." }
     : { ok: false, detail: `Missing: ${[!env.GITHUB_CLIENT_ID && "GITHUB_CLIENT_ID variable", !env.GITHUB_CLIENT_SECRET && "GITHUB_CLIENT_SECRET secret"].filter(Boolean).join(", ")}.` };
   checks.moderators = env.ADMIN_GITHUB_IDS ? { ok: true, detail: "Set." } : { ok: false, detail: "ADMIN_GITHUB_IDS is empty: nobody can approve images." };
   const ok = Object.values(checks).every((c) => c.ok);
-  return json({ ok, service: "money-tweaks-community-api", time: new Date().toISOString(), checks }, ok ? 200 : 503);
+  return json({ ok, service: "Money Tweaks Community Hub", time: new Date().toISOString(), checks }, ok ? 200 : 503);
 }
 
 async function route(request: Request, env: Env): Promise<Response> {
@@ -93,11 +110,13 @@ async function route(request: Request, env: Env): Promise<Response> {
   const path = url.pathname, method = request.method;
   const lim = limits(env);
 
-  if (path === "/health" && method === "GET") return health(env);
-  if (path === "/" && method === "GET") return json({ service: "Money Tweaks Community Hub API", health: "/health" });
+  if (!path.startsWith(PREFIX + "/") && path !== PREFIX) return json({ error: "not_found", message: "Not found." }, 404);
+  const p = path.slice(PREFIX.length) || "/";
+  if (p === "/" && method === "GET") return json({ service: "Money Tweaks Community Hub", health: `${PREFIX}/health` });
+  if (p === "/health" && method === "GET") return health(env);
 
   // Config works even before D1 exists, so the app can explain what's missing.
-  if (path === "/api/v1/config" && method === "GET") {
+  if (p === "/config" && method === "GET") {
     const m = missing(env);
     return ok({
       gitHubClientId: env.GITHUB_CLIENT_ID || null, dailyUploadLimit: lim.dailyUploads, maxUploadBytes: lim.maxUploadBytes,
@@ -109,11 +128,9 @@ async function route(request: Request, env: Env): Promise<Response> {
   }
   if (!env.DB) throw new ApiError(503, "not_configured", "The Community Hub isn't set up on this server yet: the D1 database (binding DB) is missing.");
 
-  // /media/{id}/{variant}
-  const mm = path.match(/^\/media\/([^/]+)\/([^/]+)$/);
+  // /api/community/media/{id}/{variant}
+  const mm = p.match(/^\/media\/([^/]+)\/([^/]+)$/);
   if (mm && method === "GET") return (await svc.media(env, await authenticate(env, request), mm[1], mm[2])) ?? new Response("Not found", { status: 404 });
-  if (!path.startsWith("/api/v1/")) return new Response("Not found", { status: 404 });
-  const p = path.slice("/api/v1".length);
   const seg = p.split("/").filter(Boolean);
   const user = () => requireUser(env, request);
 
@@ -182,6 +199,8 @@ async function route(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const path = new URL(request.url).pathname;
+    if (!path.startsWith("/api/")) return env.ASSETS.fetch(request); // the website, unchanged
     let resp: Response;
     try { resp = await route(request, env); }
     catch (e) {

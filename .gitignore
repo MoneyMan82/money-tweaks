@@ -13,9 +13,9 @@ src/MoneyTweaks.Community.Server/data/
 src/MoneyTweaks.Community.Server/data-dev/
 
 # Cloudflare Worker
-community-api/node_modules/
-community-api/.wrangler/
+worker/node_modules/
+worker/.wrangler/
 .wrangler/
 .dev.vars
-community-api/.dev.vars
+worker/.dev.vars
 .wrangler-dev.log

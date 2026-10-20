@@ -1,12 +1,51 @@
 // Cloudflare static site config: serves the docs/ folder. Used by `npx wrangler deploy`
 // (Workers & Pages Git integration) and ignored by classic Pages projects.
+// The same Worker also runs the Community Hub API under /api/community/ (code in worker/, guide in worker/README.md).
+// Every other address is served straight from docs/ exactly as before, without running any code.
 {
   "name": "money-tweaks",
   "compatibility_date": "2025-09-01",
   // Publish on <name>.<account>.workers.dev (otherwise the dashboard shows "No URLs enabled").
   "workers_dev": true,
   "preview_urls": true,
+  "main": "worker/src/index.ts",
   "assets": {
-    "directory": "./docs"
-  }
+    "directory": "./docs",
+    "binding": "ASSETS",
+    // Only /api/* runs the Worker code; the website files are served directly.
+    "run_worker_first": ["/api/*"]
+  },
+  // Your existing D1 database. SET THESE TWO before deploying (worker/README.md, step 2): the name and the
+  // "Database ID" shown on the database's page in the Cloudflare dashboard. Deploying with the zeros fails safely.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "SET-YOUR-D1-DATABASE-NAME",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+  // Cloudflare Images (free plan, no billing): re-encodes uploads and makes thumbnails. Nothing to create.
+  "images": { "binding": "IMAGES" },
+  // Hourly cleanup of unused uploads, removed posts and expired sign-ins.
+  "triggers": { "crons": ["17 * * * *"] },
+  "vars": {
+    // SET THIS: Client ID of your GitHub OAuth App (public). The client SECRET goes in the dashboard as a Secret
+    // named GITHUB_CLIENT_SECRET, never in this file (worker/README.md, step 5).
+    "GITHUB_CLIENT_ID": "",
+    // SET THIS: your numeric GitHub user id (moderator). Several: "123,456".
+    "ADMIN_GITHUB_IDS": "",
+    "DAILY_UPLOAD_LIMIT": "2",
+    "MAX_UPLOAD_BYTES": "5242880",
+    "MAX_IMAGE_DIMENSION": "4096",
+    "MIN_IMAGE_DIMENSION": "16",
+    "IMAGE_REVIEW": "pre",
+    "MIN_ACCOUNT_AGE_DAYS": "7",
+    "POSTS_PER_DAY": "5",
+    "REPORTS_PER_DAY": "20",
+    "REPORT_HIDE_THRESHOLD": "3",
+    // Images live in D1 (free plan: 5 GB total). Uploads pause when stored images reach this size.
+    "MAX_TOTAL_STORAGE_BYTES": "3000000000"
+  },
+  "observability": { "enabled": true }
 }

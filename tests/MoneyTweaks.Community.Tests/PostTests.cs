@@ -239,9 +239,12 @@ public sealed class PostTests
         Assert.True(session.Me.IsAdmin);
         foreach (var f in Directory.GetFiles(s.Dir, "community.db*")) // the GitHub token is never stored (database and WAL)
         {
-            using var fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var sr = new StreamReader(fs, Encoding.Latin1);
-            Assert.DoesNotContain("gho_good", await sr.ReadToEndAsync());
+            FileStream fs;
+            try { fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete); }
+            catch (FileNotFoundException) { continue; } // SQLite removes its -shm/-wal files when the last connection closes
+            using (fs)
+            using (var sr = new StreamReader(fs, Encoding.Latin1))
+                Assert.DoesNotContain("gho_good", await sr.ReadToEndAsync());
         }
         Assert.Equal(HttpStatusCode.Unauthorized, (await anon.PostAsJsonAsync("/api/v1/auth/github", new { accessToken = "gho_bad" })).StatusCode);
         Assert.Contains("POST /applications/Iv1.test/token", fake.Calls);

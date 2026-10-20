@@ -19,7 +19,7 @@ public sealed partial class CommunityHubView
     {
         await Try(async () =>
         {
-            _detail = await CommunityClient.Get<PostDetail>($"api/v1/posts/{id}");
+            _detail = await CommunityClient.Get<PostDetail>($"api/community/posts/{id}");
             Render();
         });
     }
@@ -27,7 +27,7 @@ public sealed partial class CommunityHubView
     private async Task ReloadDetailAsync()
     {
         if (_detail is null) return;
-        try { _detail = await CommunityClient.Get<PostDetail>($"api/v1/posts/{_detail.Id}"); }
+        try { _detail = await CommunityClient.Get<PostDetail>($"api/community/posts/{_detail.Id}"); }
         catch (CommunityApiException e) when (e.Status == 404) { _detail = null; await LoadListAsync(true); return; }
         Render();
     }
@@ -80,8 +80,8 @@ public sealed partial class CommunityHubView
                 {
                     var id = img.Id;
                     cell.Children.Add(Ui.Row(
-                        Ui.Btn("Approve", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/images/{id}/approve"); await ReloadDetailAsync(); }), "PrimaryButton"),
-                        Ui.Btn("Reject", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/v1/admin/images/{id}/reject"); await ReloadDetailAsync(); }), "DangerButton")));
+                        Ui.Btn("Approve", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/images/{id}/approve"); await ReloadDetailAsync(); }), "PrimaryButton"),
+                        Ui.Btn("Reject", async (_, _) => await Try(async () => { await CommunityClient.Post<bool>($"api/community/admin/images/{id}/reject"); await ReloadDetailAsync(); }), "DangerButton")));
                 }
                 gallery.Children.Add(cell);
             }
@@ -124,12 +124,12 @@ public sealed partial class CommunityHubView
         {
             row.Children.Add(B((p.Liked ? "♥ Liked" : "♡ Like") + $"  {p.Likes}", async () =>
             {
-                _detail = p.Liked ? await CommunityClient.Delete<PostDetail>($"api/v1/posts/{p.Id}/like") : await CommunityClient.Put<PostDetail>($"api/v1/posts/{p.Id}/like");
+                _detail = p.Liked ? await CommunityClient.Delete<PostDetail>($"api/community/posts/{p.Id}/like") : await CommunityClient.Put<PostDetail>($"api/community/posts/{p.Id}/like");
                 Render();
             }, p.Liked ? "PrimaryButton" : "BaseButton", signed));
             row.Children.Add(B(p.Bookmarked ? "Bookmarked" : "Bookmark", async () =>
             {
-                _detail = p.Bookmarked ? await CommunityClient.Delete<PostDetail>($"api/v1/posts/{p.Id}/bookmark") : await CommunityClient.Put<PostDetail>($"api/v1/posts/{p.Id}/bookmark");
+                _detail = p.Bookmarked ? await CommunityClient.Delete<PostDetail>($"api/community/posts/{p.Id}/bookmark") : await CommunityClient.Put<PostDetail>($"api/community/posts/{p.Id}/bookmark");
                 Render();
             }, p.Bookmarked ? "PrimaryButton" : "BaseButton", signed));
         }
@@ -139,7 +139,7 @@ public sealed partial class CommunityHubView
             row.Children.Add(B("Delete", async () =>
             {
                 if (!Dialog.Confirm("Delete this post?", $"\"{p.Title}\" and its images will be deleted for everyone. This can't be undone. (Images you uploaded today still count toward today's limit.)", "Delete", DialogKind.Warning)) return;
-                await CommunityClient.Delete<bool>($"api/v1/posts/{p.Id}");
+                await CommunityClient.Delete<bool>($"api/community/posts/{p.Id}");
                 MainWindow.Current?.ShowToast("Post deleted.", "Accent");
                 _detail = null;
                 await LoadListAsync(true);
@@ -150,14 +150,14 @@ public sealed partial class CommunityHubView
             if (p.Status != "removed") row.Children.Add(B("Remove (moderator)", async () =>
             {
                 if (!Dialog.Confirm("Remove this post?", "It disappears for everyone except its author and moderators. Its images are deleted after the retention period.", "Remove", DialogKind.Warning)) return;
-                await CommunityClient.Post<bool>($"api/v1/admin/posts/{p.Id}/remove", new { note = "Removed from the app" });
+                await CommunityClient.Post<bool>($"api/community/admin/posts/{p.Id}/remove", new { note = "Removed from the app" });
                 await ReloadDetailAsync();
             }, "DangerButton"));
-            if (p.Status != "visible") row.Children.Add(B("Restore (moderator)", async () => { await CommunityClient.Post<bool>($"api/v1/admin/posts/{p.Id}/restore"); await ReloadDetailAsync(); }));
+            if (p.Status != "visible") row.Children.Add(B("Restore (moderator)", async () => { await CommunityClient.Post<bool>($"api/community/admin/posts/{p.Id}/restore"); await ReloadDetailAsync(); }));
             if (!own) row.Children.Add(B("Suspend author", async () =>
             {
                 if (!Dialog.Confirm("Suspend this account?", $"{p.Author.Login} will be signed out and can't post, upload or react. Their posts are hidden. You can lift it later.", "Suspend", DialogKind.Warning)) return;
-                await CommunityClient.Post<bool>($"api/v1/admin/users/{p.Author.Id}", new { banned = true, reason = "Suspended from the app" });
+                await CommunityClient.Post<bool>($"api/community/admin/users/{p.Author.Id}", new { banned = true, reason = "Suspended from the app" });
                 MainWindow.Current?.ShowToast($"{p.Author.Login} suspended.", "Accent");
             }, "GhostButton"));
         }
@@ -170,8 +170,8 @@ public sealed partial class CommunityHubView
             var q = Ui.Muted($"Did this help?  {(votes == 0 ? "No ratings yet" : $"{p.HelpfulYes} of {votes} said yes")}   ", 12.5);
             q.VerticalAlignment = VerticalAlignment.Center;
             help.Children.Add(q);
-            help.Children.Add(B(p.MyHelpful == true ? "✓ Yes" : "Yes", async () => { _detail = await CommunityClient.Put<PostDetail>($"api/v1/posts/{p.Id}/helpful", new { helpful = p.MyHelpful == true ? (bool?)null : true }); Render(); }, p.MyHelpful == true ? "PrimaryButton" : "BaseButton", signed));
-            help.Children.Add(B(p.MyHelpful == false ? "✓ No" : "No", async () => { _detail = await CommunityClient.Put<PostDetail>($"api/v1/posts/{p.Id}/helpful", new { helpful = p.MyHelpful == false ? (bool?)null : false }); Render(); }, p.MyHelpful == false ? "PrimaryButton" : "BaseButton", signed));
+            help.Children.Add(B(p.MyHelpful == true ? "✓ Yes" : "Yes", async () => { _detail = await CommunityClient.Put<PostDetail>($"api/community/posts/{p.Id}/helpful", new { helpful = p.MyHelpful == true ? (bool?)null : true }); Render(); }, p.MyHelpful == true ? "PrimaryButton" : "BaseButton", signed));
+            help.Children.Add(B(p.MyHelpful == false ? "✓ No" : "No", async () => { _detail = await CommunityClient.Put<PostDetail>($"api/community/posts/{p.Id}/helpful", new { helpful = p.MyHelpful == false ? (bool?)null : false }); Render(); }, p.MyHelpful == false ? "PrimaryButton" : "BaseButton", signed));
             help.Children.Add(B(p.Reported ? "Reported" : "Report…", () => { ShowReport(sp, p); return Task.CompletedTask; }, "GhostButton", signed && !p.Reported));
             sp.Children.Add(help);
         }
@@ -193,7 +193,7 @@ public sealed partial class CommunityHubView
         form.Children.Add(Ui.Row(
             Ui.Btn("Send report", async (_, _) => await Try(async () =>
             {
-                await CommunityClient.Post<bool>($"api/v1/posts/{p.Id}/report", new ReportInput { Reason = reason.SelectedItem as string ?? "", Details = details.Text });
+                await CommunityClient.Post<bool>($"api/community/posts/{p.Id}/report", new ReportInput { Reason = reason.SelectedItem as string ?? "", Details = details.Text });
                 MainWindow.Current?.ShowToast("Thanks. A moderator will look at it.", "Success");
                 await ReloadDetailAsync();
             }), "PrimaryButton"),
@@ -410,7 +410,7 @@ public sealed partial class CommunityHubView
 
     private static async Task Recorded(PostDetail p)
     {
-        if (CommunityClient.SignedIn) try { await CommunityClient.Post<bool>($"api/v1/posts/{p.Id}/imported"); } catch { }
+        if (CommunityClient.SignedIn) try { await CommunityClient.Post<bool>($"api/community/posts/{p.Id}/imported"); } catch { }
     }
 
     private static void Imported(string what, List<string> notes, string page)

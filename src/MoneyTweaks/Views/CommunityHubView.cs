@@ -248,9 +248,9 @@ public sealed partial class CommunityHubView : UserControl, IPageLifecycle
         {
             string path = _tab switch
             {
-                "bookmarks" when CommunityClient.SignedIn => $"api/v1/me/bookmarks?page={_page}",
-                "mine" when CommunityClient.SignedIn => $"api/v1/me/posts?page={_page}",
-                _ => "api/v1/posts?" + string.Join("&", new[]
+                "bookmarks" when CommunityClient.SignedIn => $"api/community/me/bookmarks?page={_page}",
+                "mine" when CommunityClient.SignedIn => $"api/community/me/posts?page={_page}",
+                _ => "api/community/posts?" + string.Join("&", new[]
                 {
                     $"page={_page}", "sort=" + _sort,
                     _q is { Length: > 0 } ? "q=" + Uri.EscapeDataString(_q) : null,
@@ -422,7 +422,7 @@ public sealed partial class CommunityHubView : UserControl, IPageLifecycle
 
         var srv = new StackPanel();
         srv.Children.Add(Ui.Section("Server", "Money Tweaks connects only to the Community Hub server set here. Leave it empty to keep the Hub off."));
-        var box = new TextBox { Text = App.Settings.CommunityServer, Width = 360, Margin = new Thickness(0, 0, 8, 0), Tag = "https://community.example.com", VerticalAlignment = VerticalAlignment.Center };
+        var box = new TextBox { Text = App.Settings.CommunityServer, Width = 360, Margin = new Thickness(0, 0, 8, 0), Tag = CommunityClient.OfficialServer.Length > 0 ? CommunityClient.OfficialServer + " (default)" : "https://money-tweaks.<subdomain>.workers.dev", VerticalAlignment = VerticalAlignment.Center };
         var msg = Ui.Muted("", 12);
         srv.Children.Add(Ui.Row(box, Ui.Btn("Save", async (_, _) =>
         {
