@@ -1,0 +1,8 @@
+{
+  "name": "money-tweaks-site",
+  "private": true,
+  "description": "Cloudflare build entry for the website Worker (docs/ + Community Hub API in worker/). Nothing needs building: wrangler bundles worker/src during deploy.",
+  "scripts": {
+    "build": "node -e \"console.log('Nothing to build: wrangler deploy bundles worker/src and uploads docs/.')\""
+  }
+}
