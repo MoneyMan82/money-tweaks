@@ -5,6 +5,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# One release at a time: two tags pushed together used to publish out of order, and GitHub marks the most recently
+# published release "latest" (v1.48.0 ended up latest above v1.49.0, so older app versions saw no update).
+concurrency:
+  group: release
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: windows-latest
@@ -49,3 +54,14 @@ jobs:
             dist/*.zip
             dist/MoneyTweaks-*-win-x64.exe
             dist/SHA256SUMS.txt
+      - name: Keep the highest version marked latest
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          function V($t) { $s = $t.TrimStart('v','V'); if ($s -match '^\d+\.\d+$') { $s += '.0' }; try { [version]$s } catch { $null } }
+          $newest = gh release list --repo $env:GITHUB_REPOSITORY --limit 200 --exclude-drafts --exclude-pre-releases --json tagName --jq '.[].tagName' |
+            Where-Object { V $_ } | Sort-Object { V $_ } -Descending | Select-Object -First 1
+          gh release edit $newest --repo $env:GITHUB_REPOSITORY --latest
+          Write-Host "Latest release: $newest"

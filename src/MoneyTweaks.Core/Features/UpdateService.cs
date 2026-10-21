@@ -42,14 +42,34 @@ public static class UpdateService
         return Version.TryParse(t, out var v) ? v : new Version(0, 0);
     }
 
-    /// <summary>Returns the latest release if it is newer than <paramref name="current"/>, otherwise null.</summary>
+    /// <summary>
+    /// The highest-versioned published release (not a draft or pre-release) that has a checksum file. GitHub's own
+    /// "latest" is simply the most recently published one, so two releases built at the same time could leave an older
+    /// version marked latest and stop updates; choosing by version number can't.
+    /// </summary>
+    public static JsonElement? PickNewest(JsonElement releases)
+    {
+        JsonElement? best = null;
+        var bestV = new Version(0, 0);
+        foreach (var r in releases.EnumerateArray())
+        {
+            if (r.TryGetProperty("draft", out var d) && d.GetBoolean()) continue;
+            if (r.TryGetProperty("prerelease", out var p) && p.GetBoolean()) continue;
+            if (!r.TryGetProperty("assets", out var assets) || !assets.EnumerateArray().Any(a => a.GetProperty("name").GetString() == "SHA256SUMS.txt")) continue;
+            var v = ParseVersion(r.GetProperty("tag_name").GetString() ?? "");
+            if (best is null || IsNewer(v, bestV)) { best = r; bestV = v; }
+        }
+        return best;
+    }
+
+    /// <summary>Returns the newest release if it is newer than <paramref name="current"/>, otherwise null.</summary>
     public static async Task<UpdateInfo?> CheckAsync(Version current, CancellationToken ct = default)
     {
-        using var resp = await Http.GetAsync($"https://api.github.com/repos/{Repo}/releases/latest", ct);
+        using var resp = await Http.GetAsync($"https://api.github.com/repos/{Repo}/releases?per_page=30", ct);
         if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return null; // no releases yet
         resp.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
-        var root = doc.RootElement;
+        if (PickNewest(doc.RootElement) is not { } root) return null;
         var tag = root.GetProperty("tag_name").GetString() ?? "";
         var latest = ParseVersion(tag);
         if (!IsNewer(latest, current)) return null;

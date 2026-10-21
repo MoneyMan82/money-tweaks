@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.51 – 2026-10-21
+- **Fixed: updates could stop at an older version.** v1.48.0 and v1.49.0 were released at the same moment, v1.48.0
+  finished last, and GitHub marks the most recently published release as "latest", so the update check (which asked
+  GitHub for "latest") told 1.48 users they were up to date. The app now picks the highest version among the published
+  releases itself, the release workflow runs one release at a time and always marks the highest version as latest.
+
 ## 1.50 – 2026-10-21
 - **Tutorials play inside Money Tweaks**: "Watch tutorial" opens a player window (YouTube's privacy-enhanced
   youtube-nocookie.com player in Microsoft Edge WebView2) and starts the video; fullscreen works. "Open on YouTube"
