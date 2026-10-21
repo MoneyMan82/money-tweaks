@@ -341,6 +341,7 @@ public sealed partial class CommunityHubView : UserControl, IPageLifecycle
         var img = new Image { Height = 140, Stretch = Stretch.UniformToFill };
         var frame = new Border { Height = 140, CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0E, 0x14)), ClipToBounds = true, Margin = new Thickness(0, 0, 0, 10) };
         if (p.ThumbUrl is { } u) { frame.Child = img; _ = LoadInto(img, u); }
+        else if (CrosshairPreview(p.Crosshair, 140) is { } xv) frame.Child = xv;
         else frame.Child = new TextBlock { Text = "\uEB9F", Style = Ui.Res<Style>("Icon"), FontSize = 34, Foreground = Ui.Brush("Subtle"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         sp.Children.Add(frame);
         var title = Ui.Text(p.Title, 14, FontWeights.SemiBold);

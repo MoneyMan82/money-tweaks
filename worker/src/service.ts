@@ -2,7 +2,7 @@
 // Port of src/MoneyTweaks.Community.Server/CommunityService.cs, with the same JSON shapes so the app works unchanged.
 
 import { cannotContribute, commitSlot, findByLogin, quotaInfo, releaseSlot, reserveSlot, type User } from "./auth";
-import { renderPreview, sanitize, PREVIEW_SIZE } from "./crosshair";
+import { sanitize } from "./crosshair";
 import { ApiError, type Env, type Limits, iso, newId, now, sha256Hex } from "./env";
 import { processUpload } from "./images";
 import { CATEGORIES, GAMES, ID_PATTERN, REPORT_REASONS, clean, sections, validatePost, type PostContent, type PostInput } from "./rules";
@@ -153,7 +153,6 @@ export async function createPost(env: Env, lim: Limits, u: User, raw: unknown) {
     db.prepare("INSERT INTO activity (user_id, kind, created_utc) VALUES (?1, 'post', ?2)").bind(u.id, ts),
   ]);
   await attachImages(env, u, id, input.imageIds);
-  await regeneratePreview(env, id);
   return (await getPost(env, u, id))!;
 }
 
@@ -175,7 +174,7 @@ export async function updatePost(env: Env, lim: Limits, u: User, id: string, raw
   ]);
   await attachImages(env, u, id, input.imageIds);
   for (const img of before.filter((x) => !input.imageIds.includes(x))) await purgeImages(env, "id = ?1", img);
-  await regeneratePreview(env, id);
+  await purgeImages(env, "post_id = ?1 AND kind = 'crosshair-preview'", id); // old server-made previews (the app draws them now)
   return (await getPost(env, u, id))!;
 }
 
@@ -192,32 +191,12 @@ export async function deletePost(env: Env, u: User, id: string) {
   await db.batch(st);
 }
 
-/** Server-made crosshair preview: from the validated configuration, never counts toward the upload allowance. */
-async function regeneratePreview(env: Env, postId: string) {
-  await purgeImages(env, "post_id = ?1 AND kind = 'crosshair-preview'", postId);
-  const r = await env.DB!.prepare("SELECT content, author_id FROM posts WHERE id = ?1").bind(postId).first();
-  const s = mediaStore(env);
-  if (!r || !s) return;
-  const content = JSON.parse(r.content as string) as PostContent;
-  const p = content.crosshair ? sanitize(content.crosshair) : null;
-  if (!p) return;
-  const png = await renderPreview(p);
-  if (!png) return; // too complex to draw within the CPU budget: the post simply has no generated preview
-  const id = newId();
-  await s.put(`img/${id}.png`, png, "image/png");
-  await s.put(`thumb/${id}.png`, png, "image/png");
-  await env.DB!.prepare(
-    `INSERT INTO images (id, owner_id, post_id, kind, status, width, height, has_alpha, mime, bytes, thumb_mime, thumb_bytes, storage_key, thumb_key, position, created_utc)
-     VALUES (?1, ?2, ?3, 'crosshair-preview', 'approved', ?4, ?4, 0, 'image/png', ?5, 'image/png', ?5, ?6, ?7, -1, ?8)`,
-  ).bind(id, r.author_id, postId, PREVIEW_SIZE, png.length, `img/${id}.png`, `thumb/${id}.png`, iso(now())).run();
-}
-
 // ---- reading ------------------------------------------------------------------------------------------------------
 
 const SUMMARY = `p.id, p.title, p.game, p.category, p.tags, p.created_utc, p.updated_utc, p.likes, p.helpful_yes, p.helpful_no, p.imports, p.sections, p.status,
-  u.id AS author_id, u.login, u.avatar_url, u.created_utc AS joined_utc, u.is_banned,
-  (SELECT id FROM images i WHERE i.post_id = p.id AND i.status = 'approved' AND i.deleted_utc IS NULL
-     ORDER BY CASE WHEN i.kind = 'upload' THEN 0 ELSE 1 END, i.position LIMIT 1) AS thumb_id`;
+  u.id AS author_id, u.login, u.avatar_url, u.created_utc AS joined_utc, u.is_banned, json_extract(p.content, '$.crosshair') AS crosshair_json,
+  (SELECT id FROM images i WHERE i.post_id = p.id AND i.kind = 'upload' AND i.status = 'approved' AND i.deleted_utc IS NULL
+     ORDER BY i.position LIMIT 1) AS thumb_id`;
 
 function summary(r: Row) {
   return {
@@ -225,6 +204,8 @@ function summary(r: Row) {
     author: { id: r.author_id, login: r.login, avatarUrl: r.avatar_url ?? null, joinedUtc: r.joined_utc, postCount: 0, likesReceived: 0 },
     createdUtc: r.created_utc, updatedUtc: r.updated_utc, likes: r.likes, helpfulYes: r.helpful_yes, helpfulNo: r.helpful_no, imports: r.imports,
     liked: false, bookmarked: false, thumbUrl: r.thumb_id ? `/api/community/media/${r.thumb_id}/thumb` : null, sections: JSON.parse(r.sections as string), status: r.status,
+    // The app draws crosshair previews itself from these settings (sharp at any size, no server work).
+    crosshair: typeof r.crosshair_json === "string" ? JSON.parse(r.crosshair_json) : null,
   } as Record<string, unknown> & { id: string; author: Record<string, unknown> };
 }
 
@@ -252,7 +233,7 @@ export async function getPost(env: Env, viewer: User | null, id: string) {
   const d = summary(r);
   d.description = r.description;
   d.content = JSON.parse(r.content as string);
-  const imgs = (await db.prepare("SELECT * FROM images WHERE post_id = ?1 AND deleted_utc IS NULL ORDER BY position").bind(id).all()).results;
+  const imgs = (await db.prepare("SELECT * FROM images WHERE post_id = ?1 AND kind = 'upload' AND deleted_utc IS NULL ORDER BY position").bind(id).all()).results;
   d.images = imgs.filter((i) => i.status === "approved" || owner || admin).map(imageInfo);
   await authorStats(env, d.author);
   const f = await viewerFlags(env, viewer, [id]);
@@ -467,6 +448,7 @@ export async function cleanup(env: Env, lim: Limits): Promise<number> {
   n += await purgeImages(env, "post_id IS NULL AND kind = 'upload' AND created_utc < ?1", iso(new Date(t.getTime() - lim.orphanHours * 3600000)));
   n += await purgeImages(env, "post_id IN (SELECT id FROM posts WHERE status = 'removed' AND removed_utc < ?1)", iso(new Date(t.getTime() - lim.removedRetentionDays * 86400000)));
   n += await purgeImages(env, "post_id IS NOT NULL AND post_id NOT IN (SELECT id FROM posts)");
+  n += await purgeImages(env, "kind = 'crosshair-preview'"); // replaced by app-drawn previews
   await db.batch([
     db.prepare("DELETE FROM sessions WHERE expires_utc < ?1").bind(iso(t)),
     db.prepare("DELETE FROM upload_slots WHERE state = 'reserved' AND reserved_utc < ?1").bind(iso(new Date(t.getTime() - lim.reservationMinutes * 60000))),

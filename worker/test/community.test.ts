@@ -4,7 +4,7 @@ import worker from "../src/index";
 import { setClockForTests } from "../src/env";
 import { readHeader, sniff } from "../src/images";
 import { bytes } from "./fixtures";
-import { encodePng } from "../src/png";
+import { encodePng } from "./png";
 
 type Env = typeof env & Record<string, unknown>;
 let counter = 0;
@@ -314,14 +314,9 @@ describe("posts", () => {
     const post = await publish(alice.token, { imageIds: [up.image.id], content: { settings: { fpsCap: 240 }, crosshair: crosshair() } });
     expect(post.sections).toEqual(expect.arrayContaining(["Game settings", "Crosshair"]));
     expect(post.canEdit).toBe(true);
-    const preview = post.images.find((i: { kind: string }) => i.kind === "crosshair-preview");
-    expect(preview.status).toBe("approved");
-    expect(await storedImages()).toBe(before + 2); // generated preview (+ its thumb) added
-    expect((await quota(alice.token)).remaining).toBe(1); // the preview is free
-
-    const png = new Uint8Array(await (await call("GET", preview.url)).arrayBuffer());
-    expect(sniff(png)).toBe("image/png");
-    expect(readHeader(png)).toMatchObject({ width: 256, height: 256 });
+    expect(post.images.map((i: { kind: string }) => i.kind)).toEqual(["upload"]); // no server-made preview image
+    expect(await storedImages()).toBe(before);
+    expect((await quota(alice.token)).remaining).toBe(1);
 
     const edit = publishBody({ title: "Bob was here" });
     expect((await call("PUT", `/api/community/posts/${post.id}`, { token: bob.token, json: edit })).status).toBe(403);
@@ -337,30 +332,32 @@ describe("posts", () => {
     expect((await call("GET", `/api/community/posts/${post.id}`)).status).toBe(404);
   });
 
-  it("draws the crosshair preview from the configuration, and skips it for extreme crosshairs", async () => {
+  it("post lists carry the crosshair so the app can draw a sharp preview itself", async () => {
+    const a = await signIn(uniq("xauthor"));
+    const before = await storedImages();
+    const post = await publish(a.token, { title: "Sharp crosshair test", content: { crosshair: crosshair() } });
+    expect(await storedImages()).toBe(before); // nothing rendered or stored on the server
+    const list = await j(await call("GET", `/api/community/posts?author=${a.login}`));
+    const item = list.items.find((i: { id: string }) => i.id === post.id);
+    expect(item.crosshair.layers[0].color).toBe("#FFFF00FF");
+    expect(item.crosshair.layers[0].thickness).toBe(2);
+    expect(item.thumbUrl).toBeNull();
+    const plain = await publish(a.token, { title: "No crosshair here" });
+    expect((await j(await call("GET", `/api/community/posts?author=${a.login}`))).items.find((i: { id: string }) => i.id === plain.id).crosshair).toBeNull();
+  });
+
+  it("removes old server-made preview images", async () => {
     const a = await signIn();
-    const post = await publish(a.token, { content: { crosshair: crosshair() } });
-    const prev = post.images.find((i: { kind: string }) => i.kind === "crosshair-preview");
-    const png = new Uint8Array(await (await call("GET", prev.url)).arrayBuffer());
-    // Decode the server's own PNG (8-bit RGB, one IDAT, filter 0 rows) to check the pixels.
-    const dv = new DataView(png.buffer, png.byteOffset);
-    let pos = 8, idat = new Uint8Array(0);
-    while (pos < png.length) {
-      const len = dv.getUint32(pos), type = String.fromCharCode(...png.subarray(pos + 4, pos + 8));
-      if (type === "IDAT") idat = png.slice(pos + 8, pos + 8 + len);
-      pos += 12 + len;
-    }
-    const raw = new Uint8Array(await new Response(new Blob([idat]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
-    let magenta = 0;
-    for (let y = 0; y < 256; y++) {
-      expect(raw[y * 769]).toBe(0);
-      for (let x = 0; x < 256; x++) { const i = y * 769 + 1 + x * 3; if (raw[i] > 240 && raw[i + 1] < 20 && raw[i + 2] > 240) magenta++; }
-    }
-    expect(magenta).toBeGreaterThan(100);
-    const huge = { name: "huge", layers: Array.from({ length: 64 }, (_, i) => ({ kind: i % 2 ? "Circle" : "Lines", size: 20 + i, length: 40, rotation: i * 7 })) };
-    const p2 = await publish(a.token, { title: "Huge crosshair test", content: { crosshair: huge } });
-    expect(p2.sections).toContain("Crosshair");
-    expect(p2.images.some((i: { kind: string }) => i.kind === "crosshair-preview")).toBe(false);
+    const post = await publish(a.token, { title: "Old preview post", content: { crosshair: crosshair() } });
+    await env.DB.prepare(`INSERT INTO images (id, owner_id, post_id, kind, status, width, height, has_alpha, mime, bytes, thumb_mime, thumb_bytes, storage_key, thumb_key, created_utc)
+      VALUES ('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', ?1, ?2, 'crosshair-preview', 'approved', 256, 256, 0, 'image/png', 3, 'image/png', 3, 'img/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png', 'thumb/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png', ?3)`)
+      .bind(a.me.user.id, post.id, new Date().toISOString()).run();
+    expect((await j(await call("GET", `/api/community/posts/${post.id}`))).images).toHaveLength(0); // hidden right away
+    const ctx = createExecutionContext();
+    await worker.scheduled!(createScheduledController(), env as never, ctx);
+    await waitOnExecutionContext(ctx);
+    const left = await env.DB.prepare("SELECT COUNT(*) AS n FROM images WHERE kind = 'crosshair-preview' AND deleted_utc IS NULL").first<{ n: number }>();
+    expect(left!.n).toBe(0);
   });
 
   it("deleting a post deletes its image files but not the quota use", async () => {
@@ -368,7 +365,7 @@ describe("posts", () => {
     const before = await storedImages();
     const up = await j(await upload(a.token, bytes("pngOpaque")));
     const post = await publish(a.token, { imageIds: [up.image.id], content: { crosshair: crosshair() } });
-    expect(await storedImages()).toBe(before + 4);
+    expect(await storedImages()).toBe(before + 2);
     expect((await call("DELETE", `/api/community/posts/${post.id}`, { token: a.token })).status).toBe(204);
     expect(await storedImages()).toBe(before);
     expect((await quota(a.token)).remaining).toBe(1);

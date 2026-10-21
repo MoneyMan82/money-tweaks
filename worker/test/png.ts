@@ -1,5 +1,4 @@
-// Minimal PNG encoder (8-bit RGB, no metadata) for server-generated crosshair previews. Compression uses the
-// runtime's native CompressionStream, so it costs little Worker CPU.
+// Minimal PNG encoder (8-bit RGB, no metadata), used by the tests to build large images.
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);

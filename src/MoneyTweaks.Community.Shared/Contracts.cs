@@ -172,6 +172,8 @@ public class PostSummary
     public bool Bookmarked { get; set; }
     public string? ThumbUrl { get; set; }
     public List<string> Sections { get; set; } = [];
+    /// <summary>The post's crosshair settings (when it has one), so lists can draw a sharp preview locally.</summary>
+    public JsonElement? Crosshair { get; set; }
     /// <summary>"visible", "hidden" (auto-hidden after reports, awaiting review), "removed".</summary>
     public string Status { get; set; } = "visible";
 }

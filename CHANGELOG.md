@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.44 – 2026-10-21
+- **Sharp crosshair previews in the Community Hub.** Crosshairs on post cards and post pages are now drawn by the app
+  with the same renderer as your overlay, enlarged to fit, instead of a small server-made picture that looked like
+  32×32 pixel art. Circles and rotated lines are smooth; straight lines stay crisp.
+- The server no longer makes or stores preview images (less work and storage on the free plan); old ones are removed
+  automatically.
+
 ## 1.43 – 2026-10-21
 - **Share in one click:** "Share to Community Hub" on Custom Crosshair (Profiles › Share) and on each of your Gaming
   Profiles opens the Hub's Publish form with that crosshair or profile already chosen, a title and category filled in;

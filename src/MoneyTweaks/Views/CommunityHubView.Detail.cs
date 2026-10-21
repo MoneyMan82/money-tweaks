@@ -62,10 +62,11 @@ public sealed partial class CommunityHubView
         _body.Children.Add(Ui.Card(head, new Thickness(0, 8, 0, 12)));
 
         // Images
-        if (p.Images.Count > 0)
+        var shownImages = p.Images.Where(i => i.Kind != "crosshair-preview").ToList(); // the crosshair is drawn live below
+        if (shownImages.Count > 0)
         {
             var gallery = new WrapPanel();
-            foreach (var img in p.Images)
+            foreach (var img in shownImages)
             {
                 var im = new Image { Stretch = Stretch.Uniform, MaxHeight = 220, MaxWidth = 360 };
                 _ = LoadInto(im, img.ThumbUrl, 0);
@@ -291,7 +292,7 @@ public sealed partial class CommunityHubView
         if (profile is null) { sp.Children.Add(Ui.Muted("This crosshair couldn't be read.", 12.5)); return sp; }
         CrosshairSanitizer.Clean(profile);
         foreach (var l in profile.Layers.Where(l => l.Kind == LayerKind.Image)) l.ImageFile = null; // images show in the generated preview above
-        var vis = new CrosshairVisual { Profile = profile, Zoom = 4, Height = 180 };
+        var vis = new CrosshairVisual { Profile = profile, Zoom = FitZoom(profile, 260), Height = 260 };
         sp.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0E, 0x14)), CornerRadius = new CornerRadius(8), Child = vis, ClipToBounds = true, Margin = new Thickness(0, 0, 0, 8) });
         sp.Children.Add(Ui.Muted($"{profile.Layers.Count} layer(s){(profile.Firing.Enabled ? " · firing animation" : "")}{(profile.Layers.Any(l => l.Kind == LayerKind.Image) ? " · includes an image layer" : "")}", 12));
         sp.Children.Add(Ui.Row(Ui.Btn("Get crosshair", async (_, _) => await GetAsync(p, profile: false, preset: false), "PrimaryButton", new Thickness(0, 10, 0, 0))));
@@ -360,6 +361,26 @@ public sealed partial class CommunityHubView
             sp.Children.Add(Ui.Muted("Numbers depend on the whole PC, drivers and the match. Expect different results on yours.", 11.5));
         }
         return sp;
+    }
+
+    /// <summary>Whole-number magnification that makes the crosshair fill about 80% of a box this tall (sharp, like the overlay up close).</summary>
+    public static double FitZoom(CrosshairProfile p, double box)
+    {
+        var ext = CrosshairGeometry.Extent(p, 1);
+        return Math.Clamp(Math.Floor(box * 0.8 / (2 * ext)), 1, 16);
+    }
+
+    /// <summary>A crosshair drawn by the app from shared settings, or null when there isn't a valid one.</summary>
+    public static UIElement? CrosshairPreview(JsonElement? json, double height)
+    {
+        if (json is not { ValueKind: JsonValueKind.Object } x) return null;
+        CrosshairProfile? profile;
+        try { profile = x.Deserialize<CrosshairProfile>(new JsonSerializerOptions(Api.Json) { NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals }); }
+        catch { return null; }
+        if (profile is null) return null;
+        CrosshairSanitizer.Clean(profile);
+        foreach (var l in profile.Layers.Where(l => l.Kind == LayerKind.Image)) l.ImageFile = null; // only local images can be drawn
+        return new CrosshairVisual { Profile = profile, Zoom = FitZoom(profile, height), Height = height };
     }
 
     // ---- get (import) ------------------------------------------------------------------------------------------------
