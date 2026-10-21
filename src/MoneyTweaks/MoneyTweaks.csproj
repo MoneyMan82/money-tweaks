@@ -8,6 +8,8 @@
     <RootNamespace>MoneyTweaks</RootNamespace>
     <AssemblyName>MoneyTweaks</AssemblyName>
     <ApplicationIcon>Assets\MoneyTweaks.ico</ApplicationIcon>
+    <!-- No package XML docs (WebView2) next to the published exe. -->
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
@@ -25,5 +27,8 @@
   <ItemGroup>
     <!-- Legacy UI recolours a copy of the theme's source before the first window opens. -->
     <EmbeddedResource Include="Themes\Theme.xaml" LogicalName="MoneyTweaks.Themes.Theme.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
   </ItemGroup>
 </Project>

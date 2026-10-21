@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.50 – 2026-10-21
+- **Tutorials play inside Money Tweaks**: "Watch tutorial" opens a player window (YouTube's privacy-enhanced
+  youtube-nocookie.com player in Microsoft Edge WebView2) and starts the video; fullscreen works. "Open on YouTube"
+  is still there, and links that leave the player open in your browser. Without the WebView2 runtime the video opens
+  in your browser instead.
+
 ## 1.49 – 2026-10-21
 - **Video tutorials**: Potato Graphics and Fortnite Stretched have a "Watch tutorial" button at the top of the page that
   opens the official Money Tweaks video on YouTube in your browser. Searching "tutorial" (Ctrl+K) finds both pages.

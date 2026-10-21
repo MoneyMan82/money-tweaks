@@ -101,16 +101,12 @@ public static class Ui
         return b;
     }
 
-    /// <summary>"Watch tutorial" button for a page with an official video (opens it in the browser), or null when there's none.</summary>
+    /// <summary>"Watch tutorial" button for a page with an official video (plays it inside the app), or null when there's none.</summary>
     public static Button? TutorialButton(string pageTag)
     {
-        if (Core.Model.Tutorials.For(pageTag) is not { } url) return null;
-        var b = Btn("▶  Watch tutorial", (_, _) =>
-        {
-            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); }
-            catch (Exception ex) { Dialog.Show("Couldn't open your browser", $"{ex.Message}\n\nThe video is at: {url}", DialogKind.Error); }
-        });
-        b.ToolTip = "Opens the video tutorial on YouTube: " + url;
+        if (Core.Model.Tutorials.For(pageTag) is not { } t) return null;
+        var b = Btn("▶  Watch tutorial", (_, _) => TutorialPlayer.Play(t));
+        b.ToolTip = "Plays the video tutorial in Money Tweaks (from YouTube)";
         return b;
     }
 
