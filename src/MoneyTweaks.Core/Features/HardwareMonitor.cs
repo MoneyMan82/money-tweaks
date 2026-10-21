@@ -163,6 +163,20 @@ public sealed class HardwareMonitor : IDisposable
         return all.Length;
     }
 
+    /// <summary>Installed memory modules and the board's slot count from the firmware's SMBIOS tables (0 = unknown).</summary>
+    public static (int Modules, int Slots) MemoryLayout()
+    {
+        int modules = 0, slots = 0;
+        try { using var s = new ManagementObjectSearcher("SELECT Capacity FROM Win32_PhysicalMemory"); modules = s.Get().Count; } catch { }
+        try
+        {
+            using var a = new ManagementObjectSearcher("SELECT MemoryDevices FROM Win32_PhysicalMemoryArray");
+            foreach (var o in a.Get()) slots += Convert.ToInt32(o["MemoryDevices"] ?? 0);
+        }
+        catch { }
+        return (modules, slots);
+    }
+
     public static SystemSpecs ReadSpecs()
     {
         string Q(string cls, string prop, string scope = @"root\cimv2")

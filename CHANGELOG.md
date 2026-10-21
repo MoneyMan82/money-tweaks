@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.46 – 2026-10-21
+- **Reality Lab's virtual PC is now realistic**: a full ATX motherboard (circuit board with traces, vias, silkscreen and
+  mounting holes, VRM heatsinks, capacitors, chipset heatsink, M.2 SSD, power connectors, SATA ports), a tower CPU cooler
+  with copper heat pipes, an aluminium fin stack and a 120 mm fan, RAM modules with heat spreaders and light bars, and a
+  triple-fan graphics card standing in its PCIe slot with backplate, fin edge and bracket. Brushed-metal and anodised
+  textures, key/fill/rim lighting and soft contact shadows.
+- The model shows **your real number of memory modules and slots** (read from the firmware), also listed under RAM.
+- Heat now glows on the board around the CPU and GPU, the CPU fan spins with CPU load, the RAM light bars' length shows
+  memory in use. Still drawn only when the page is open, at most 30 fps, and paused while measuring.
+
 ## 1.45 – 2026-10-21
 - **Reality Lab** (Monitoring & Benchmarks): a 3D virtual PC (CPU and cooler, RAM, graphics card) driven by this PC's
   live readings: heat colour from the temperature sensor (or load when there is none), GPU fans spinning with GPU load,

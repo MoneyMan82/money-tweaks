@@ -26,6 +26,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
     private PcReading? _live;
     private HardwareSnapshot? _liveSnap;
     private SystemSpecs? _specs;
+    private readonly Task<(int Modules, int Slots)> _memLayout = Task.Run(HardwareMonitor.MemoryLayout);
     private string _view = "live"; // "live", "before", "after"
     private string _part = "cpu";
     private readonly StackPanel _readout = new();
@@ -92,8 +93,11 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
     private void EnsureScene()
     {
         if (_scene is not null) return;
+        // The model shows this PC's real memory modules and slots, so wait for that reading (WMI, off the UI thread).
+        if (!_memLayout.IsCompleted) { _memLayout.ContinueWith(_ => Dispatcher.BeginInvoke(EnsureScene, DispatcherPriority.Background)); return; }
         using var perf = Perf.Measure("build Reality Lab scene", 20);
-        _scene = new VirtualPcScene();
+        var (modules, slots) = _memLayout.Result;
+        _scene = new VirtualPcScene(modules, slots, detailed: !SoftwareRendering);
         _scene.PartSelected += p => { _part = p; RenderReadout(); };
         _scene.Select(_part);
         _sceneHost.Child = _scene;
@@ -110,7 +114,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
             (SoftwareRendering ? "Animation is off because Windows draws this app without the graphics card here; colours and levels still update. " : "") +
             (App.ReduceMotion && !SoftwareRendering ? "Reduced motion is on: the model holds still and only its colours and levels change. " : "") +
             "Heat colour follows the temperature sensor (or load when there's none), GPU fans spin with GPU load, RAM sticks fill with memory in use, and data pulses speed up with CPU load. " +
-            "The model is an illustration of your parts, not a scan of their layout.";
+            "The model is an illustration of your parts (your real number of memory modules and slots), not a scan of their exact layout.";
     }
 
     public void OnShown()
@@ -225,6 +229,8 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
             default:
                 Row(live ? "In use" : "Average in use", $"{r.RamUsedGb:0.0} of {r.RamTotalGb:0.#} GB");
                 Row("Share", r.RamTotalGb > 0 ? $"{r.RamUsedGb / r.RamTotalGb * 100:0} %" : "–");
+                if (_memLayout.IsCompletedSuccessfully && _memLayout.Result is { Modules: > 0 } ml)
+                    Row("Modules", ml.Slots > 0 ? $"{ml.Modules} in {ml.Slots} slots" : $"{ml.Modules}", "From the firmware's memory tables; the model shows the same.");
                 if (_specs is { } sp2 && (sp2.RamConfiguredMts ?? sp2.RamRatedMts) is { } mts)
                     Row("Speed", $"{mts} MT/s" + (sp2.RamRatedMts is { } rated && mts < rated ? $" (rated {rated})" : ""), "Configured memory speed reported by the firmware.");
                 break;
