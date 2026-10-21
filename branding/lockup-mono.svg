@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="200" viewBox="0 0 980 200" role="img" aria-label="Money Tweaks">
+  <title>Money Tweaks</title>
+  <defs><linearGradient id="mt-accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4C8DFF"/><stop offset="1" stop-color="#8B6CFF"/></linearGradient></defs>
+  <polygon fill="currentColor" points="28.54,42.05 170.00,42.05 156.77,60.80 25.54,60.80"/>
+  <polygon fill="currentColor" points="10.00,157.95 24.45,67.62 50.02,67.62 88.26,94.89 135.23,67.62 160.80,67.62 146.34,157.95 124.19,157.95 134.82,91.48 96.10,120.45 90.10,157.95 66.24,157.95 72.24,120.45 42.79,91.48 32.16,157.95"/>
+  <text x="210" y="128" font-size="84" font-family="Bahnschrift, 'Segoe UI', 'DIN Alternate', Arial, sans-serif" font-weight="600" letter-spacing="6" fill="currentColor">MONEY<tspan dx="26" fill="currentColor">TWEAKS</tspan></text>
+</svg>

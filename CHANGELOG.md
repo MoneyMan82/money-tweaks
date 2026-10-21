@@ -1,6 +1,15 @@
 # Changelog
 
-## 1.46 – 2026-10-21
+## 1.48 – 2026-10-21
+- **New logo.** An original symbol: a forward-leaning "M" whose centre runs down into a stem under a separate crossbar,
+  so it reads as both M and T, with one machined gap for precision and an angled leading edge for speed. Only the
+  crossbar carries the app's blue-to-violet accent. A heavier cut with wider gaps is used at 16 to 32 px so it stays crisp.
+- Logo system in `branding/` (vector SVG plus 1024 px transparent PNG): symbol, app icon, monochrome symbol, wordmark
+  lockups for dark, light and single-colour use. All are generated from one definition by `branding/make_logo.py`.
+- Replaced everywhere: app and taskbar icon, tray icon, installer icon, sidebar logo, website logo (now SVG), favicons
+  (new SVG favicon) and the social sharing card.
+
+## 1.47 – 2026-10-21
 - **Reality Lab's virtual PC is now realistic**: a full ATX motherboard (circuit board with traces, vias, silkscreen and
   mounting holes, VRM heatsinks, capacitors, chipset heatsink, M.2 SSD, power connectors, SATA ports), a tower CPU cooler
   with copper heat pipes, an aluminium fin stack and a 120 mm fan, RAM modules with heat spreaders and light bars, and a

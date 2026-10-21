@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" role="img" aria-label="Money Tweaks">
+  <title>Money Tweaks</title>
+  <defs><linearGradient id="mt-accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4C8DFF"/><stop offset="1" stop-color="#8B6CFF"/></linearGradient></defs>
+  <polygon fill="url(#mt-accent)" points="14.66,16.68 96.00,16.68 88.40,27.46 12.94,27.46"/>
+  <polygon fill="#E9EEF7" points="4.00,83.32 12.31,31.38 27.01,31.38 49.00,47.06 76.01,31.38 90.71,31.38 82.40,83.32 69.66,83.32 75.77,45.10 53.51,61.76 50.06,83.32 36.34,83.32 39.79,61.76 22.85,45.10 16.74,83.32"/>
+</svg>
