@@ -31,9 +31,12 @@ public sealed class FortniteStretchedView : UserControl, IPageLifecycle
     {
         var refresh = Ui.Btn("Refresh", (_, _) => ShowFile(), "BaseButton");
         refresh.ToolTip = "Read Fortnite's settings file again";
+        var header = new StackPanel { Orientation = Orientation.Horizontal };
+        if (Ui.TutorialButton("fnstretch") is { } tutorial) { tutorial.Margin = new Thickness(0, 0, 8, 0); header.Children.Add(tutorial); }
+        header.Children.Add(refresh);
         var (root, body) = Ui.Page("Fortnite Stretched",
             "Set a custom resolution for Fortnite only, by editing Fortnite's own GameUserSettings.ini. Your Windows desktop resolution, monitor resolution and refresh rate are not changed.",
-            refresh, "INI method · Fortnite only", "\uE740");
+            header, "INI method · Fortnite only", "\uE740");
         Content = root;
 
         body.Children.Add(Ui.Card(Notice()));

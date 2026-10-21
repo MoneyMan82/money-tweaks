@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.49 – 2026-10-21
+- **Video tutorials**: Potato Graphics and Fortnite Stretched have a "Watch tutorial" button at the top of the page that
+  opens the official Money Tweaks video on YouTube in your browser. Searching "tutorial" (Ctrl+K) finds both pages.
+
 ## 1.48 – 2026-10-21
 - **New logo.** An original symbol: a forward-leaning "M" whose centre runs down into a stem under a separate crossbar,
   so it reads as both M and T, with one machined gap for precision and an angled leading edge for speed. Only the
