@@ -73,6 +73,7 @@ public sealed partial class CommunityHubView : UserControl, IPageLifecycle
             await CommunityClient.LoadConfigAsync();
             await CommunityClient.RefreshMeAsync();
             _busy = false;
+            if (ApplyPendingShare()) { Render(); return; }
             await LoadListAsync(reset: true);
         }
         catch (CommunityApiException e) { _busy = false; _error = e.Message; Render(); }
@@ -354,6 +355,17 @@ public sealed partial class CommunityHubView : UserControl, IPageLifecycle
         foreach (var s in p.Sections) { var t = Ui.Tag(s, s.Contains("user-reported") ? "Gold" : "Accent"); t.Margin = new Thickness(0, 0, 4, 4); pills.Children.Add(t); }
         if (p.Status != "visible") { var t = Ui.Tag(p.Status == "hidden" ? "Hidden: under review" : "Removed", "Danger"); t.Margin = new Thickness(0, 0, 4, 4); pills.Children.Add(t); }
         sp.Children.Add(pills);
+        if (CanGet(p) && p.Status == "visible")
+        {
+            var get = Ui.Btn("⤓  Get", async (_, e) =>
+            {
+                e.Handled = true;
+                await Try(async () => await GetAsync(await CommunityClient.Get<PostDetail>($"api/community/posts/{p.Id}")));
+            }, "PrimaryButton", new Thickness(0, 8, 0, 0));
+            get.ToolTip = "Add to your library in one click. Nothing is applied.";
+            get.HorizontalAlignment = HorizontalAlignment.Left;
+            sp.Children.Add(get);
+        }
         var card = Ui.ClickCard(sp, async () => await OpenAsync(p.Id), new Thickness(0, 0, 12, 12));
         card.Width = 262;
         return card;

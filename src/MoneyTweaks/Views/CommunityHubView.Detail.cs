@@ -133,6 +133,14 @@ public sealed partial class CommunityHubView
                 Render();
             }, p.Bookmarked ? "PrimaryButton" : "BaseButton", signed));
         }
+        if (CanGet(p) && p.Status == "visible")
+        {
+            var get = Ui.Btn("⤓  Get", async (_, _) => await GetAsync(p), "PrimaryButton", new Thickness(0, 0, 8, 8));
+            get.ToolTip = "Add this post's " + string.Join(", ", p.Sections.Where(x => x is "Crosshair" or "Gaming profile" or "Preset").Select(x => x.ToLowerInvariant())) + " to your library. Nothing is applied.";
+            row.Children.Insert(0, get);
+            if (_lastAdded is { } page)
+                row.Children.Insert(1, Ui.Btn(page == "crosshair" ? "Open Custom Crosshair" : page == "profiles" ? "Open Gaming Profiles" : "Open Presets", (_, _) => MainWindow.Current?.Navigate(page), "BaseButton", new Thickness(0, 0, 8, 8)));
+        }
         if (own)
         {
             if (p.CanEdit) row.Children.Add(B("Edit", () => { BeginEdit(p); return Task.CompletedTask; }));
@@ -286,7 +294,7 @@ public sealed partial class CommunityHubView
         var vis = new CrosshairVisual { Profile = profile, Zoom = 4, Height = 180 };
         sp.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0E, 0x14)), CornerRadius = new CornerRadius(8), Child = vis, ClipToBounds = true, Margin = new Thickness(0, 0, 0, 8) });
         sp.Children.Add(Ui.Muted($"{profile.Layers.Count} layer(s){(profile.Firing.Enabled ? " · firing animation" : "")}{(profile.Layers.Any(l => l.Kind == LayerKind.Image) ? " · includes an image layer" : "")}", 12));
-        sp.Children.Add(Ui.Row(Ui.Btn("Import crosshair…", async (_, _) => await ImportCrosshairAsync(p, x), "PrimaryButton", new Thickness(0, 10, 0, 0))));
+        sp.Children.Add(Ui.Row(Ui.Btn("Get crosshair", async (_, _) => await GetAsync(p, profile: false, preset: false), "PrimaryButton", new Thickness(0, 10, 0, 0))));
         return sp;
     }
 
@@ -318,8 +326,8 @@ public sealed partial class CommunityHubView
             list.Children.Add(r);
         }
         sp.Children.Add(list);
-        sp.Children.Add(Ui.Muted($"{lines.Count(l => l.WillImport)} of {lines.Count} tweaks will be imported. Importing adds the {(profile ? "profile" : "preset")} to your library; nothing changes on your PC until you apply it yourself.", 12));
-        sp.Children.Add(Ui.Row(Ui.Btn(profile ? "Import gaming profile…" : "Import preset…", async (_, _) => await ImportBundleAsync(p, b, profile), "PrimaryButton", new Thickness(0, 10, 0, 0))));
+        sp.Children.Add(Ui.Muted($"{lines.Count(l => l.WillImport)} of {lines.Count} tweaks will be added. Get adds the {(profile ? "profile" : "preset")} to your library; nothing changes on your PC until you {(profile ? "activate" : "apply")} it yourself.", 12));
+        sp.Children.Add(Ui.Row(Ui.Btn(profile ? "Get gaming profile" : "Get preset", async (_, _) => await GetAsync(p, crosshair: false, profile: profile, preset: !profile), "PrimaryButton", new Thickness(0, 10, 0, 0))));
         return sp;
     }
 
@@ -354,68 +362,56 @@ public sealed partial class CommunityHubView
         return sp;
     }
 
-    // ---- import -------------------------------------------------------------------------------------------------------
+    // ---- get (import) ------------------------------------------------------------------------------------------------
 
-    private async Task ImportCrosshairAsync(PostDetail p, JsonElement x)
+    /// <summary>Whether a post has something you can add to your library.</summary>
+    public static bool CanGet(PostSummary p) => p.Sections.Any(s => s is "Crosshair" or "Gaming profile" or "Preset");
+
+    /// <summary>
+    /// One click: adds the post's crosshair, gaming profile and/or preset to your library. Nothing is applied or activated,
+    /// so there's no confirmation; tweaks that don't exist in this version are skipped and listed.
+    /// </summary>
+    private async Task GetAsync(PostDetail p, bool crosshair = true, bool profile = true, bool preset = true)
     {
         await Try(async () =>
         {
-            if (!Dialog.Confirm("Import crosshair?", $"\"{p.Title}\" will be added to Custom Crosshair as a new profile. It won't replace your current crosshair or turn on the overlay.", "Import")) return;
-            var (profile, notes) = await CommunityImport.ToCrosshairAsync(x, CrosshairService.Data.Profiles,
-                id => p.Images.FirstOrDefault(i => i.Id == id && i.Status == "approved") is { } img ? CommunityClient.GetBytesAsync(img.Url) : Task.FromResult<byte[]?>(null));
-            if (profile is null) { Dialog.Show("Not imported", string.Join("\n", notes), DialogKind.Warning); return; }
-            CrosshairService.Data.Profiles.Add(profile);
-            CrosshairService.SaveNow();
-            await Recorded(p);
-            Imported($"Crosshair \"{profile.Name}\" added.", notes, "crosshair");
-        });
-    }
-
-    private async Task ImportBundleAsync(PostDetail p, MoneyTweaks.Community.TweakBundle b, bool profile)
-    {
-        await Try(async () =>
-        {
-            var lines = CommunityImport.Preview(b, profile);
-            var will = lines.Where(l => l.WillImport).ToList();
-            var msg = $"This adds the {(profile ? "gaming profile" : "preset")} \"{b.Name}\" to your library with {will.Count} tweak(s){(will.Any(l => l.Caution) ? $", {will.Count(l => l.Caution)} marked Caution" : "")}. " +
-                      (profile ? "It won't be activated and automatic switching stays off." : "Nothing is applied.") +
-                      " You can review and apply it later with the usual preview, backups and confirmations.";
-            if (!Dialog.Confirm(profile ? "Import gaming profile?" : "Import preset?", msg, "Import")) return;
-            List<string> notes;
-            string name;
-            if (profile)
+            var added = new List<(string what, string page)>();
+            var notes = new List<string>();
+            if (crosshair && p.Content.Crosshair is { ValueKind: JsonValueKind.Object } x)
+            {
+                var (cp, n) = await CommunityImport.ToCrosshairAsync(x, CrosshairService.Data.Profiles,
+                    id => p.Images.FirstOrDefault(i => i.Id == id && i.Status == "approved") is { } img ? CommunityClient.GetBytesAsync(img.Url) : Task.FromResult<byte[]?>(null));
+                notes.AddRange(n);
+                if (cp is not null) { CrosshairService.Data.Profiles.Add(cp); CrosshairService.SaveNow(); added.Add(($"crosshair \"{cp.Name}\"", "crosshair")); }
+            }
+            if (profile && p.Content.GamingProfile is { } gb)
             {
                 var file = ProfileStore.Load();
-                var (gp, n) = CommunityImport.ToGamingProfile(b, ProfileStore.All(file));
-                notes = n;
-                if (gp is null) { Dialog.Show("Not imported", string.Join("\n", notes), DialogKind.Warning); return; }
-                file.Profiles.Add(gp);
-                ProfileStore.Save(file);
-                name = gp.Name;
+                var (gp, n) = CommunityImport.ToGamingProfile(gb, ProfileStore.All(file));
+                notes.AddRange(n);
+                if (gp is not null) { file.Profiles.Add(gp); ProfileStore.Save(file); added.Add(($"gaming profile \"{gp.Name}\"", "profiles")); }
             }
-            else
+            if (preset && p.Content.Preset is { } pb)
             {
                 var file = PresetStore.Load();
-                var (pr, n) = CommunityImport.ToPreset(b, PresetStore.BuiltIns.Concat(file.Presets));
-                notes = n;
-                if (pr is null) { Dialog.Show("Not imported", string.Join("\n", notes), DialogKind.Warning); return; }
-                file.Presets.Add(pr);
-                PresetStore.Save(file);
-                name = pr.Name;
+                var (pr, n) = CommunityImport.ToPreset(pb, PresetStore.BuiltIns.Concat(file.Presets));
+                notes.AddRange(n);
+                if (pr is not null) { file.Presets.Add(pr); PresetStore.Save(file); added.Add(($"preset \"{pr.Name}\"", "presets")); }
             }
+            if (added.Count == 0) { Dialog.Show("Nothing added", notes.Count > 0 ? string.Join("\n", notes) : "This post has nothing to add to your library.", DialogKind.Warning); return; }
             await Recorded(p);
-            Imported($"{(profile ? "Gaming profile" : "Preset")} \"{name}\" added.", notes, profile ? "profiles" : "presets");
+            var msg = "Added " + string.Join(" and ", added.Select(a => a.what)) + " to your library. Nothing was applied: open it to use it.";
+            if (notes.Count > 0) msg += " (" + string.Join(" ", notes) + ")";
+            MainWindow.Current?.ShowToast(msg, notes.Count > 0 ? "Gold" : "Success");
+            _lastAdded = added[0].page;
+            if (_detail?.Id == p.Id) Render();
         });
     }
+
+    private string? _lastAdded;
 
     private static async Task Recorded(PostDetail p)
     {
         if (CommunityClient.SignedIn) try { await CommunityClient.Post<bool>($"api/community/posts/{p.Id}/imported"); } catch { }
-    }
-
-    private static void Imported(string what, List<string> notes, string page)
-    {
-        var text = what + (notes.Count > 0 ? "\n\n" + string.Join("\n", notes.Select(n => "• " + n)) : "") + "\n\nOpen it now?";
-        if (Dialog.Show("Imported", text, DialogKind.Info, "Open", "Stay here")) MainWindow.Current?.Navigate(page);
     }
 }

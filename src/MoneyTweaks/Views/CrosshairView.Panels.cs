@@ -344,6 +344,7 @@ public sealed partial class CrosshairView
 
         _profiles.Children.Add(Sub("Share"));
         var share = new WrapPanel();
+        share.Children.Add(Ui.Btn("Share to Community Hub", (_, _) => { FlushCommit(); CrosshairService.SaveNow(); CommunityHubView.ShareCrosshair(P.Id); }, "PrimaryButton", new Thickness(0, 0, 6, 6)));
         share.Children.Add(Ui.Btn("Copy share code", (_, _) => CopyCode(), "BaseButton", new Thickness(0, 0, 6, 6)));
         share.Children.Add(Ui.Btn("Export to file…", (_, _) => ExportFile(), "BaseButton", new Thickness(0, 0, 6, 6)));
         share.Children.Add(Ui.Btn("Import file…", (_, _) => ImportFile(), "BaseButton", new Thickness(0, 0, 6, 6)));

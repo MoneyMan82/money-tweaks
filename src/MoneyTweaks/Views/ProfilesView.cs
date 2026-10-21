@@ -104,6 +104,7 @@ public sealed class ProfilesView : UserControl, IPageLifecycle
         if (!p.BuiltIn)
         {
             row.Children.Add(Ui.Btn("Edit / rename", (_, _) => OpenEditor(p), "GhostButton"));
+            row.Children.Add(Ui.Btn("Share to Community Hub", (_, _) => CommunityHubView.ShareGamingProfile(p.Name), "GhostButton"));
             row.Children.Add(Ui.Btn("Export", (_, _) => Export([p]), "GhostButton"));
             row.Children.Add(Ui.Btn("Delete", (_, _) => Delete(p), "GhostButton"));
         }

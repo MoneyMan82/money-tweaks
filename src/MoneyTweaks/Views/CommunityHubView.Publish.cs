@@ -25,6 +25,45 @@ public sealed partial class CommunityHubView
     private string _keybindsText = "", _graphicsText = "";
     private List<string> _publishErrors = [];
 
+    /// <summary>"Share to Community Hub" from the Crosshair or Gaming Profiles page: what to prefill on the next visit.</summary>
+    private static (string kind, string key)? _pendingShare;
+
+    /// <summary>Opens the Hub's Publish form with this crosshair profile already chosen.</summary>
+    public static void ShareCrosshair(string crosshairProfileId) { _pendingShare = ("crosshair", crosshairProfileId); MainWindow.Current?.Navigate("community"); }
+
+    /// <summary>Opens the Hub's Publish form with this gaming profile already chosen.</summary>
+    public static void ShareGamingProfile(string profileName) { _pendingShare = ("profile", profileName); MainWindow.Current?.Navigate("community"); }
+
+    /// <summary>Applies a pending share request to a fresh draft. Returns true when the Publish tab should be shown.</summary>
+    private bool ApplyPendingShare()
+    {
+        if (_pendingShare is not { } req) return false;
+        _pendingShare = null;
+        ResetEditor();
+        _incSettings = false;
+        _detail = null;
+        _tab = "publish";
+        if (req.kind == "crosshair" && CrosshairService.Data.Find(req.key) is { } xp)
+        {
+            _incCrosshair = true;
+            _crosshairId = xp.Id;
+            _draft.Title = PostRules.Clean(xp.Name.Length >= 6 ? xp.Name : xp.Name + " crosshair", PostRules.TitleMax);
+            _draft.Category = "Crosshair";
+            _draft.Game = "Other";
+        }
+        else if (req.kind == "profile" && ProfileStore.All(ProfileStore.Load()).FirstOrDefault(p => p.Name == req.key) is { } gp)
+        {
+            _incProfile = true;
+            _profileName = gp.Name;
+            _draft.Title = PostRules.Clean(gp.Name.Length >= 6 ? gp.Name : gp.Name + " profile", PostRules.TitleMax);
+            _draft.Description = gp.Description;
+            _draft.Category = "Performance";
+            var exes = string.Join(" ", gp.GameExes).ToLowerInvariant();
+            _draft.Game = exes.Contains("fortnite") ? "Fortnite" : exes.Contains("geometrydash") ? "Geometry Dash" : exes.Contains("valorant") ? "VALORANT" : exes.Contains("cs2") ? "Counter-Strike 2" : "Other";
+        }
+        return true;
+    }
+
     private static PostInput NewDraft() => new()
     {
         Game = "Fortnite", Category = "Competitive",

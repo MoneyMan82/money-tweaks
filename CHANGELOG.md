@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.43 – 2026-10-21
+- **Share in one click:** "Share to Community Hub" on Custom Crosshair (Profiles › Share) and on each of your Gaming
+  Profiles opens the Hub's Publish form with that crosshair or profile already chosen, a title and category filled in;
+  add a description or screenshot if you like and press Publish.
+- **Get in one click:** every Community Hub post with a crosshair, gaming profile or preset has a **Get** button, on the
+  card and on the post. It adds them to your library right away (crosshair into Custom Crosshair, profile into Gaming
+  Profiles, preset into Presets) without a confirmation, because nothing is applied or activated. Tweaks that don't
+  exist in your version are skipped and listed. After getting, an "Open" button takes you to it.
+
 ## 1.42 – 2026-10-20
 - **Community Hub** page (Gaming tools): discover, search, like, bookmark, rate and report shared game settings,
   crosshairs, gaming profiles and presets; preview everything and import it into your library (never applied by itself);
