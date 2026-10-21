@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.45 – 2026-10-21
+- **Reality Lab** (Monitoring & Benchmarks): a 3D virtual PC (CPU and cooler, RAM, graphics card) driven by this PC's
+  live readings: heat colour from the temperature sensor (or load when there is none), GPU fans spinning with GPU load,
+  RAM sticks filling with memory in use, data pulses speeding up with CPU load. Drag to turn, scroll to zoom, click a part
+  for its real readings. A part Windows gives no reading for stays grey and says so.
+- **Safe experiments**: four curated sets (Lighter desktop, Power saving off, Quiet background, Foreground priority) or
+  the safe, switchable tweaks of any preset. The preview lists every registry value, service or power setting that would
+  change, the tweak's state now and how it's undone, plus an **estimate** per metric that is labelled as an estimate,
+  explains its reasoning and never gives a number.
+- **Measured, then restored**: Run switches the tweaks off and on in a counterbalanced order (off, on, on, off),
+  measures idle resource use (and optionally the synthetic 3D FPS scene from Test & Benchmark), then puts every tweak back
+  and reads it back. Interrupted runs are offered for restore on the next start. Results show each metric before/after
+  with run-to-run variation, whether the change is meaningful, and whether the estimate matched. "Show without/with in
+  3D" drives the model with the measured averages. Results are saved in Test & Benchmark › History.
+- **Keep or roll back**: nothing is kept unless you choose Keep (restore point, a backup per tweak); kept experiments
+  can be rolled back from the lab, reverting exactly those tweaks.
+- Lightweight: the page and its 3D scene (about 600 triangles) are only built when opened, animate at up to 30 fps
+  only while visible, and pause while measuring so the lab doesn't affect its own results. Reduced motion holds the
+  model still.
+- **Legacy UI** (Settings › Appearance): switch back to the original 1.0–1.3 look (green accents, flat cards, no
+  ambient glow). Every page and feature stays the same; takes effect after a restart (button included).
+
 ## 1.44 – 2026-10-21
 - **Sharp crosshair previews in the Community Hub.** Crosshairs on post cards and post pages are now drawn by the app
   with the same renderer as your overlay, enlarged to fit, instead of a small server-made picture that looked like

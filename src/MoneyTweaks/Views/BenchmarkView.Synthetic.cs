@@ -194,20 +194,44 @@ public sealed partial class BenchmarkView
         var saved = new List<BenchmarkRun>();
         foreach (var (on, at, r) in runs)
         {
-            var run = new BenchmarkRun
-            {
-                StudyId = s.Id, Phase = on ? "After" : "Baseline", At = at,
-                Conditions = new TestConditions { DurationSec = _synthDuration, PowerPlan = BenchmarkSampler.ActivePowerPlan(), OnAcPower = BenchmarkSampler.OnAcPower(), OsBuild = OsInfo.Build, AppVersion = App.Version, Scene = scene },
-                CpuAvg = r.CpuAvg, GpuAvg = r.GpuAvg, RamUsedGb = r.RamGb, CpuTempC = r.CpuTemp, GpuTempC = r.GpuTemp, FpsSeries = r.FpsPerSecond,
-            };
-            try { run.Frames = FrameTimeCsv.FromFrameTimes(r.FrameMs, $"Synthetic 3D scene (intensity {_synthIntensity}, {_synthRes.w}×{_synthRes.h})"); }
-            catch (Exception ex) { Log.Warn("Synthetic run had too few frames: " + ex.Message); }
+            var run = RunFromScene(r, s.Id, on, at, _synthDuration, scene, $"Synthetic 3D scene (intensity {_synthIntensity}, {_synthRes.w}×{_synthRes.h})");
             _file.Runs.Add(run);
             saved.Add(run);
         }
         Save();
         RenderHistory();
         return (s, saved);
+    }
+
+    /// <summary>One measured scene run as a benchmark run (also used by Reality Lab).</summary>
+    internal static BenchmarkRun RunFromScene(SceneResult r, string studyId, bool on, DateTime at, int durationSec, string scene, string frameSource)
+    {
+        var run = new BenchmarkRun
+        {
+            StudyId = studyId, Phase = on ? "After" : "Baseline", At = at,
+            Conditions = new TestConditions { DurationSec = durationSec, PowerPlan = BenchmarkSampler.ActivePowerPlan(), OnAcPower = BenchmarkSampler.OnAcPower(), OsBuild = OsInfo.Build, AppVersion = App.Version, Scene = scene },
+            CpuAvg = r.CpuAvg, GpuAvg = r.GpuAvg, RamUsedGb = r.RamGb, CpuTempC = r.CpuTemp, GpuTempC = r.GpuTemp, FpsSeries = r.FpsPerSecond,
+        };
+        try { run.Frames = FrameTimeCsv.FromFrameTimes(r.FrameMs, frameSource); }
+        catch (Exception ex) { Log.Warn("Synthetic run had too few frames: " + ex.Message); }
+        return run;
+    }
+
+    /// <summary>Adds a study measured elsewhere (Reality Lab) to the one benchmark history, so it shows up here too.</summary>
+    internal static void AddStudy(BenchmarkStudy s, IEnumerable<BenchmarkRun> runs)
+    {
+        if (_instance is { } v)
+        {
+            v._file.Studies.Add(s);
+            v._file.Runs.AddRange(runs);
+            v.Save();
+            v.RenderHistory();
+            return;
+        }
+        var f = BenchmarkStore.Load();
+        f.Studies.Add(s);
+        f.Runs.AddRange(runs);
+        BenchmarkStore.Save(f);
     }
 
     /// <summary>Shared with Performance Genome: see <see cref="BenchmarkSampler.SettleAsync"/>.</summary>
@@ -330,7 +354,7 @@ public sealed partial class BenchmarkView
     }
 
     /// <summary>Known games currently running (they would skew a synthetic benchmark).</summary>
-    private static List<string> RunningGames()
+    internal static List<string> RunningGames()
     {
         // Same identity-checked detection as the Game Library (a generic exe like javaw.exe only counts when it is the game).
         var games = Core.Games.GameLibrary.Items(Core.Games.GameLibrary.Current);

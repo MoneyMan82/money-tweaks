@@ -74,6 +74,7 @@ public static class AppNavigation
         new("monitor#health", "\uE95E", "Driver & Windows Health", "monitor", "Driver, Windows Update and stability checks, SFC/DISM and safe repairs.", "drivers health windows update sfc dism crash bsod"),
         new("advisor", "\uE9D9", "Upgrade Advisor", "monitor", "Finds what holds your game back (CPU, GPU, memory, storage, heat, frame cap) from real measurements, then ranks the three smartest fixes and upgrades by benefit per euro.", "bottleneck upgrade advisor fps goal target cpu gpu ram ssd budget price buy recommend diagnose limit"),
         new("benchmark", "\uE916", "Test & Benchmark", "monitor", "Measure with and without tweaks, synthetic stress scene, history and comparisons.", "benchmark fps test compare graph history"),
+        new("lab", "\uE7B8", "Reality Lab", "monitor", "A 3D virtual PC driven by live CPU, GPU and RAM readings. Preview safe tweak experiments, compare the estimate with a real A/B measurement, inspect before/after resource use, then keep or roll back.", "lab reality 3d virtual pc experiment predict estimate preview simulate compare before after resource usage rollback"),
 
         new("startup", "\uE7E8", "Startup Apps", "tools", "Turn apps that launch at sign-in on or off.", "autostart sign in boot"),
         Cat(TweakCategory.AppOptimizer, "tools", keywords: "apps background launchers"),
@@ -87,6 +88,7 @@ public static class AppNavigation
         new("about#appearance", "\uE771", "Appearance", "settings", "Motion and effects, sidebar.", "theme animation motion sidebar", InSidebar: false),
         new("about#hotkeys", "\uE765", "Hotkeys", "settings", "Search, emergency stop and overlay hotkeys.", "shortcut keyboard hotkey", InSidebar: false),
         new("about#updates", "\uE896", "Updates", "settings", "Check and install updates.", "update version", InSidebar: false),
+        new("about#legacy", "\uE81C", "Legacy UI", "settings", "Switch back to the original Money Tweaks look.", "legacy classic old ui look theme green original", InSidebar: false),
     ];
 
     public static NavPage? Find(string tag) => Pages.FirstOrDefault(p => p.Tag == tag) ?? Pages.FirstOrDefault(p => p.Tag == tag.Split('#')[0]);

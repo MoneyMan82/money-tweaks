@@ -62,6 +62,8 @@ public sealed class AppSettings
     public int CommunityGuidelinesAccepted { get; set; }
     /// <summary>Dashboard cards the user hid.</summary>
     public List<string> DashboardHidden { get; set; } = [];
+    /// <summary>Legacy UI: the original (1.0–1.3) green look with flat cards and no ambient glow. Applied at startup.</summary>
+    public bool LegacyUi { get; set; }
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

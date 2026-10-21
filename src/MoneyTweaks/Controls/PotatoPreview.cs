@@ -473,7 +473,8 @@ public static class PotatoScene
         return m;
     }
 
-    private static MeshGeometry3D Box(Point3D c, double sx, double sy, double sz)
+    /// <summary>Axis-aligned box with flat normals (also used by Reality Lab's virtual PC).</summary>
+    internal static MeshGeometry3D Box(Point3D c, double sx, double sy, double sz)
     {
         var m = new MeshGeometry3D();
         double x0 = c.X - sx / 2, x1 = c.X + sx / 2, y0 = c.Y - sy / 2, y1 = c.Y + sy / 2, z0 = c.Z - sz / 2, z1 = c.Z + sz / 2;

@@ -194,7 +194,7 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
 {
     private readonly Dictionary<string, FrameworkElement> _sections = [];
 
-    /// <summary>"about#appearance", "about#hotkeys", "about#updates".</summary>
+    /// <summary>"about#appearance", "about#legacy", "about#hotkeys", "about#updates".</summary>
     public void ShowSection(string anchor)
     {
         if (_sections.TryGetValue(anchor, out var el)) Ui.ScrollTo(el);
@@ -238,6 +238,23 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
         ap.Children.Add(new TextBlock { Text = "Dashboard", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 2) });
         ap.Children.Add(Ui.Muted("Choose which dashboard cards are shown with Customize on the dashboard.", 12));
         ap.Children.Add(Ui.Row(Ui.Btn("Customize dashboard ›", (_, _) => MainWindow.Current?.Navigate("dashboard"), "GhostButton", new Thickness(0, 6, 8, 0))));
+        var legacyHead = new TextBlock { Text = "Legacy UI", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 2) };
+        ap.Children.Add(legacyHead);
+        ap.Children.Add(Ui.Muted("The original Money Tweaks look from versions 1.0–1.3: green accents, flat cards and no ambient glow. Every page and feature stays the same; only the look changes. Takes effect after a restart.", 12));
+        var legacy = new CheckBox { Content = "Use the legacy UI", IsChecked = App.Settings.LegacyUi, Margin = new Thickness(0, 8, 0, 0) };
+        var legacyRestart = Ui.Btn("Restart now to apply", (_, _) => LegacyTheme.Restart(), "PrimaryButton", new Thickness(0, 8, 8, 0));
+        void SyncLegacy() => legacyRestart.Visibility = (App.Settings.LegacyUi != LegacyTheme.Active) ? Visibility.Visible : Visibility.Collapsed;
+        legacy.Click += (_, _) =>
+        {
+            App.Settings.LegacyUi = legacy.IsChecked == true;
+            App.Settings.Save();
+            SyncLegacy();
+            MainWindow.Current?.ShowToast(App.Settings.LegacyUi == LegacyTheme.Active ? "That's the look you have now." : $"The {(App.Settings.LegacyUi ? "legacy" : "current")} look is used after a restart.");
+        };
+        SyncLegacy();
+        ap.Children.Add(legacy);
+        ap.Children.Add(Ui.Row(legacyRestart));
+        _sections["legacy"] = legacyHead;
         var apCard = Ui.Card(ap);
         _sections["appearance"] = apCard;
         body.Children.Add(apCard);

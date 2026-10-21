@@ -86,6 +86,7 @@ public partial class MainWindow : Window
             await RefreshAppliedSummaryAsync();
             if (!App.ScreenshotMode) Updater.VerifyPendingUpdate();
             if (!App.ScreenshotMode) await BenchmarkView.CheckPendingSyntheticRestoreAsync();
+            if (!App.ScreenshotMode) await RealityLabView.CheckPendingAsync();
             if (!App.ScreenshotMode) await GenomeView.CheckPendingAsync();
             if (!App.ScreenshotMode && !App.BackgroundStart) _ = GenomeView.CheckForUpdatesAsync();
             if (!App.ScreenshotMode) await ProfileService.CheckPendingAsync();
@@ -105,6 +106,14 @@ public partial class MainWindow : Window
         _ambient?.Stop(Ambient);
         _ambient = null;
         Ambient.Opacity = 1;
+        if (LegacyTheme.Active)
+        {
+            // The original look had no ambient glow; the sidebar highlight uses the legacy accent.
+            Ambient.Visibility = Visibility.Collapsed;
+            NavIndicator.Background = (Brush)FindResource("AccentSoft");
+            NavIndicator.BorderBrush = (Brush)FindResource("AccentSoft");
+            return;
+        }
         if (App.ReduceMotion) return;
         var a = new DoubleAnimation(1, 0.6, TimeSpan.FromSeconds(7)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() };
         Storyboard.SetTargetProperty(a, new PropertyPath(OpacityProperty));
@@ -443,6 +452,7 @@ public partial class MainWindow : Window
         "presets" => new PresetsView(),
         "macros" => new GamingMacrosView(),
         "benchmark" => new BenchmarkView(),
+        "lab" => new RealityLabView(),
         "scanner" => new ScannerView(),
         "profiles" => new ProfilesView(),
         "library" => new GameLibraryView(),

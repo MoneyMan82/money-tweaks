@@ -22,4 +22,8 @@
     <Resource Include="Assets\logo.png" />
     <Resource Include="Assets\MoneyTweaks.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Legacy UI recolours a copy of the theme's source before the first window opens. -->
+    <EmbeddedResource Include="Themes\Theme.xaml" LogicalName="MoneyTweaks.Themes.Theme.xaml" />
+  </ItemGroup>
 </Project>

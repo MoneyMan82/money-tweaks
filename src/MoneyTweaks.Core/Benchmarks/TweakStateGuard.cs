@@ -40,19 +40,24 @@ public static class TweakStateGuard
         return d;
     }
 
-    public static void SavePending(Dictionary<string, bool> original)
+    public static void SavePending(Dictionary<string, bool> original) => SavePending(original, PendingPath);
+    public static Dictionary<string, bool>? LoadPending() => LoadPending(PendingPath);
+    public static void ClearPending() => ClearPending(PendingPath);
+
+    /// <summary>Same as above for another feature's restore file (Reality Lab keeps its own, so the two never mix).</summary>
+    public static void SavePending(Dictionary<string, bool> original, string path)
     {
         Directory.CreateDirectory(AppPaths.Root);
-        AtomicFile.WriteAllText(PendingPath, JsonSerializer.Serialize(original));
+        AtomicFile.WriteAllText(path, JsonSerializer.Serialize(original));
     }
 
-    public static Dictionary<string, bool>? LoadPending()
+    public static Dictionary<string, bool>? LoadPending(string path)
     {
-        try { return File.Exists(PendingPath) ? JsonSerializer.Deserialize<Dictionary<string, bool>>(File.ReadAllText(PendingPath)) : null; }
-        catch (Exception ex) { Log.Error("synthetic-restore.json unreadable", ex); return null; }
+        try { return File.Exists(path) ? JsonSerializer.Deserialize<Dictionary<string, bool>>(File.ReadAllText(path)) : null; }
+        catch (Exception ex) { Log.Error($"{Path.GetFileName(path)} unreadable", ex); return null; }
     }
 
-    public static void ClearPending() { try { File.Delete(PendingPath); } catch { } }
+    public static void ClearPending(string path) { try { File.Delete(path); } catch { } }
 
     /// <summary>Turns every tweak on or off. Returns problems; the engine verifies each change and rolls back failures.</summary>
     public static List<string> SetAll(IEnumerable<string> ids, bool on, Func<string, Tweak?>? find = null)
@@ -91,7 +96,7 @@ public static class TweakStateGuard
             }
             catch (Exception ex) { problems.Add($"{t.Name}: {ex.Message}"); }
         }
-        Log.Info(problems.Count == 0 ? $"Synthetic benchmark: restored {original.Count} tweak(s) to their original state" : "Synthetic benchmark restore problems: " + string.Join("; ", problems));
+        Log.Info(problems.Count == 0 ? $"Restored {original.Count} tweak(s) to their original state after a test" : "Restore after a test had problems: " + string.Join("; ", problems));
         return problems;
     }
 }

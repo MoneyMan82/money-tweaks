@@ -19,6 +19,11 @@ Resume point for future sessions. Keep it short.
 - Release: scripts/build-release.ps1 -> dist/ (self-contained single-file exe, portable zip, Inno Setup installer, SHA256SUMS).
   GitHub Actions: ci.yml (build+test), release.yml (on tag v* -> GitHub Release with assets).
 - Website: docs/ (GitHub Pages from main:/docs).
+- 1.45 Reality Lab (`lab` page; `Core/Lab/RealityLab.cs`, `Views/RealityLabView*.cs`, `Controls/VirtualPcScene.cs`): reuses
+  HardwareMonitor, BenchmarkSampler, StressScene, TweakStateGuard (own restore file `lab-restore.json`), TweakService and the
+  benchmark history (study TargetKind "lab"). Estimates are qualitative only (Expect enum), checked against BenchmarkStats verdicts.
+  Kept experiments in `lab.json`. Legacy UI: `Themes/LegacyTheme.cs` recolours an embedded copy of Theme.xaml at startup
+  (theme brushes are frozen on load, so in-place recolouring doesn't work).
 
 ## Gotchas
 - Pillow ICOs with PNG-compressed entries produce a "Bad IL format" assembly. Keep bitmap_format="bmp" (branding script in history).
