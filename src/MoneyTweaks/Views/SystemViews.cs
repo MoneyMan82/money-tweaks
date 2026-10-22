@@ -328,7 +328,7 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
         ab.Children.Add(Ui.Muted($"Data folder: {AppPaths.Root}", 12.5));
         ab.Children.Add(Ui.Muted($"Running on {OsInfo.ProductName}, {(Admin.IsElevated ? "as administrator" : "as standard user")}.", 12.5));
         ab.Children.Add(Ui.Row(
-            Ui.Btn("Website", (_, _) => Open("https://money-tweaks.pages.dev/"), margin: new Thickness(0, 10, 8, 0)),
+            Ui.Btn("Website", (_, _) => Open("https://money-tweaks.barkgdd.workers.dev/"), margin: new Thickness(0, 10, 8, 0)),
             Ui.Btn("Source code", (_, _) => Open("https://github.com/MoneyMan82/money-tweaks"), margin: new Thickness(0, 10, 8, 0)),
             Ui.Btn("Report an issue", (_, _) => Open("https://github.com/MoneyMan82/money-tweaks/issues"), margin: new Thickness(0, 10, 8, 0))));
         body.Children.Add(Ui.Card(ab));

@@ -356,6 +356,14 @@ public sealed class PresetsView : UserControl, IPageLifecycle
         _lists.Visibility = Visibility.Visible;
     }
 
-    public void OnShown() { _file = PresetStore.Load(); if (_editorHost.Visibility != Visibility.Visible) Rebuild(); }
+    /// <summary>Set by another page (Reality Lab) to open the new-preset editor when this page appears.</summary>
+    internal static bool OpenNewOnShow;
+
+    public void OnShown()
+    {
+        _file = PresetStore.Load();
+        if (_editorHost.Visibility != Visibility.Visible) Rebuild();
+        if (OpenNewOnShow) { OpenNewOnShow = false; OpenEditor(null); }
+    }
     public void OnHidden() { }
 }

@@ -5,7 +5,7 @@ No accounts, no ads, no telemetry, no paid tiers.
 
 ![Money Tweaks dashboard](docs/assets/screenshots/dashboard.png)
 
-**Website:** https://money-tweaks.pages.dev/ · **Download:** [latest release](https://github.com/MoneyMan82/money-tweaks/releases/latest)
+**Website:** https://money-tweaks.barkgdd.workers.dev/ · **Download:** [latest release](https://github.com/MoneyMan82/money-tweaks/releases/latest)
 
 > Money Tweaks is an independent project. It is not affiliated with, endorsed by or derived from Microsoft
 > or any game publisher. All code, text and artwork are original.
@@ -90,16 +90,14 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-### Website (Cloudflare Pages, free)
-The site is the static folder `docs/` (no build step). It includes `_headers` (security headers and caching), `robots.txt` and `sitemap.xml`.
+### Website and Community Hub (Cloudflare Worker, free)
+The site is the static folder `docs/` (no build step), served by the `money-tweaks` Cloudflare Worker (`wrangler.jsonc`),
+which also runs the Community Hub API under `/api/community/` (`worker/`). It includes `_headers` (security headers and
+caching), `robots.txt` and `sitemap.xml`. The Worker is connected to this repository in Cloudflare (Workers Builds), so
+every push to `main` deploys it to `https://money-tweaks.barkgdd.workers.dev`. Setup guide: `worker/README.md`.
 
-1. Log in at https://dash.cloudflare.com and go to **Workers & Pages → Create → Pages → Connect to Git**.
-2. Authorize GitHub and pick `MoneyMan82/money-tweaks`. Private repos work too.
-3. Set build settings: Framework preset **None**, Build command *(empty)*, Build output directory **`docs`**, Production branch **`main`**.
-4. **Save and Deploy**. The site goes live at `https://money-tweaks.pages.dev` and redeploys on every push to `main`.
-
-If Cloudflare gives you a different `*.pages.dev` name, or you add a custom domain, replace `money-tweaks.pages.dev`
-in `docs/index.html`, `docs/robots.txt`, `docs/sitemap.xml` and `src/MoneyTweaks/Views/SystemViews.cs`.
+If the address changes (e.g. a custom domain), replace `money-tweaks.barkgdd.workers.dev` in `docs/index.html`,
+`docs/robots.txt`, `docs/sitemap.xml`, `src/MoneyTweaks/Views/SystemViews.cs` and `CommunityClient.OfficialServer`.
 
 ## Project layout
 ```

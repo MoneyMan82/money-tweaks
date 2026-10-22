@@ -62,7 +62,11 @@ public sealed partial class RealityLabView
         sp.Children.Add(Label("Lab experiments"));
         sp.Children.Add(ChoiceRow(Choices().Where(c => c.Curated)));
         sp.Children.Add(Label("Or one of your presets (only its safe, switchable tweaks are tested)"));
-        sp.Children.Add(ChoiceRow(Choices().Where(c => !c.Curated)));
+        FillPresetRow();
+        sp.Children.Add(_presetRow);
+        var own = Ui.Btn("+  Make your own set", (_, _) => { PresetsView.OpenNewOnShow = true; MainWindow.Current?.Navigate("presets"); }, "GhostButton", new Thickness(0, 0, 0, 4));
+        own.ToolTip = "Pick any tweaks in the preset editor; your new preset appears here, and only its safe, switchable tweaks are tested";
+        sp.Children.Add(Ui.Row(own));
         sp.Children.Add(_preview);
 
         sp.Children.Add(Label("Measure"));
@@ -97,16 +101,31 @@ public sealed partial class RealityLabView
 
     private static TextBlock Label(string t) => new() { Text = t, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Ui.Brush("Muted"), Margin = new Thickness(0, 14, 0, 6) };
 
+    private readonly WrapPanel _presetRow = new();
+
+    /// <summary>Presets can change on the Presets page (including a set made for the lab), so this row is refreshed on show.</summary>
+    private void FillPresetRow()
+    {
+        _presetRow.Children.Clear();
+        AddChoices(_presetRow, Choices().Where(c => !c.Curated));
+        if (Choices().All(c => c.Id != _selId)) { _selId = RealityLab.Experiments[0].Id; RefreshPreview(); }
+    }
+
     private WrapPanel ChoiceRow(IEnumerable<Choice> items)
     {
         var row = new WrapPanel();
+        AddChoices(row, items);
+        return row;
+    }
+
+    private void AddChoices(Panel row, IEnumerable<Choice> items)
+    {
         foreach (var c in items)
         {
             var rb = new RadioButton { Content = c.Name, ToolTip = c.Goal, Style = Ui.Res<Style>("Chip"), GroupName = "labexp", IsChecked = c.Id == _selId, Margin = new Thickness(0, 0, 6, 6) };
             rb.Checked += (_, _) => { _selId = c.Id; RefreshPreview(); };
             row.Children.Add(rb);
         }
-        return row;
     }
 
     // ---- preview + estimate -----------------------------------------------------------------------------------------

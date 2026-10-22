@@ -125,6 +125,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
         _sampleTimer.Start();
         SyncRunning();
         RenderKept();
+        if (!_measuring) FillPresetRow();
     }
 
     public void OnHidden()

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.53 – 2026-10-22
+- **Fixed: the Website button and links pointed to a dead address** (money-tweaks.pages.dev). The app's Website
+  button, the README, and the site's own sharing card, canonical link, robots.txt and sitemap now use the live site,
+  https://money-tweaks.barkgdd.workers.dev. The README's website section describes the current Cloudflare Worker setup.
+- **Reality Lab: make your own experiment.** "+ Make your own set" opens the preset editor to pick any tweaks; the new
+  preset shows up in the lab's list when you come back (only its safe, switchable tweaks are tested, as with any preset).
+
 ## 1.52 – 2026-10-22
 - **Video tutorials are embedded in the page**: Potato Graphics and Fortnite Stretched show a "Video tutorial" card
   with a 16:9 player right on the page. Press play and YouTube's privacy-enhanced player plays it in place; it scrolls
