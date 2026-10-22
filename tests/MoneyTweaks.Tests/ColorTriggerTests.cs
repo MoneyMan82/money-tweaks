@@ -60,17 +60,21 @@ public class ColorTriggerTests
         w.Start([andM, orM]);
         await Task.Delay(200);
         Assert.Empty(rising);
+        // Wait for the 50 ms poller (up to 3 s: shared CI runners can stall a thread for longer than a few polls).
+        async Task Until(Func<bool> ok) { for (int i = 0; i < 60 && !ok(); i++) await Task.Delay(50); }
+        bool Has(List<string> l, string v) { lock (l) return l.Contains(v); }
         screen.A = (0, 255, 0);                      // only first condition true
-        await Task.Delay(250);
+        await Until(() => Has(rising, "or"));
         lock (rising) Assert.Equal(["or"], rising);
         Assert.True(w.IsTrue(orM));
         Assert.False(w.IsTrue(andM));
         screen.B = (0, 0, 255);                      // both true
-        await Task.Delay(250);
+        await Until(() => Has(rising, "and"));
+        await Task.Delay(200);                       // a few more polls: no repeated edge may appear
         lock (rising) Assert.Contains("and", rising);
         lock (rising) Assert.Single(rising, "or");    // no repeated rising edge while it stays true
         screen.A = (0, 0, 0); screen.B = (0, 0, 0);
-        await Task.Delay(250);
+        await Until(() => Has(falling, "or") && Has(falling, "and"));
         lock (falling) Assert.Contains("or", falling);
         lock (falling) Assert.Contains("and", falling);
     }
