@@ -136,7 +136,7 @@ public sealed partial class CleanerView
             right.Children.Add(rv);
         }
         Grid.SetColumn(right, 2); grid.Children.Add(right);
-        return new Border { Padding = new Thickness(10, 8, 10, 8), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 4, 0, 0), Background = Ui.Brush(_selected.Contains(c.Id) ? "AccentSoft" : "Surface"), Child = grid };
+        return new Border { Padding = new Thickness(10, 8, 10, 8), CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 4, 0, 0), Background = Ui.Brush(_selected.Contains(c.Id) ? "AccentSoft" : "Surface"), Child = grid };
     }
 
     /// <summary>Inspection before deletion: the largest files of a category, with their location and age. Exclude a folder from here.</summary>

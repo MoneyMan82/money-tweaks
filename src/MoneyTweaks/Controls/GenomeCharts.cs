@@ -90,7 +90,7 @@ public sealed class FrontierChart : Border
             _c.Children.Add(new Line { X1 = X(p.X - p.XCi), X2 = X(p.X + p.XCi), Y1 = cy, Y2 = cy, Stroke = tone, StrokeThickness = 1, Opacity = 0.55 });
             _c.Children.Add(new Line { X1 = cx, X2 = cx, Y1 = Y(p.Y - p.YCi), Y2 = Y(p.Y + p.YCi), Stroke = tone, StrokeThickness = 1, Opacity = 0.55 });
             double r = p.Measured ? 5 + Math.Min(4, p.N) : 6;
-            var dot = new Ellipse
+            var dot = new Rectangle
             {
                 Width = r * 2, Height = r * 2, Stroke = tone, StrokeThickness = p.Key == _selected ? 3 : 1.6,
                 Fill = p.Measured ? tone : Brushes.Transparent, Cursor = Cursors.Hand,
@@ -133,7 +133,7 @@ public sealed class CompareChart : StackPanel
         var legend = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         for (int i = 0; i < items.Count; i++)
         {
-            legend.Children.Add(new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(3), Background = Ui.Brush(Palette[i]), Margin = new Thickness(0, 2, 6, 0) });
+            legend.Children.Add(new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(0), Background = Ui.Brush(Palette[i]), Margin = new Thickness(0, 2, 6, 0) });
             legend.Children.Add(new TextBlock { Text = $"{items[i].name} ({items[i].e.N} runs)", Foreground = Ui.Brush("Text"), FontSize = 12, Margin = new Thickness(0, 0, 16, 0) });
         }
         Children.Add(legend);
@@ -164,8 +164,16 @@ public sealed class CompareChart : StackPanel
                     if (vals[i] is not { } s) continue;
                     double g = Good(s.Mean), ci = Ci(s), y = 2 + i * 17;
                     double len = Math.Abs(g) / scale * half;
-                    var bar = new Rectangle { Width = Math.Max(1, len), Height = 10, RadiusX = 2, RadiusY = 2, Fill = Ui.Brush(Palette[i]), Opacity = Math.Abs(g) > ci ? 1 : 0.45 };
+                    var bar = new Rectangle { Width = Math.Max(1, len), Height = 10, RadiusX = 0, RadiusY = 0, Fill = Ui.Brush(Palette[i]), Opacity = Math.Abs(g) > ci ? 1 : 0.45 };
                     bars.Children.Add(Pos(bar, g >= 0 ? mid : mid - len, y));
+                    // Bars extend out from the zero line.
+                    if (Motion.Enabled)
+                    {
+                        var st = new ScaleTransform(0, 1);
+                        bar.RenderTransformOrigin = new Point(g >= 0 ? 0 : 1, 0.5);
+                        bar.RenderTransform = st;
+                        st.BeginAnimation(ScaleTransform.ScaleXProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(480)) { BeginTime = TimeSpan.FromMilliseconds(i * 60), EasingFunction = new System.Windows.Media.Animation.QuinticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } });
+                    }
                     double a = mid + (g - ci) / scale * half, b = mid + (g + ci) / scale * half;
                     bars.Children.Add(Pos(new Line { X1 = 0, X2 = b - a, Y1 = 5, Y2 = 5, Stroke = Ui.Brush("Text"), StrokeThickness = 1, Opacity = 0.7 }, a, y));
                     var txt = new TextBlock { Text = $"{m.Change(s.Mean)} ±{(m.Kind == MetricKind.Ratio ? $"{ci:0.0}%" : $"{ci:0.0}")}", FontSize = 10.5, Foreground = Ui.Brush(Palette[i]) };
@@ -213,7 +221,7 @@ public sealed class EffectMap : Grid
                 var text = $"{f.Metric.Change(f.Mean)}";
                 var b = new Border
                 {
-                    Background = Ui.Brush(f.Clear ? (good >= 0 ? "SuccessSoft" : "DangerSoft") : "Surface"), CornerRadius = new CornerRadius(5), Margin = new Thickness(3, 2, 3, 2), Padding = new Thickness(6, 3, 6, 3),
+                    Background = Ui.Brush(f.Clear ? (good >= 0 ? "SuccessSoft" : "DangerSoft") : "Surface"), CornerRadius = new CornerRadius(0), Margin = new Thickness(3, 2, 3, 2), Padding = new Thickness(6, 3, 6, 3),
                     Child = new TextBlock { Text = text, FontSize = 11.5, Foreground = Ui.Brush(tone), FontWeight = f.Clear ? FontWeights.SemiBold : FontWeights.Normal },
                     ToolTip = $"{f.Factor.Name} {f.Level.Label} vs. your setting: {f.Metric.Label} {text} (95% ±{(f.Metric.Kind == MetricKind.Ratio ? $"{ci * 100:0.0}%" : $"{ci:0.0} {f.Metric.Unit}")}), from {f.Support} trial(s).{(f.Clear ? "" : " Not clearly different from no change.")}",
                 };

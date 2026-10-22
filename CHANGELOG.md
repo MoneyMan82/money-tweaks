@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.56 – 2026-10-22
+- **Square corners everywhere.** Every card, panel, button, input, dropdown, navigation item, dialog, popup, menu, tag,
+  tooltip, progress bar, switch, slider, radio button and expander is now sharp and angular (0 rounded elements left in
+  an automated audit of all 38 pages). Windows 11 no longer rounds the app's windows. Gauges are square instruments,
+  status dots are squares, the slider thumb is a diamond and lines end flat. Depth comes from thin borders, layered
+  surfaces and light instead of curves. The logo tile and icons are square too.
+- **Much more motion**, mostly 120–350 ms with smooth easing, longer for page changes:
+  - Page transitions fade, rise and settle in scale; content enters in a stagger.
+  - The navigation indicator glides between items and its accent edge stretches and pulses.
+  - Buttons get a light sweep on hover and a press dip; navigation items nudge; tweak cards get a hover highlight.
+  - Toggles slide with a slight overshoot and a halo; chips draw an underline when selected; text boxes draw a focus
+    line; tooltips, menus and expanders fade and slide in.
+  - Progress bars glide to new values; benchmark bars grow, FPS lines draw in, Genome bars extend from zero, gauges
+    sweep to their value.
+  - Header rules draw out with a passing glint, panel corner brackets draw out, loading shows a stepping sequencer,
+    toasts show a countdown line, and the background light drifts very slowly.
+  - Windows' "Animation effects" off (or Reduce motion in Money Tweaks) turns the code-driven motion off.
+- **Website renewed** to match: square corners, Vector palette, animated hero, light sweeps on buttons, staggered
+  reveals, HUD-framed screenshot, and new screenshots of the current version.
+
 ## 1.55 – 2026-10-22
 - **New look: "Vector".** A redesigned design system across the whole app, with every feature unchanged:
   - Deep neutral graphite surfaces lit from the top-left (cards are a touch lighter at the top, their rim catches the

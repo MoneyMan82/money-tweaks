@@ -41,7 +41,7 @@
                     <DrawingBrush TileMode="Tile" Viewport="0,0,28,28" ViewportUnits="Absolute" Stretch="None">
                         <DrawingBrush.Drawing>
                             <GeometryDrawing Brush="#14FFFFFF">
-                                <GeometryDrawing.Geometry><EllipseGeometry Center="1,1" RadiusX="1" RadiusY="1"/></GeometryDrawing.Geometry>
+                                <GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,1.5,1.5"/></GeometryDrawing.Geometry>
                             </GeometryDrawing>
                         </DrawingBrush.Drawing>
                     </DrawingBrush>
@@ -83,12 +83,12 @@
                         </StackPanel>
                     </DockPanel>
 
-                    <Border x:Name="StatusCard" DockPanel.Dock="Bottom" Margin="14,10,14,14" Padding="14" CornerRadius="12" Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardRim}" BorderThickness="1">
+                    <Border x:Name="StatusCard" DockPanel.Dock="Bottom" Margin="14,10,14,14" Padding="14" CornerRadius="0" Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardRim}" BorderThickness="1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Grid Width="10" Height="10" Margin="0,0,9,0">
-                                    <Ellipse x:Name="AdminHalo" Fill="{StaticResource Gold}" Opacity="0.25" Margin="-3"/>
-                                    <Ellipse x:Name="AdminDot" Fill="{StaticResource Gold}"/>
+                                    <Rectangle x:Name="AdminHalo" Fill="{StaticResource Gold}" Opacity="0.25" Margin="-3"/>
+                                    <Rectangle x:Name="AdminDot" Fill="{StaticResource Gold}"/>
                                 </Grid>
                                 <TextBlock x:Name="AdminText" Text="Standard user" FontSize="12" FontWeight="SemiBold"/>
                             </StackPanel>
@@ -101,14 +101,16 @@
                         <Grid x:Name="NavGrid">
                             <Canvas x:Name="NavCanvas" IsHitTestVisible="False">
                                 <!-- Selection: a violet wash fading to the right, a hairline rim and a bright violet→cyan edge bar. -->
-                                <Border x:Name="NavIndicator" Width="232" Height="38" CornerRadius="8" Opacity="0" BorderThickness="1" BorderBrush="#2E8A6BFF">
+                                <Border x:Name="NavIndicator" Width="232" Height="38" CornerRadius="0" Opacity="0" BorderThickness="1" BorderBrush="#2E8A6BFF">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
                                             <GradientStop Color="#2A8A6BFF" Offset="0"/>
                                             <GradientStop Color="#062FD8EE" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Border.Background>
-                                    <Border Width="3" CornerRadius="1.5" HorizontalAlignment="Left" Margin="0,9" Background="{StaticResource AccentGradient}"/>
+                                    <Border x:Name="NavEdge" Width="3" CornerRadius="0" HorizontalAlignment="Left" Margin="0,9" Background="{StaticResource AccentGradient}" RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform><ScaleTransform x:Name="NavEdgeScale"/></Border.RenderTransform>
+                                    </Border>
                                 </Border>
                             </Canvas>
                             <!-- Built from AppNavigation: favourites, recent pages and the collapsible groups. -->
@@ -137,7 +139,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource Icon}" Text="&#xE721;" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,10,0"/>
                             <TextBlock x:Name="SearchHint" Text="Search pages, tweaks, games &amp; settings" Foreground="{StaticResource Muted}" FontWeight="Normal" Margin="0,0,22,0"/>
-                            <Border CornerRadius="4" Background="#10FFFFFF" BorderBrush="#1CFFFFFF" BorderThickness="1,1,1,2" Padding="6,1">
+                            <Border CornerRadius="0" Background="#10FFFFFF" BorderBrush="#1CFFFFFF" BorderThickness="1,1,1,2" Padding="6,1">
                                 <TextBlock Text="Ctrl K" FontSize="10.5" FontFamily="{StaticResource MonoFont}" Foreground="{StaticResource Muted}"/>
                             </Border>
                         </StackPanel>
@@ -154,14 +156,14 @@
                 </DockPanel>
 
                 <StackPanel Grid.Row="1">
-                    <Border x:Name="UpdateBanner" Margin="32,0,32,10" Padding="14,10" CornerRadius="10" Background="{StaticResource AccentSoft}" BorderBrush="#558A6BFF" BorderThickness="1" Visibility="Collapsed">
+                    <Border x:Name="UpdateBanner" Margin="32,0,32,10" Padding="14,10" CornerRadius="0" Background="{StaticResource AccentSoft}" BorderBrush="#558A6BFF" BorderThickness="1" Visibility="Collapsed">
                         <DockPanel>
                             <Button x:Name="UpdateButton" DockPanel.Dock="Right" Content="Update now" Style="{StaticResource PrimaryButton}" Padding="14,6" Margin="12,0,0,0" Click="Update_Click"/>
                             <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" Foreground="{StaticResource Accent}" Margin="0,0,10,0"/>
                             <TextBlock x:Name="UpdateText" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12.5"/>
                         </DockPanel>
                     </Border>
-                    <Border x:Name="AdminBanner" Margin="32,0,32,10" Padding="14,10" CornerRadius="10" Background="{StaticResource GoldSoft}" BorderBrush="#45F5B84A" BorderThickness="1">
+                    <Border x:Name="AdminBanner" Margin="32,0,32,10" Padding="14,10" CornerRadius="0" Background="{StaticResource GoldSoft}" BorderBrush="#45F5B84A" BorderThickness="1">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Restart as admin" Style="{StaticResource GoldButton}" Padding="14,6" Margin="12,0,0,0" Click="Elevate_Click"/>
                             <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Click="DismissAdminBanner" ToolTip="Hide for this session"><TextBlock Text="&#xE711;" Style="{StaticResource Icon}" FontSize="10"/></Button>
@@ -201,7 +203,7 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="b" CornerRadius="8" Padding="12,8" Margin="0,1" Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
+                                            <Border x:Name="b" CornerRadius="0" Padding="12,8" Margin="0,1" Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
                                                 <ContentPresenter/>
                                             </Border>
                                             <ControlTemplate.Triggers>
@@ -217,7 +219,7 @@
                             <DataTemplate>
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Right" Text="{Binding Kind}" FontSize="11" Foreground="{StaticResource Subtle}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                                    <Border Width="30" Height="30" CornerRadius="8" Background="#10FFFFFF" BorderBrush="#14FFFFFF" BorderThickness="1" Margin="0,0,12,0">
+                                    <Border Width="30" Height="30" CornerRadius="0" Background="#10FFFFFF" BorderBrush="#14FFFFFF" BorderThickness="1" Margin="0,0,12,0">
                                         <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" FontSize="13" Foreground="{StaticResource Violet}" HorizontalAlignment="Center"/>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">

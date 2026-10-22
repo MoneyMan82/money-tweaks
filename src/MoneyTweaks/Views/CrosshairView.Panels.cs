@@ -153,7 +153,7 @@ public sealed partial class CrosshairView
             kind.VerticalAlignment = VerticalAlignment.Center;
             DockPanel.SetDock(kind, Dock.Right);
             row.Children.Add(kind);
-            var sw = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(3), Margin = new Thickness(4, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
+            var sw = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(0), Margin = new Thickness(4, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
             if (Argb.TryParse(layer.Color, out var c) && layer.Kind != LayerKind.Image) sw.Background = new SolidColorBrush(Color.FromArgb(c.A, c.R, c.G, c.B));
             DockPanel.SetDock(sw, Dock.Left);
             row.Children.Add(sw);
@@ -163,7 +163,7 @@ public sealed partial class CrosshairView
             row.Children.Add(name);
             var b = new Border
             {
-                Child = row, Padding = new Thickness(4, 3, 8, 3), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 0, 3), Cursor = Cursors.Hand,
+                Child = row, Padding = new Thickness(4, 3, 8, 3), CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 0, 0, 3), Cursor = Cursors.Hand,
                 Background = sel ? Ui.Brush("AccentSoft") : Brushes.Transparent, BorderBrush = sel ? Ui.Brush("Accent") : Brushes.Transparent, BorderThickness = new Thickness(1),
             };
             b.MouseLeftButtonUp += (_, _) => { _layerId = layer.Id; RenderLayers(); RenderProps(); };
@@ -314,7 +314,7 @@ public sealed partial class CrosshairView
             row.Children.Add(txt);
             var b = new Border
             {
-                Child = row, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 0, 4), Cursor = Cursors.Hand,
+                Child = row, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 0, 0, 4), Cursor = Cursors.Hand,
                 Background = active ? Ui.Brush("AccentSoft") : Brushes.Transparent, BorderBrush = active ? Ui.Brush("Accent") : Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1),
             };
             b.MouseLeftButtonUp += (_, _) => { if (prof.Id != D.ActiveId) { FlushCommit(); CrosshairService.Activate(prof.Id); _layerId = null; RenderAll(); } };

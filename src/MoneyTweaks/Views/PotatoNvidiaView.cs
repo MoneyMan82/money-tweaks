@@ -85,7 +85,7 @@ public sealed partial class PotatoView
         // What changes what
         var info = new Border
         {
-            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(12, 10, 12, 10), Margin = new Thickness(0, 12, 0, 0),
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(0), Padding = new Thickness(12, 10, 12, 10), Margin = new Thickness(0, 12, 0, 0),
             Child = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Ui.Brush("Muted"),

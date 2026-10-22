@@ -236,7 +236,7 @@ public sealed partial class RealityLabView
         sp.Children.Add(Ui.Muted("Estimated from how each setting works, not from tests on your PC, and never a promise: hardware, drivers and what else is running all change the outcome. " +
             "Only the measurement counts. Confidence in each tweak's usual benefit: " + string.Join(" · ", conf) + ".", 11.5));
         ((TextBlock)sp.Children[^1]).TextWrapping = TextWrapping.Wrap;
-        return new Border { Child = sp, Margin = new Thickness(0, 8, 0, 0), Padding = new Thickness(14, 10, 14, 12), CornerRadius = new CornerRadius(10), Background = Ui.Brush("GoldSoft") };
+        return new Border { Child = sp, Margin = new Thickness(0, 8, 0, 0), Padding = new Thickness(14, 10, 14, 12), CornerRadius = new CornerRadius(0), Background = Ui.Brush("GoldSoft") };
     }
 
     /// <summary>The most recent earlier lab measurement of the same experiment on this PC, if any.</summary>

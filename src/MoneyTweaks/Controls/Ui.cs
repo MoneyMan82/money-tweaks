@@ -57,7 +57,7 @@ public static class Ui
     /// <summary>Square glyph tile: dark glass with a violet→cyan rim and a gradient glyph. Used by page headers and empty states.</summary>
     public static Border IconTile(string icon, double size = 46, double glyph = 19) => new()
     {
-        Width = size, Height = size, CornerRadius = new CornerRadius(size * 0.24), Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center,
+        Width = size, Height = size, CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center,
         Background = TileFill, BorderBrush = Brush("AccentGradient"), BorderThickness = new Thickness(1),
         Child = new TextBlock { Text = icon, Style = Res<Style>("Icon"), FontSize = glyph, Foreground = Brush("AccentGradient"), HorizontalAlignment = HorizontalAlignment.Center },
     };
@@ -68,11 +68,24 @@ public static class Ui
     /// <summary>Hairline divider with a short violet→cyan segment at its start (the signature rule).</summary>
     public static UIElement Rule(Thickness margin)
     {
-        var g = new Grid { Height = 2, Margin = margin };
+        var g = new Grid { Height = 2, Margin = margin, ClipToBounds = true };
         g.Children.Add(new Border { Height = 1, Background = Brush("Hairline"), VerticalAlignment = VerticalAlignment.Center });
-        g.Children.Add(new Border { Width = 64, Height = 2, CornerRadius = new CornerRadius(1), Background = Brush("AccentGradientH"), HorizontalAlignment = HorizontalAlignment.Left });
+        var seg = new ScaleTransform(1, 1);
+        g.Children.Add(new Border { Width = 64, Height = 2, CornerRadius = new CornerRadius(0), Background = Brush("AccentGradientH"), HorizontalAlignment = HorizontalAlignment.Left, RenderTransformOrigin = new Point(0, 0.5), RenderTransform = seg });
+        // A light glint that travels along the hairline once each time the page appears.
+        var glintX = new TranslateTransform(-160, 0);
+        g.Children.Add(new Border { Width = 160, Height = 1, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Background = Glint, RenderTransform = glintX, IsHitTestVisible = false });
+        g.Loaded += (_, _) =>
+        {
+            if (!Motion.Enabled) return;
+            seg.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(520)) { BeginTime = TimeSpan.FromMilliseconds(120), EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
+            glintX.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-160, Math.Max(400, g.ActualWidth), TimeSpan.FromMilliseconds(1300)) { BeginTime = TimeSpan.FromMilliseconds(260), EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+        };
         return g;
     }
+
+    private static readonly Brush Glint = Frozen(new LinearGradientBrush(new GradientStopCollection
+        { new(Color.FromArgb(0, 0x2F, 0xD8, 0xEE), 0), new(Color.FromArgb(0xC0, 0x9E, 0xEE, 0xFF), 0.5), new(Color.FromArgb(0, 0x8A, 0x6B, 0xFF), 1) }, 0));
 
     /// <summary>Scrolls the page's ScrollViewer so the element sits at the top (used for "page#section" navigation).</summary>
     public static void ScrollTo(FrameworkElement el)
@@ -118,7 +131,7 @@ public static class Ui
     {
         var s = new StackPanel();
         var head = new StackPanel { Orientation = Orientation.Horizontal };
-        head.Children.Add(new Border { Width = 3, Height = 15, CornerRadius = new CornerRadius(1.5), Background = Brush("AccentGradient"), Margin = new Thickness(0, 1, 10, 0), VerticalAlignment = VerticalAlignment.Center });
+        head.Children.Add(new Border { Width = 3, Height = 15, CornerRadius = new CornerRadius(0), Background = Brush("AccentGradient"), Margin = new Thickness(0, 1, 10, 0), VerticalAlignment = VerticalAlignment.Center });
         head.Children.Add(new TextBlock { Text = title, Style = Res<Style>("H2"), VerticalAlignment = VerticalAlignment.Center });
         s.Children.Add(head);
         if (sub is not null) s.Children.Add(new TextBlock { Text = sub, Style = Res<Style>("MutedText"), Margin = new Thickness(0, 4, 0, 12) });
@@ -200,7 +213,7 @@ public static class Ui
             sp.Children.Add(new Border
             {
                 // Slightly thicker bottom edge reads as a physical key.
-                CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1, 1, 1, 2),
+                CornerRadius = new CornerRadius(0), BorderThickness = new Thickness(1, 1, 1, 2),
                 BorderBrush = Brush("ControlBorderHover"), Background = Brush("ControlFill"),
                 Padding = new Thickness(8, 3, 8, 3), MinWidth = 28, VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
@@ -221,16 +234,30 @@ public static class Ui
         tile.Margin = new Thickness(0);
         tile.HorizontalAlignment = HorizontalAlignment.Center;
         sp.Children.Add(tile);
+        sp.Loaded += (_, _) => Motion.FadeIn(sp, 60, 10, 420);
         sp.Children.Add(new TextBlock { Text = title, Style = Res<Style>("H2"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 14, 0, 4) });
         sp.Children.Add(new TextBlock { Text = sub, Style = Res<Style>("MutedText"), TextAlignment = TextAlignment.Center, MaxWidth = 380 });
         return sp;
     }
 
-    /// <summary>Indeterminate shimmer bar with a caption, for work in progress.</summary>
+    /// <summary>Indeterminate shimmer bar with a caption and a three-block sequencer, for work in progress.</summary>
     public static UIElement Loading(string caption)
     {
         var sp = new StackPanel { Margin = new Thickness(0, 6, 0, 6) };
-        sp.Children.Add(Muted(caption, 12));
+        var head = new StackPanel { Orientation = Orientation.Horizontal };
+        // Three squares light up in turn (opacity only); still squares with reduced motion.
+        for (int i = 0; i < 3; i++)
+        {
+            var b = new Border { Width = 6, Height = 6, Margin = new Thickness(0, 0, 4, 0), Background = Brush("AccentGradient"), VerticalAlignment = VerticalAlignment.Center, Opacity = 0.35 };
+            if (!App.ReduceMotion)
+                b.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.25, 1, TimeSpan.FromMilliseconds(420))
+                    { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromMilliseconds(i * 160), EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+            head.Children.Add(b);
+        }
+        var cap = Muted(caption, 12);
+        cap.Margin = new Thickness(6, 0, 0, 0);
+        head.Children.Add(cap);
+        sp.Children.Add(head);
         sp.Children.Add(new ProgressBar { IsIndeterminate = !App.ReduceMotion, Margin = new Thickness(0, 8, 0, 0), MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left, Width = 420 });
         return sp;
     }
@@ -261,7 +288,10 @@ public sealed class ResponsiveGrid : UniformGrid
     }
 }
 
-/// <summary>Circular gauge drawn in OnRender; animates only when its value changes.</summary>
+/// <summary>
+/// Angular gauge drawn in OnRender: a square track, and the value as a stroke running clockwise around it from the top
+/// centre, with instrument ticks inside. Animates only when its value changes.
+/// </summary>
 public sealed class RingArc : FrameworkElement
 {
     public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(nameof(Value), typeof(double), typeof(RingArc),
@@ -270,37 +300,53 @@ public sealed class RingArc : FrameworkElement
     public double Thickness { get; set; } = 10;
     public Brush? Stroke { get; set; }
 
-    private static readonly Pen TrackPen = CreateTrackPen();
+    private static readonly Brush TrackBrush = FrozenBrush(Color.FromRgb(0x1A, 0x1D, 0x25));
     private static readonly Pen TickMinor = FrozenPen(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF), 1);
     private static readonly Pen TickMajor = FrozenPen(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF), 1.2);
+    private static Brush FrozenBrush(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
     private static Pen FrozenPen(Color c, double w) { var p = new Pen(new SolidColorBrush(c), w); p.Freeze(); return p; }
-    private static Pen CreateTrackPen() { var p = new Pen(new SolidColorBrush(Color.FromRgb(0x1A, 0x1D, 0x25)), 10) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }; p.Freeze(); return p; }
+
+    /// <summary>Point at fraction t (0..1) of the way round a square of half-size h centred on c, starting top centre, clockwise.</summary>
+    private static Point Along(Point c, double h, double t)
+    {
+        double d = (t % 1) * 8 * h; // perimeter = 8h, starting at the top centre
+        if (d < h) return new(c.X + d, c.Y - h);
+        d -= h; if (d < 2 * h) return new(c.X + h, c.Y - h + d);
+        d -= 2 * h; if (d < 2 * h) return new(c.X + h - d, c.Y + h);
+        d -= 2 * h; if (d < 2 * h) return new(c.X - h, c.Y + h - d);
+        d -= 2 * h; return new(c.X - h + d, c.Y - h);
+    }
 
     protected override void OnRender(DrawingContext dc)
     {
-        double size = Math.Min(ActualWidth, ActualHeight), r = (size - Thickness) / 2;
-        if (r <= 0) return;
+        double size = Math.Min(ActualWidth, ActualHeight), h = (size - Thickness) / 2;
+        if (h <= 0) return;
         var c = new Point(ActualWidth / 2, ActualHeight / 2);
-        var track = TrackPen.Thickness == Thickness ? TrackPen : new Pen(TrackPen.Brush, Thickness);
-        dc.DrawEllipse(null, track, c, r, r);
-        // Instrument ticks inside the ring: fine every 9°, stronger every 45°.
-        double inner = r - Thickness / 2 - 4;
+        var track = new Pen(TrackBrush, Thickness) { LineJoin = PenLineJoin.Miter };
+        dc.DrawRectangle(null, track, new Rect(c.X - h, c.Y - h, 2 * h, 2 * h));
+        // Ticks along the inside edge: fine every 1/40 of the way round, stronger every 1/8.
+        double inner = h - Thickness / 2 - 4;
         if (inner > 20)
             for (int i = 0; i < 40; i++)
             {
-                double a = i * Math.PI / 20 - Math.PI / 2, len = i % 5 == 0 ? 5 : 2.5;
-                dc.DrawLine(i % 5 == 0 ? TickMajor : TickMinor, new Point(c.X + Math.Cos(a) * inner, c.Y + Math.Sin(a) * inner), new Point(c.X + Math.Cos(a) * (inner - len), c.Y + Math.Sin(a) * (inner - len)));
+                var p = Along(c, inner, i / 40.0);
+                var len = i % 5 == 0 ? 5 : 2.5;
+                var dir = new Vector(c.X - p.X, c.Y - p.Y);
+                // Ticks point straight inwards from the nearest edge.
+                var n = Math.Abs(dir.X) > Math.Abs(dir.Y) ? new Vector(Math.Sign(dir.X), 0) : new Vector(0, Math.Sign(dir.Y));
+                dc.DrawLine(i % 5 == 0 ? TickMajor : TickMinor, p, p + n * len);
             }
         var v = Math.Clamp(Value, 0, 100) / 100.0;
         if (v <= 0.001) return;
-        var pen = new Pen(Stroke ?? Ui.Brush("AccentGradient"), Thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-        if (v >= 0.999) { dc.DrawEllipse(null, pen, c, r, r); return; }
-        double a0 = -Math.PI / 2, a1 = a0 + v * 2 * Math.PI;
+        var pen = new Pen(Stroke ?? Ui.Brush("AccentGradient"), Thickness) { LineJoin = PenLineJoin.Miter, StartLineCap = PenLineCap.Flat, EndLineCap = PenLineCap.Flat };
         var geo = new StreamGeometry();
         using (var ctx = geo.Open())
         {
-            ctx.BeginFigure(new Point(c.X + r * Math.Cos(a0), c.Y + r * Math.Sin(a0)), false, false);
-            ctx.ArcTo(new Point(c.X + r * Math.Cos(a1), c.Y + r * Math.Sin(a1)), new Size(r, r), 0, v > 0.5, SweepDirection.Clockwise, true, false);
+            ctx.BeginFigure(Along(c, h, 0), false, v >= 0.999);
+            // Corners in order (fractions of the perimeter where the path turns).
+            foreach (var corner in new[] { 0.125, 0.375, 0.625, 0.875 })
+                if (v > corner) ctx.LineTo(Along(c, h, corner), true, false);
+            ctx.LineTo(Along(c, h, Math.Min(v, 0.9999)), true, false);
         }
         geo.Freeze();
         dc.DrawGeometry(null, pen, geo);
@@ -337,7 +383,8 @@ public sealed class RingGauge : Grid
     {
         _value.Text = display;
         _unit.Text = unit;
-        Ui.Animate(_arc, RingArc.ValueProperty, percent ?? 0, 450);
+        if (App.ReduceMotion) { _arc.BeginAnimation(RingArc.ValueProperty, null); _arc.Value = percent ?? 0; return; }
+        _arc.BeginAnimation(RingArc.ValueProperty, new DoubleAnimation(percent ?? 0, TimeSpan.FromMilliseconds(650)) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
     }
 
     public string Caption { set => _caption.Text = value; }
@@ -348,7 +395,7 @@ public sealed class StatTile : Border
 {
     private readonly TextBlock _value = new() { FontSize = 24, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Res<FontFamily>("DisplayFont") };
     private readonly TextBlock _sub = Ui.Muted("", 11.5);
-    private readonly Path _line = new() { StrokeThickness = 2, Stroke = Ui.Brush("AccentGradientH"), StrokeLineJoin = PenLineJoin.Round };
+    private readonly Path _line = new() { StrokeThickness = 2, Stroke = Ui.Brush("AccentGradientH"), StrokeLineJoin = PenLineJoin.Miter };
     private readonly Path _fill = new();
     private readonly double[] _values = new double[60];
     private int _count;

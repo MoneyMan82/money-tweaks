@@ -220,7 +220,7 @@ public sealed partial class BenchmarkView : UserControl, IPageLifecycle
             FontFamily = Ui.Res<FontFamily>("MonoFont"), FontSize = 11, Foreground = Ui.Brush("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0), Visibility = Visibility.Collapsed
         };
         sp.Children.Add(detail);
-        var b = new Border { Child = sp, Padding = new Thickness(10, 8, 10, 8), CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), Margin = new Thickness(0, 0, 0, 6), Cursor = Cursors.Hand, ToolTip = "Click for evidence" };
+        var b = new Border { Child = sp, Padding = new Thickness(10, 8, 10, 8), CornerRadius = new CornerRadius(0), Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), Margin = new Thickness(0, 0, 0, 6), Cursor = Cursors.Hand, ToolTip = "Click for evidence" };
         b.MouseLeftButtonUp += (_, _) => detail.Visibility = detail.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
         return b;
     }
@@ -563,9 +563,10 @@ public sealed partial class BenchmarkView : UserControl, IPageLifecycle
             var (r, phase, v) = pts[i];
             var h = Math.Max(2, (v!.Value - min) / range * H);
             var x = Left + i * (BarW + Gap);
-            var bar = new Rectangle { Width = BarW, Height = h, RadiusX = 4, RadiusY = 4, Fill = Ui.Brush(phase == 0 ? "Accent" : "Violet"), ToolTip = $"{(phase == 0 ? "Before" : "After")} {r.At:g}: {BenchmarkStats.Fmt(v.Value)} {m.Unit}" };
+            var bar = new Rectangle { Width = BarW, Height = h, RadiusX = 0, RadiusY = 0, Fill = Ui.Brush(phase == 0 ? "Accent" : "Violet"), ToolTip = $"{(phase == 0 ? "Before" : "After")} {r.At:g}: {BenchmarkStats.Fmt(v.Value)} {m.Unit}" };
             Canvas.SetLeft(bar, x); Canvas.SetTop(bar, H - h + 16);
             canvas.Children.Add(bar);
+            Motion.GrowUp(bar, i * 55);
             var lbl = new TextBlock { Text = BenchmarkStats.Fmt(v.Value), FontSize = 10, Foreground = Ui.Brush("Muted"), Width = BarW + Gap, TextAlignment = TextAlignment.Left };
             Canvas.SetLeft(lbl, x); Canvas.SetTop(lbl, H - h);
             canvas.Children.Add(lbl);
@@ -813,7 +814,7 @@ internal static class NumberForm
         sp.Children.Add(buttons);
         win.Content = new Border
         {
-            Background = Ui.Brush("Surface"), BorderBrush = Ui.Brush("Accent"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14),
+            Background = Ui.Brush("Surface"), BorderBrush = Ui.Brush("Accent"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(0),
             Padding = new Thickness(22), Margin = new Thickness(12), Child = sp,
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 0, Opacity = 0.6 }
         };

@@ -138,7 +138,7 @@ public sealed class TweakMapView : UserControl, IPageLifecycle
         var legend = new WrapPanel { Margin = new Thickness(0, 10, 0, 6) };
         foreach (var c in _k!.Profiles.Select(p => p.Tweak.Category).Distinct().OrderBy(c => c))
         {
-            var chip = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 6, 6), Background = CatSoft(c), Cursor = Cursors.Hand, ToolTip = $"Open {CategoryInfo.DisplayName(c)}" };
+            var chip = new Border { CornerRadius = new CornerRadius(0), Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 6, 6), Background = CatSoft(c), Cursor = Cursors.Hand, ToolTip = $"Open {CategoryInfo.DisplayName(c)}" };
             chip.Child = new TextBlock { Text = $"{CategoryInfo.DisplayName(c)} · {_k.Profiles.Count(p => p.Tweak.Category == c)}", FontSize = 11.5, Foreground = CatBrush(c), FontWeight = FontWeights.SemiBold };
             var cat = c;
             chip.MouseLeftButtonUp += (_, _) => MainWindow.Current?.Navigate("cat:" + cat);
@@ -197,7 +197,7 @@ public sealed class TweakMapView : UserControl, IPageLifecycle
         double width = 118 + Math.Min(visible, 60) * 2.6;
         var b = new Border
         {
-            Width = width, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(10, 7, 10, 7), CornerRadius = new CornerRadius(8), Cursor = Cursors.Hand,
+            Width = width, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(10, 7, 10, 7), CornerRadius = new CornerRadius(0), Cursor = Cursors.Hand,
             Background = CatSoft(t.Category), BorderBrush = CatBrush(t.Category), BorderThickness = new Thickness(3, 0, 0, 0), Child = sp,
             ToolTip = $"{CategoryInfo.DisplayName(t.Category)} › {t.Group}: {t.Items.Count} tweak(s)" + (_links[t.Key].Count > 0 ? $"\nConnected to {_links[t.Key].Count} other group(s)" : ""),
         };
@@ -308,7 +308,7 @@ public sealed class TweakMapView : UserControl, IPageLifecycle
         row.MouseLeftButtonUp += (_, _) => MainWindow.Current?.OpenTweak(t.Id);
         row.MouseEnter += (_, _) => row.Background = Ui.Brush("CardHover");
         row.MouseLeave += (_, _) => row.Background = Brushes.Transparent;
-        return new Border { Padding = new Thickness(6, 3, 6, 3), CornerRadius = new CornerRadius(6), Child = row };
+        return new Border { Padding = new Thickness(6, 3, 6, 3), CornerRadius = new CornerRadius(0), Child = row };
     }
 
     // ---- conflicts & overlaps ----------------------------------------------------------------------------------------------

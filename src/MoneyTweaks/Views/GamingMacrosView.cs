@@ -20,7 +20,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
     private readonly TextBlock _status = Ui.Text("No macro running.", 13, FontWeights.SemiBold);
     private readonly TextBlock _statusSub = Ui.Muted("", 12);
     private readonly Button _armBtn, _stopBtn;
-    private readonly System.Windows.Shapes.Ellipse _dot = new() { Width = 10, Height = 10, Margin = new Thickness(0, 0, 10, 0) };
+    private readonly System.Windows.Shapes.Rectangle _dot = new() { Width = 10, Height = 10, Margin = new Thickness(0, 0, 10, 0) };
     private string _game = "All";
     private DispatcherTimer? _countdown;
     private readonly Button _pauseBtn;
@@ -410,7 +410,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
 
         var grip = new TextBlock { Text = "\uE76F", Style = Ui.Res<Style>("Icon"), FontSize = 14, Foreground = Ui.Brush("Subtle"), Cursor = Cursors.SizeAll, Margin = new Thickness(0, 0, 8, 0), ToolTip = "Drag to reorder" };
         row.Children.Add(grip);
-        var num = new Border { Width = 28, Height = 28, CornerRadius = new CornerRadius(14), Background = Ui.Brush("AccentSoft"), Margin = new Thickness(0, 0, 10, 0),
+        var num = new Border { Width = 28, Height = 28, CornerRadius = new CornerRadius(0), Background = Ui.Brush("AccentSoft"), Margin = new Thickness(0, 0, 10, 0),
             Child = new TextBlock { Text = (i + 1).ToString(), FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Ui.Brush("Accent"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
         row.Children.Add(num);
         var p = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -446,7 +446,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         row.Children.Add(p);
         var block = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 6, 6, 6),
+            Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(0), Padding = new Thickness(10, 6, 6, 6),
             Margin = new Thickness(0, 0, 0, 6), Child = row, AllowDrop = true, BorderThickness = new Thickness(1), BorderBrush = Brushes.Transparent,
         };
         grip.MouseLeftButtonDown += (_, _) =>
@@ -569,7 +569,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
     private UIElement ColorRow(Macro m, int i, Action rerender)
     {
         var t = m.ColorTriggers[i];
-        var swatch = new Border { Width = 28, Height = 28, CornerRadius = new CornerRadius(7), BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 10, 0) };
+        var swatch = new Border { Width = 28, Height = 28, CornerRadius = new CornerRadius(0), BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 10, 0) };
         var rgb = Ui.Muted("", 11.5);
         void Paint()
         {
@@ -616,7 +616,7 @@ public sealed class GamingMacrosView : UserControl, IPageLifecycle
         stack.Children.Add(top);
         stack.Children.Add(bottom);
         dock.Children.Add(stack);
-        return new Border { Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 8, 6, 8), Margin = new Thickness(0, 8, 0, 0), Child = dock };
+        return new Border { Background = new SolidColorBrush(Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(0), Padding = new Thickness(10, 8, 6, 8), Margin = new Thickness(0, 8, 0, 0), Child = dock };
     }
 
     private void CloseEditor()

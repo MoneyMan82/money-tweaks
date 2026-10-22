@@ -102,7 +102,7 @@ public static class StressScene
             WindowStartupLocation = WindowStartupLocation.CenterScreen; SizeToContent = SizeToContent.WidthAndHeight; ShowInTaskbar = true;
             var root = new Grid { Width = o.Width, Height = o.Height };
             root.Children.Add(BuildViewport());
-            var hudBox = new Border { Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x08, 0x0B, 0x12)), CornerRadius = new CornerRadius(10), Padding = new Thickness(12, 10, 14, 10), Margin = new Thickness(14), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Child = _hud };
+            var hudBox = new Border { Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x08, 0x0B, 0x12)), CornerRadius = new CornerRadius(0), Padding = new Thickness(12, 10, 14, 10), Margin = new Thickness(14), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Child = _hud };
             root.Children.Add(hudBox);
             var stop = new Button { Content = "■  Emergency stop (Esc)", Padding = new Thickness(14, 8, 14, 8), Margin = new Thickness(14), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Background = new SolidColorBrush(Color.FromRgb(0xC2, 0x3B, 0x3B)), Foreground = Brushes.White, BorderThickness = new Thickness(0), FontWeight = FontWeights.SemiBold, Cursor = Cursors.Hand };
             stop.Click += (_, _) => Stop("Stopped by user");

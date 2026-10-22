@@ -60,6 +60,8 @@ public partial class App : Application
         Settings = AppSettings.Load();
         if (Settings.LegacyUi) LegacyTheme.Apply(Resources); // before any window or style is created
         Controls.Motion.InstallSmoothScrolling(); // smooth wheel scrolling in every scrollable area (off with reduced motion)
+        Controls.Motion.InstallProgressGlide();   // determinate progress bars glide to new values
+        Controls.Motion.InstallSquareWindows();   // square window corners on Windows 11, like the rest of the design
         Log.Info($"Money Tweaks {Version} ({Environment.ProcessPath}) started on {OsInfo.ProductName} (admin: {Admin.IsElevated})");
 
         UpdateService.CleanupAfterUpdate();

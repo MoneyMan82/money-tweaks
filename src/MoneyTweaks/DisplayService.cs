@@ -213,7 +213,7 @@ public static class Countdown
             buttons.Children.Add(k);
         }
         sp.Children.Add(buttons);
-        win.Content = new Border { Background = Ui.Brush("Surface"), BorderBrush = Ui.Brush("Accent"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(22), Margin = new Thickness(12), Child = sp };
+        win.Content = new Border { Background = Ui.Brush("Surface"), BorderBrush = Ui.Brush("Accent"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(0), Padding = new Thickness(22), Margin = new Thickness(12), Child = sp };
         void Show() { count.Text = left.ToString(System.Globalization.CultureInfo.CurrentCulture); bar.Value = left; }
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         timer.Tick += (_, _) => { left--; Show(); if (left <= 0) win.Close(); };

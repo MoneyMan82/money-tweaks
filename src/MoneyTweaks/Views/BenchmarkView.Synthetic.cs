@@ -340,12 +340,13 @@ public sealed partial class BenchmarkView
         if (series.Count == 0) return canvas;
         var max = series.Max(r => r.FpsSeries.Max()) * 1.1;
         var len = series.Max(r => r.FpsSeries.Count);
-        canvas.Children.Add(new Rectangle { Width = W, Height = H, Fill = new SolidColorBrush(Color.FromArgb(0x0A, 0xFF, 0xFF, 0xFF)), RadiusX = 8, RadiusY = 8 });
+        canvas.Children.Add(new Rectangle { Width = W, Height = H, Fill = new SolidColorBrush(Color.FromArgb(0x0A, 0xFF, 0xFF, 0xFF)), RadiusX = 0, RadiusY = 0 });
         foreach (var r in series)
         {
             var pl = new Polyline { Stroke = Ui.Brush(r.Phase == "Baseline" ? "Accent" : "Violet"), StrokeThickness = 1.8, Opacity = 0.9 };
             for (int i = 0; i < r.FpsSeries.Count; i++) pl.Points.Add(new Point(i * W / Math.Max(1, len - 1), H - r.FpsSeries[i] / max * (H - 8) - 4));
             canvas.Children.Add(pl);
+            Motion.DrawIn(pl, 900, series.IndexOf(r) * 120);
         }
         var legend = new TextBlock { Text = $"FPS per second · blue = without tweaks · violet = with tweaks · top ≈ {max:0} FPS", FontSize = 11, Foreground = Ui.Brush("Subtle") };
         Canvas.SetTop(legend, H + 8);

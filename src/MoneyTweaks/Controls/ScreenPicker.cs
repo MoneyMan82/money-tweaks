@@ -19,7 +19,7 @@ public sealed class ScreenPicker : Window
     private readonly Canvas _canvas = new();
     private readonly Rectangle _sel = new() { Stroke = Brushes.White, StrokeThickness = 1.5, StrokeDashArray = [4, 3], Fill = new SolidColorBrush(Color.FromArgb(0x22, 0x8A, 0x6B, 0xFF)), Visibility = Visibility.Collapsed };
     private readonly Border _info;
-    private readonly Border _swatch = new() { Width = 22, Height = 22, CornerRadius = new CornerRadius(5), BorderBrush = Brushes.White, BorderThickness = new Thickness(1) };
+    private readonly Border _swatch = new() { Width = 22, Height = 22, CornerRadius = new CornerRadius(0), BorderBrush = Brushes.White, BorderThickness = new Thickness(1) };
     private readonly TextBlock _text = new() { Foreground = Brushes.White, FontSize = 12, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private (int x, int y)? _start;
@@ -37,10 +37,10 @@ public sealed class ScreenPicker : Window
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         row.Children.Add(_swatch);
         row.Children.Add(_text);
-        _info = new Border { Background = new SolidColorBrush(Color.FromArgb(0xE6, 0x10, 0x14, 0x1C)), CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 6, 10, 6), Child = row, IsHitTestVisible = false };
+        _info = new Border { Background = new SolidColorBrush(Color.FromArgb(0xE6, 0x10, 0x14, 0x1C)), CornerRadius = new CornerRadius(0), Padding = new Thickness(8, 6, 10, 6), Child = row, IsHitTestVisible = false };
         var help = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0xE6, 0x10, 0x14, 0x1C)), CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 8, 14, 8), IsHitTestVisible = false,
+            Background = new SolidColorBrush(Color.FromArgb(0xE6, 0x10, 0x14, 0x1C)), CornerRadius = new CornerRadius(0), Padding = new Thickness(14, 8, 14, 8), IsHitTestVisible = false,
             Child = new TextBlock { Text = "Click a pixel, or drag to select a region (max 200×200).  Esc to cancel.", Foreground = Brushes.White, FontSize = 13 }
         };
         Canvas.SetLeft(help, 30); Canvas.SetTop(help, 30);

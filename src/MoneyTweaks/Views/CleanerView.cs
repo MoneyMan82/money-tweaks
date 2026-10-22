@@ -243,7 +243,7 @@ public sealed partial class CleanerView : UserControl, IPageLifecycle
             ex.Padding = new Thickness(8, 2, 8, 2); ex.FontSize = 11;
             Grid.SetColumn(ex, 3); grid.Children.Add(ex);
         }
-        return new Border { Padding = new Thickness(8, 4, 8, 4), CornerRadius = new CornerRadius(8), Background = Ui.Brush(_checked.Contains(a.Name) && selectable ? "AccentSoft" : "Surface"), Margin = new Thickness(0, 0, 0, 3), Child = grid };
+        return new Border { Padding = new Thickness(8, 4, 8, 4), CornerRadius = new CornerRadius(0), Background = Ui.Brush(_checked.Contains(a.Name) && selectable ? "AccentSoft" : "Surface"), Margin = new Thickness(0, 0, 0, 3), Child = grid };
     }
 
     private void SaveGameRule()
@@ -385,7 +385,7 @@ public sealed partial class CleanerView : UserControl, IPageLifecycle
         var chips = new WrapPanel();
         foreach (var e in list.ToList())
         {
-            var chip = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 2, 4, 2), Margin = new Thickness(0, 4, 6, 0), Background = Ui.Brush("Surface") };
+            var chip = new Border { CornerRadius = new CornerRadius(0), Padding = new Thickness(8, 2, 4, 2), Margin = new Thickness(0, 4, 6, 0), Background = Ui.Brush("Surface") };
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             row.Children.Add(new TextBlock { Text = e, FontSize = 11.5, Foreground = Ui.Brush("Text"), VerticalAlignment = VerticalAlignment.Center });
             var x = Ui.Btn("×", async (_, _) => { list.Remove(e); _s.Save(); await changed(); }, "GhostButton", new Thickness(4, 0, 0, 0));

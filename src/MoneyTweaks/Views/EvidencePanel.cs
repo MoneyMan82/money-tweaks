@@ -55,7 +55,7 @@ public static class EvidencePanel
         head.Children.Add(Ui.Tag(tag, tone));
         sp.Children.Add(head);
         sp.Children.Add(body);
-        return new Border { Child = sp, BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 8, 10, 10), Margin = new Thickness(0, 0, 0, 8) };
+        return new Border { Child = sp, BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(0), Padding = new Thickness(10, 8, 10, 10), Margin = new Thickness(0, 0, 0, 8) };
     }
 
     private static TextBlock Note(string text, double size = 11.5, string brush = "Muted") =>

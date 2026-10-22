@@ -25,65 +25,94 @@
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Money Tweaks","operatingSystem":"Windows 10, Windows 11","applicationCategory":"UtilitiesApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/licenses/MIT","url":"https://money-tweaks.barkgdd.workers.dev/","downloadUrl":"https://github.com/MoneyMan82/money-tweaks/releases/latest"}
 </script>
 <style>
-:root{--bg:#05070b;--surface:#0a0d13;--card:#10141c;--border:#1d2432;--accent:#4c8dff;--accent2:#8b6cff;--gold:#f5b84a;--text:#e9eef7;--muted:#8a94a8;--radius:14px}
-*{box-sizing:border-box}
+/* "Vector" design system: graphite, electric violet + cyan, square corners everywhere, restrained motion. */
+:root{--bg:#06070a;--surface:#0b0d12;--card:#111419;--card2:#13161c;--border:#1e222b;--rim:#2a2f3b;--accent:#8a6bff;--accent2:#2fd8ee;--gold:#f5b84a;--text:#eceff6;--muted:#8d94a6;--subtle:#5a6175;
+  --grad:linear-gradient(90deg,#8a6bff,#2fd8ee);--ease:cubic-bezier(.22,1,.36,1);--display:"Bahnschrift","DIN Alternate","DIN 2014","Barlow Semi Condensed","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box;border-radius:0!important}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-a{color:var(--accent);text-decoration:none}
+a{color:var(--accent2);text-decoration:none}
 a:hover{text-decoration:underline}
 img{max-width:100%;display:block}
 .wrap{max-width:1160px;margin:0 auto;padding-inline:20px}
-h1,h2,h3{font-family:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;line-height:1.15;margin:0 0 .5em}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.12;margin:0 0 .5em}
 h2{font-size:clamp(28px,4vw,40px)}
 .muted{color:var(--muted)}
-.eyebrow{color:var(--accent);font-weight:700;letter-spacing:.12em;font-size:12px;text-transform:uppercase}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--accent2);font-family:var(--display);font-weight:600;letter-spacing:.14em;font-size:12px;text-transform:uppercase}
+.eyebrow::before{content:"";width:22px;height:2px;background:var(--grad)}
 /* nav */
-header{position:sticky;top:0;z-index:20;background:rgba(5,7,11,.78);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top,0px)}
+header{position:sticky;top:0;z-index:20;background:rgba(6,7,10,.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top,0px)}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(138,107,255,.7),rgba(47,216,238,.7),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:scanline 9s var(--ease) infinite}
+@keyframes scanline{0%{background-position:-60% 0}60%,100%{background-position:160% 0}}
 .nav{display:flex;align-items:center;gap:22px;height:64px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--text);font-size:18px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text);font-size:17px}
 .brand img{width:32px;height:32px}
-.nav ul{display:flex;gap:20px;list-style:none;margin:0 0 0 auto;padding:0}
-.nav ul a{color:var(--muted);font-size:14px;font-weight:600}
+.nav ul{display:flex;gap:22px;list-style:none;margin:0 0 0 auto;padding:0}
+.nav ul a{position:relative;color:var(--muted);font-size:14px;font-weight:600;padding:6px 0}
+.nav ul a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--grad);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
 .nav ul a:hover{color:var(--text);text-decoration:none}
-.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:12px 20px;font-weight:700;font-size:15px;border:1px solid var(--border);color:var(--text);background:var(--card);transition:transform .15s,box-shadow .2s,border-color .2s;cursor:pointer}
+.nav ul a:hover::after{transform:scaleX(1)}
+/* buttons: square, with a light sweep on hover and a press dip */
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:8px;padding:12px 22px;font-weight:700;font-size:15px;border:1px solid var(--rim);color:var(--text);background:var(--card);transition:transform .18s var(--ease),border-color .2s,box-shadow .25s;cursor:pointer}
+.btn::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.18) 48%,rgba(201,244,255,.22) 50%,transparent 65%);transform:translateX(-120%);transition:transform .65s var(--ease);pointer-events:none}
 .btn:hover{text-decoration:none;transform:translateY(-2px);border-color:var(--accent)}
-.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;box-shadow:0 8px 30px rgba(76,141,255,.25)}
-.btn.primary:hover{box-shadow:0 12px 40px rgba(76,141,255,.4)}
+.btn:hover::after{transform:translateX(120%)}
+.btn:active{transform:translateY(0) scale(.97);transition-duration:.08s}
+.btn.primary{background:linear-gradient(180deg,#9479ff,#7657f6);color:#fff;border-color:#9c85ff;box-shadow:0 10px 34px rgba(138,107,255,.28)}
+.btn.primary:hover{box-shadow:0 14px 44px rgba(138,107,255,.45),0 0 0 1px rgba(47,216,238,.35)}
 .btn.small{padding:8px 14px;font-size:13px}
 @media (max-width:860px){.nav ul{display:none}}
 /* hero */
-.hero{position:relative;padding:90px 0 60px;overflow:hidden}
-.grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 75%);opacity:.45;pointer-events:none}
-.glow{position:absolute;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,rgba(76,141,255,.22),transparent 65%);top:-220px;left:50%;transform:translateX(-50%);animation:pulse 7s ease-in-out infinite;pointer-events:none}
-@keyframes pulse{50%{opacity:.6;transform:translateX(-50%) scale(1.08)}}
+.hero{position:relative;padding:96px 0 64px;overflow:hidden}
+.grid-bg{position:absolute;inset:-44px 0 0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 75%);opacity:.5;pointer-events:none;animation:gridDrift 18s linear infinite}
+@keyframes gridDrift{to{transform:translateY(44px)}}
+.glow{position:absolute;width:680px;height:680px;background:radial-gradient(closest-side,rgba(138,107,255,.22),transparent);top:-260px;left:50%;transform:translateX(-50%);animation:drift 14s ease-in-out infinite alternate;pointer-events:none}
+.glow::after{content:"";position:absolute;width:520px;height:520px;left:62%;top:40%;background:radial-gradient(closest-side,rgba(47,216,238,.14),transparent);animation:drift2 17s ease-in-out infinite alternate}
+@keyframes drift{0%{transform:translateX(-56%) scale(1)}100%{transform:translateX(-44%) scale(1.08);opacity:.8}}
+@keyframes drift2{to{transform:translate(-30%,-12%)}}
 .hero-inner{position:relative;text-align:center}
-.hero h1{font-size:clamp(38px,7vw,72px);font-weight:800;letter-spacing:-.02em}
-.hero h1 .hl{background:linear-gradient(135deg,var(--accent),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero p.lead{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:720px;margin:0 auto 30px}
-.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.facts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
-.fact{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--muted)}
-.fact b{color:var(--text)}
-.shot-hero{margin:56px auto 0;width:100%;max-width:1040px;height:auto;border-radius:16px;border:1px solid var(--border);overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,.6),0 0 0 1px rgba(76,141,255,.08);transform:perspective(1600px) rotateX(6deg);transition:transform .6s ease}
-.shot-hero:hover{transform:perspective(1600px) rotateX(0)}
-section{padding:80px 0}
+.hero h1{font-size:clamp(38px,7vw,74px);font-weight:600;letter-spacing:-.01em;animation:rise .9s var(--ease) both}
+.hero h1 .hl{background:linear-gradient(90deg,#8a6bff,#2fd8ee,#c9f4ff,#8a6bff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sweepText 7s ease-in-out infinite}
+@keyframes sweepText{0%,100%{background-position:0 0}50%{background-position:100% 0}}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.hero p.lead{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:720px;margin:0 auto 30px;animation:rise .9s .12s var(--ease) both}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;animation:rise .9s .22s var(--ease) both}
+.facts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px;animation:rise .9s .32s var(--ease) both}
+.fact{border:1px solid var(--border);background:var(--surface);padding:6px 14px;font-size:13px;color:var(--muted)}
+.fact b{color:var(--text);font-family:var(--display)}
+/* hero screenshot inside a HUD frame (corner brackets that draw in) */
+.shot-frame{position:relative;margin:56px auto 0;max-width:1040px}
+.shot-frame::before,.shot-frame::after{content:"";position:absolute;width:28px;height:28px;border:2px solid var(--accent2);pointer-events:none;z-index:1;transition:width .6s var(--ease),height .6s var(--ease)}
+.shot-frame::before{left:-10px;top:-10px;border-right:0;border-bottom:0}
+.shot-frame::after{right:-10px;bottom:-10px;border-left:0;border-top:0}
+.shot-frame:hover::before,.shot-frame:hover::after{width:44px;height:44px}
+.shot-hero{width:100%;height:auto;border:1px solid var(--rim);overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,.6),0 0 0 1px rgba(138,107,255,.1);transform:perspective(1600px) rotateX(6deg);transition:transform .8s var(--ease)}
+.shot-frame:hover .shot-hero{transform:perspective(1600px) rotateX(0)}
+section{padding:84px 0}
 .section-head{max-width:720px;margin-bottom:40px}
-/* cards */
+/* cards: graphite, lit top edge, gradient rim and lift on hover */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:border-color .2s,transform .2s}
-.card:hover{border-color:rgba(76,141,255,.55);transform:translateY(-3px)}
-.card h3{font-size:18px;margin-bottom:6px}
+.card{position:relative;background:linear-gradient(180deg,var(--card2),#0f1116);border:1px solid var(--border);padding:22px;transition:border-color .25s,transform .3s var(--ease),box-shadow .3s}
+.card::before{content:"";position:absolute;left:-1px;top:-1px;height:2px;width:100%;background:var(--grad);transform:scaleX(0);transform-origin:left;transition:transform .45s var(--ease)}
+.card:hover{border-color:var(--rim);transform:translateY(-4px);box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.card:hover::before{transform:scaleX(1)}
+.card h3{font-size:19px;margin-bottom:6px}
 .card p{margin:0;color:var(--muted);font-size:14.5px}
-.ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:rgba(76,141,255,.12);color:var(--accent);margin-bottom:14px}
+.ico{width:44px;height:44px;display:grid;place-items:center;background:linear-gradient(135deg,#1b1833,#0e161c);border:1px solid rgba(138,107,255,.55);color:var(--accent2);margin-bottom:14px;transition:transform .3s var(--ease)}
+.card:hover .ico{transform:translateY(-2px) rotate(-3deg)}
 .ico svg{width:22px;height:22px}
-.new{float:right;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);background:rgba(245,184,74,.12);border-radius:999px;padding:3px 10px}
-.count{float:right;font-size:13px;font-weight:700;color:var(--accent);background:rgba(76,141,255,.12);border-radius:999px;padding:2px 10px}
+.new{float:right;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);background:rgba(245,184,74,.1);border:1px solid rgba(245,184,74,.35);padding:2px 9px}
+.count{float:right;font-family:var(--display);font-size:13px;font-weight:600;color:var(--accent2);background:rgba(47,216,238,.08);border:1px solid rgba(47,216,238,.3);padding:1px 9px}
 /* tabs gallery */
-.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
-.tab{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit}
-.tab[aria-selected=true]{color:var(--accent);border-color:var(--accent);background:rgba(76,141,255,.1)}
-.gallery-frame{border-radius:16px;border:1px solid var(--border);overflow:hidden;background:var(--surface)}
-.gallery-frame img{width:100%;height:auto;transition:opacity .25s}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.tab{position:relative;border:1px solid var(--border);background:var(--card);color:var(--muted);padding:7px 14px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit;transition:color .2s,border-color .2s,background .2s}
+.tab::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--grad);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+.tab:hover{color:var(--text);border-color:var(--rim)}
+.tab[aria-selected=true]{color:var(--text);border-color:var(--accent);background:rgba(138,107,255,.12)}
+.tab[aria-selected=true]::after{transform:scaleX(1)}
+.gallery-frame{border:1px solid var(--rim);overflow:hidden;background:var(--surface)}
+.gallery-frame img{width:100%;height:auto;transition:opacity .25s,transform .45s var(--ease)}
+.gallery-frame img.swap{opacity:0;transform:scale(.985) translateY(8px)}
 .caption{margin-top:12px;color:var(--muted);font-size:14px}
 /* split */
 .split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
@@ -93,40 +122,44 @@ p code,li code{overflow-wrap:anywhere}
 .list{list-style:none;padding:0;margin:0}
 .list li{padding:10px 0 10px 32px;position:relative;border-bottom:1px solid var(--border);color:var(--muted)}
 .list li b{color:var(--text)}
-.list li::before{content:"";position:absolute;left:4px;top:17px;width:14px;height:8px;border-left:2.5px solid var(--accent);border-bottom:2.5px solid var(--accent);transform:rotate(-45deg)}
-.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:1px 8px;margin-right:6px}
-.badge.safe{background:rgba(76,141,255,.14);color:var(--accent)}
-.badge.caution{background:rgba(245,196,81,.14);color:var(--gold)}
+.list li::before{content:"";position:absolute;left:6px;top:19px;width:8px;height:8px;background:var(--grad);transform:rotate(45deg)}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;margin-right:6px;border:1px solid}
+.badge.safe{background:rgba(138,107,255,.12);color:#b9a7ff;border-color:rgba(138,107,255,.4)}
+.badge.caution{background:rgba(245,184,74,.1);color:var(--gold);border-color:rgba(245,184,74,.35)}
 /* download */
-.download{background:linear-gradient(180deg,transparent,rgba(76,141,255,.05));border-block:1px solid var(--border)}
+.download{background:linear-gradient(180deg,transparent,rgba(138,107,255,.05));border-block:1px solid var(--border)}
 .dl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:10px}
 .dl{display:flex;flex-direction:column;gap:10px}
 .dl .btn{justify-content:center;margin-top:auto}
 code,pre{font-family:"Cascadia Mono",Consolas,monospace;font-size:13.5px}
-pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;color:var(--text);margin:10px 0 0}
+pre{background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--accent);padding:14px 16px;overflow-x:auto;color:var(--text);margin:10px 0 0}
 ol.steps{counter-reset:s;list-style:none;padding:0;margin:0;display:grid;gap:14px}
-ol.steps li{counter-increment:s;position:relative;padding:16px 18px 16px 60px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted)}
+ol.steps li{counter-increment:s;position:relative;padding:16px 18px 16px 62px;background:var(--card);border:1px solid var(--border);color:var(--muted);transition:border-color .25s,transform .3s var(--ease)}
+ol.steps li:hover{border-color:var(--rim);transform:translateX(4px)}
 ol.steps li b{color:var(--text)}
-ol.steps li::before{content:counter(s);position:absolute;left:16px;top:14px;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:800;display:grid;place-items:center}
+ol.steps li::before{content:counter(s,decimal-leading-zero);position:absolute;left:16px;top:14px;width:32px;height:32px;background:linear-gradient(180deg,#9479ff,#7657f6);color:#fff;font-family:var(--display);font-weight:600;display:grid;place-items:center}
 table{width:100%;border-collapse:collapse;font-size:14.5px}
-.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+.table-wrap{overflow-x:auto;border:1px solid var(--border)}
 th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border)}
-th{color:var(--muted);font-weight:600;background:var(--surface)}
-details{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px}
+th{color:var(--muted);font-weight:600;background:var(--surface);font-family:var(--display);letter-spacing:.04em}
+tbody tr{transition:background .2s}
+tbody tr:hover{background:rgba(138,107,255,.06)}
+details{background:var(--card);border:1px solid var(--border);padding:14px 18px;margin-bottom:10px;transition:border-color .2s}
 details summary{cursor:pointer;font-weight:700;list-style:none}
 details summary::-webkit-details-marker{display:none}
-details{transition:border-color .2s}
-details:hover{border-color:rgba(76,141,255,.45)}
-details summary::after{content:"+";float:right;color:var(--accent);font-size:20px;line-height:1;transition:transform .25s ease}
+details:hover{border-color:var(--rim)}
+details[open]{border-left:2px solid var(--accent)}
+details summary::after{content:"+";float:right;color:var(--accent2);font-size:20px;line-height:1;transition:transform .3s var(--ease)}
 details[open] summary::after{transform:rotate(45deg)}
 details p{color:var(--muted);margin:10px 0 0}
-details[open] p{animation:faq-open .3s ease}
+details[open] p{animation:faq-open .35s var(--ease)}
 @keyframes faq-open{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:14px}
 .foot{display:flex;flex-wrap:wrap;gap:30px;justify-content:space-between}
 .foot a{color:var(--muted)}
-/* reveal */
-.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.foot a:hover{color:var(--text)}
+/* reveal: rise and fade, staggered among siblings (delay set by the script) */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .75s var(--ease),transform .9s var(--ease)}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}html{scroll-behavior:auto}}
 </style>
@@ -166,7 +199,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
         <span class="fact"><b>$0</b> no tiers, ads or accounts</span>
         <span class="fact">MIT licensed</span>
       </div>
-      <img class="shot-hero reveal" src="assets/screenshots/dashboard.png" width="1280" height="820" alt="Money Tweaks dashboard showing live CPU, GPU, memory, disk and network tiles">
+      <div class="shot-frame reveal"><img class="shot-hero" src="assets/screenshots/dashboard.png" width="1280" height="820" alt="Money Tweaks dashboard showing live CPU, GPU, memory, disk and network tiles"></div>
     </div>
   </section>
 
@@ -174,26 +207,26 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
     <div class="wrap">
       <div class="section-head reveal"><div class="eyebrow">Tools</div><h2>More than a list of switches</h2><p class="muted">Alongside the tweak library, Money Tweaks ships with tools that handle the jobs gamers usually need three separate apps for.</p></div>
       <div class="cards">
-        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><circle cx="18" cy="7" r="2"/></svg></div><h3>Upgrade Advisor</h3><p>Pick your game, settings and FPS target. Money Tweaks measures what's really holding you back (CPU, GPU, power limits, memory, VRAM, storage, heat or a frame cap) and ranks the three smartest moves by benefit per euro: free fixes first, upgrades only when they'd actually help. Projections are labelled; prices come from you, with source and date.</p></div>
-        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg></div><h3>PC Cleaner</h3><p>Closes background apps you don't need while playing (Safe / Review / Protected, polite close first) and removes verifiably disposable files: old temp files, crash dumps, caches, Windows Update leftovers via DISM. Review before deleting, 7-day quarantine, measured results. Personal files, browser data and system stores are never touched.</p></div>
-        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8"/></svg></div><h3>Performance Genome</h3><p>Learns how your PC responds to CPU boost, GPU power and clock limits, Windows tweaks and game settings from its own measurements. Pick a goal and limits, let it run adaptive experiments with baselines and repeats, and get measured profiles with 95% intervals and a performance frontier. Predictions are always labelled; your settings are restored after every session.</p></div>
-        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6M7 16h8"/></svg></div><h3>Game Library</h3><p>Finds your games from Steam and Epic manifests, the Riot Client, Roblox and Minecraft, plus any exe you add. A game only counts as running when its real executable runs from its install (Roblox Player and Studio are told apart). Per-game profiles, launch, Test Detection. Removing a game never uninstalls it.</p></div>
-        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 14l3-4 3 2 3-5 3 4"/><path d="M8 21h8"/></svg></div><h3>Performance Overlay</h3><p>FPS, frame time, 1% low, a frame-time graph, CPU/GPU load, RAM and temperatures on top of your game. Frame timing comes from the same Windows ETW Present events PresentMon uses: nothing is injected, nothing reads game memory. Hotkey, per-game layouts and auto-show.</p></div>
-        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/><path d="M8 12h2l1-2 2 4 1-2h2"/></svg></div><h3>Driver &amp; Windows Health</h3><p>Read-only checks for GPU, chipset, network, audio and storage drivers, Windows Update, blue screens, driver resets, crashes, throttling and disk health, plus SFC/DISM. Repairs only run after you confirm them. Results say "unable to check" instead of guessing.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="12" rx="3"/><path d="M8 11v4M6 13h4M15 12h.01M18 14h.01"/></svg></div><h3>Gaming Profiles</h3><p>Fortnite Competitive, Fortnite Performance Mode, Geometry Dash and General Gaming, or your own. One click to switch, or switch automatically when the game starts and restore everything when it closes.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><h3>Smart Scanner</h3><p>Reads your hardware, power plan, RAM, startup apps, background processes and network, then lists findings with severity, evidence and confidence. Fix, Undo or Ignore each one.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><h3>Test &amp; Benchmark</h3><p>Verify every tweak against what Windows actually reports, and run before/after benchmarks: a synthetic 3D stress scene with balanced A/B runs, real frame times, and verdicts only when a difference beats the noise.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><h3>Stretched Resolution</h3><p>Pick a monitor, type any resolution and see its aspect ratio. Every change is checked with your display driver first and reverts automatically unless you confirm it.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg></div><h3>Fortnite Stretched</h3><p>Sets a custom resolution for Fortnite only, in its own GameUserSettings.ini, without touching your desktop. Backup, restore and reset included.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></div><h3>Gaming Macros</h3><p>Timed key and mouse-button sequences with hotkey triggers, screen-colour triggers, pause and an emergency stop. Blocked in competitive anti-cheat games.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18c2-6 6-9 12-10M16 8l-1 5M16 8l-5-1"/><circle cx="7" cy="17" r="2"/></svg></div><h3>Potato Graphics</h3><p>Fortnite potato studio with a before/after 3D preview, plus potato levels for Minecraft Java and Rocket League. Only the game's own settings files change, backed up first, with one-click restore. On NVIDIA cards, texture-filtering presets (including Legacy Potato, LOD bias 0x20) go into Fortnite's own driver profile with a backup, read-back verification and Restore.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Game Booster</h3><p>One click: High/Ultimate power plan, close the background apps you pick, raise your game's priority and clear standby memory.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 6v4"/></svg></div><h3>Input Delay Reducer</h3><p>Holds a 0.5 ms kernel timer while the app is open and groups the input tweaks (mouse acceleration, sticky keys, MSI mode, timers).</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div><h3>Ping Stabilizer</h3><p>Live latency, jitter and packet-loss graph, plus a 20-second diagnostic that tells you whether lag comes from your home network or your provider. Clearly labelled as generic ping, not game-server ping.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/></svg></div><h3>Custom Crosshair</h3><p>Layered crosshair editor: lines, dots, circles and your own PNGs with colour, outline, offset and rotation, a live zoomable preview and undo. Unlimited profiles with share codes, firing bloom, per-game switching and hotkeys. Drawn pixel-exact as a click-through overlay on any monitor.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-3 3 2 4-5"/></svg></div><h3>Hardware Monitor</h3><p>CPU, GPU, RAM, disk and network usage with sparklines, your specs, and a check that flags RAM running below its rated speed.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div><h3>Backup &amp; Restore</h3><p>Restore points, a list of everything applied, and one button to undo it all.</p></div>
-        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v9l4-4"/><rect x="4" y="14" width="16" height="6" rx="2"/></svg></div><h3>Startup Apps</h3><p>Switch sign-in apps off and on with the same flags Task Manager uses. Nothing gets deleted.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><circle cx="18" cy="7" r="2"/></svg></div><h3>Upgrade Advisor</h3><p>Pick your game, settings and FPS target. Money Tweaks measures what's really holding you back (CPU, GPU, power limits, memory, VRAM, storage, heat or a frame cap) and ranks the three smartest moves by benefit per euro: free fixes first, upgrades only when they'd actually help. Projections are labelled; prices come from you, with source and date.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg></div><h3>PC Cleaner</h3><p>Closes background apps you don't need while playing (Safe / Review / Protected, polite close first) and removes verifiably disposable files: old temp files, crash dumps, caches, Windows Update leftovers via DISM. Review before deleting, 7-day quarantine, measured results. Personal files, browser data and system stores are never touched.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8"/></svg></div><h3>Performance Genome</h3><p>Learns how your PC responds to CPU boost, GPU power and clock limits, Windows tweaks and game settings from its own measurements. Pick a goal and limits, let it run adaptive experiments with baselines and repeats, and get measured profiles with 95% intervals and a performance frontier. Predictions are always labelled; your settings are restored after every session.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="3" y="4" width="18" height="16" rx="0"/><path d="M7 8h10M7 12h6M7 16h8"/></svg></div><h3>Game Library</h3><p>Finds your games from Steam and Epic manifests, the Riot Client, Roblox and Minecraft, plus any exe you add. A game only counts as running when its real executable runs from its install (Roblox Player and Studio are told apart). Per-game profiles, launch, Test Detection. Removing a game never uninstalls it.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="2" y="4" width="20" height="14" rx="0"/><path d="M6 14l3-4 3 2 3-5 3 4"/><path d="M8 21h8"/></svg></div><h3>Performance Overlay</h3><p>FPS, frame time, 1% low, a frame-time graph, CPU/GPU load, RAM and temperatures on top of your game. Frame timing comes from the same Windows ETW Present events PresentMon uses: nothing is injected, nothing reads game memory. Hotkey, per-game layouts and auto-show.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/><path d="M8 12h2l1-2 2 4 1-2h2"/></svg></div><h3>Driver &amp; Windows Health</h3><p>Read-only checks for GPU, chipset, network, audio and storage drivers, Windows Update, blue screens, driver resets, crashes, throttling and disk health, plus SFC/DISM. Repairs only run after you confirm them. Results say "unable to check" instead of guessing.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="3" y="7" width="18" height="12" rx="0"/><path d="M8 11v4M6 13h4M15 12h.01M18 14h.01"/></svg></div><h3>Gaming Profiles</h3><p>Fortnite Competitive, Fortnite Performance Mode, Geometry Dash and General Gaming, or your own. One click to switch, or switch automatically when the game starts and restore everything when it closes.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><h3>Smart Scanner</h3><p>Reads your hardware, power plan, RAM, startup apps, background processes and network, then lists findings with severity, evidence and confidence. Fix, Undo or Ignore each one.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><h3>Test &amp; Benchmark</h3><p>Verify every tweak against what Windows actually reports, and run before/after benchmarks: a synthetic 3D stress scene with balanced A/B runs, real frame times, and verdicts only when a difference beats the noise.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="2" y="4" width="20" height="13" rx="0"/><path d="M8 21h8M12 17v4"/></svg></div><h3>Stretched Resolution</h3><p>Pick a monitor, type any resolution and see its aspect ratio. Every change is checked with your display driver first and reverts automatically unless you confirm it.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg></div><h3>Fortnite Stretched</h3><p>Sets a custom resolution for Fortnite only, in its own GameUserSettings.ini, without touching your desktop. Backup, restore and reset included.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="2" y="6" width="20" height="12" rx="0"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></div><h3>Gaming Macros</h3><p>Timed key and mouse-button sequences with hotkey triggers, screen-colour triggers, pause and an emergency stop. Blocked in competitive anti-cheat games.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M4 18c2-6 6-9 12-10M16 8l-1 5M16 8l-5-1"/><circle cx="7" cy="17" r="2"/></svg></div><h3>Potato Graphics</h3><p>Fortnite potato studio with a before/after 3D preview, plus potato levels for Minecraft Java and Rocket League. Only the game's own settings files change, backed up first, with one-click restore. On NVIDIA cards, texture-filtering presets (including Legacy Potato, LOD bias 0x20) go into Fortnite's own driver profile with a backup, read-back verification and Restore.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Game Booster</h3><p>One click: High/Ultimate power plan, close the background apps you pick, raise your game's priority and clear standby memory.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="7" y="2" width="10" height="20" rx="0"/><path d="M12 6v4"/></svg></div><h3>Input Delay Reducer</h3><p>Holds a 0.5 ms kernel timer while the app is open and groups the input tweaks (mouse acceleration, sticky keys, MSI mode, timers).</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div><h3>Ping Stabilizer</h3><p>Live latency, jitter and packet-loss graph, plus a 20-second diagnostic that tells you whether lag comes from your home network or your provider. Clearly labelled as generic ping, not game-server ping.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><circle cx="12" cy="12" r="8"/><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/></svg></div><h3>Custom Crosshair</h3><p>Layered crosshair editor: lines, dots, circles and your own PNGs with colour, outline, offset and rotation, a live zoomable preview and undo. Unlimited profiles with share codes, firing bloom, per-game switching and hotkeys. Drawn pixel-exact as a click-through overlay on any monitor.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="3" y="4" width="18" height="14" rx="0"/><path d="M7 14l3-3 3 2 4-5"/></svg></div><h3>Hardware Monitor</h3><p>CPU, GPU, RAM, disk and network usage with sparklines, your specs, and a check that flags RAM running below its rated speed.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M12 6v6l4 2"/><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div><h3>Backup &amp; Restore</h3><p>Restore points, a list of everything applied, and one button to undo it all.</p></div>
+        <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M12 3v9l4-4"/><rect x="4" y="14" width="16" height="6" rx="0"/></svg></div><h3>Startup Apps</h3><p>Switch sign-in apps off and on with the same flags Task Manager uses. Nothing gets deleted.</p></div>
       </div>
     </div>
   </section>
@@ -217,7 +250,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
 
   <section id="screens">
     <div class="wrap">
-      <div class="section-head reveal"><div class="eyebrow">Screenshots</div><h2>See it before you install</h2><p class="muted">Real screenshots captured by the app on a Windows 11 PC (version 1.13; the current version groups these pages in a sidebar and adds the Game Library, overlay and Health Center).</p></div>
+      <div class="section-head reveal"><div class="eyebrow">Screenshots</div><h2>See it before you install</h2><p class="muted">Real screenshots of the current version on a Windows 11 PC.</p></div>
       <div class="tabs" role="tablist" id="tabs"></div>
       <div class="gallery-frame reveal"><img id="shot" src="assets/screenshots/profiles.png" width="1280" height="820" alt="Money Tweaks screenshot"></div>
       <p class="caption" id="caption"></p>
@@ -291,6 +324,8 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <div class="card reveal" style="margin-bottom:16px">
         <h3>Recent releases <span class="muted" style="font-size:14px;font-weight:400">· October 2026</span></h3>
         <ul class="list">
+          <li><b>1.56:</b> Fully square, angular interface and much more motion: page transitions, a gliding navigation indicator, staggered entrances, light sweeps, animated toggles, progress and chart transitions. Respects Windows animation settings. This website was renewed to match.</li>
+          <li><b>1.55:</b> New "Vector" look: graphite surfaces, violet and cyan accents, a new page header and instrument-style panels.</li>
           <li><b>1.54:</b> Tweak Truth Index: every tweak shows what was actually measured on your PC (tests, median change, repeatability, regressions, confidence), separate from estimates and from opt-in, anonymous community results.</li>
           <li><b>1.53:</b> Reality Lab: test your own set of tweaks. The Website button works again.</li>
           <li><b>1.52:</b> Video tutorials play embedded right on the Potato Graphics and Fortnite Stretched pages.</li>
@@ -415,10 +450,10 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
   var tabs=document.getElementById('tabs'),img=document.getElementById('shot'),cap=document.getElementById('caption');
   shots.forEach(function(s,i){var b=document.createElement('button');b.className='tab';b.type='button';b.role='tab';b.textContent=s[1];
     b.setAttribute('aria-selected',i===0);b.onclick=function(){[].forEach.call(tabs.children,function(t){t.setAttribute('aria-selected','false')});b.setAttribute('aria-selected','true');
-      img.style.opacity=0;setTimeout(function(){img.src='assets/screenshots/'+s[0]+'.png';img.alt='Money Tweaks '+s[1]+' screen';cap.textContent=s[2];img.style.opacity=1},150)};tabs.appendChild(b)});
+      img.classList.add('swap');setTimeout(function(){img.src='assets/screenshots/'+s[0]+'.png';img.alt='Money Tweaks '+s[1]+' screen';cap.textContent=s[2];img.onload=function(){img.classList.remove('swap')}},220)};tabs.appendChild(b)});
   cap.textContent=shots[0][2];
   if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
-    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)})}else document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in')});
+    document.querySelectorAll('.reveal').forEach(function(el){var sib=[].filter.call(el.parentNode.children,function(c){return c.classList.contains('reveal')});var i=sib.indexOf(el);if(i>0)el.style.transitionDelay=Math.min(i,8)*60+'ms';io.observe(el)})}else document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in')});
 })();
 </script>
 </body>

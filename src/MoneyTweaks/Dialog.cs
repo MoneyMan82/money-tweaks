@@ -53,7 +53,7 @@ public static class Dialog
         var soft = kind switch { DialogKind.Error => "DangerSoft", DialogKind.Warning => "GoldSoft", _ => "AccentSoft" };
         header.Children.Add(new Border
         {
-            Width = 34, Height = 34, CornerRadius = new CornerRadius(9), Margin = new Thickness(0, 0, 12, 0), Background = (Brush)Application.Current.Resources[soft],
+            Width = 34, Height = 34, CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 0, 12, 0), Background = (Brush)Application.Current.Resources[soft],
             Child = new TextBlock { Text = icon, Style = (Style)Application.Current.Resources["Icon"], Foreground = accent, FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center },
         });
         header.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.Resources["H2"], VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 380 });
@@ -71,11 +71,11 @@ public static class Dialog
         // Graphite card with a thin tone line along the top edge (the kind of dialog), not a fully coloured frame.
         var frame = new Grid();
         frame.Children.Add(body);
-        frame.Children.Add(new Border { Height = 2, CornerRadius = new CornerRadius(1), Background = accent, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(-8, -22, -8, 0), Opacity = 0.9 });
+        frame.Children.Add(new Border { Height = 2, CornerRadius = new CornerRadius(0), Background = accent, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(-8, -22, -8, 0), Opacity = 0.9 });
         win.Content = new Border
         {
             Background = (Brush)Application.Current.Resources["CardFill"], BorderBrush = (Brush)Application.Current.Resources["CardRim"], BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14), Padding = new Thickness(24, 22, 24, 22), Margin = new Thickness(14), Child = frame, ClipToBounds = false,
+            CornerRadius = new CornerRadius(0), Padding = new Thickness(24, 22, 24, 22), Margin = new Thickness(14), Child = frame, ClipToBounds = false,
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 32, ShadowDepth = 0, Opacity = 0.65 }
         };
         win.Loaded += (_, _) => Controls.Motion.PopIn((FrameworkElement)win.Content);

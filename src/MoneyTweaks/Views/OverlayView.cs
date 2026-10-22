@@ -33,7 +33,7 @@ public sealed class OverlayView : UserControl, IPageLifecycle
 
         var look = Ui.Section("Layout", "What the overlay shows and where. Changes apply immediately.");
         look.Children.Add(_editor);
-        var previewHost = new Border { Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x3B, 0x52)), CornerRadius = new CornerRadius(10), Padding = new Thickness(16), Margin = new Thickness(0, 12, 0, 0), Child = _preview };
+        var previewHost = new Border { Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x3B, 0x52)), CornerRadius = new CornerRadius(0), Padding = new Thickness(16), Margin = new Thickness(0, 12, 0, 0), Child = _preview };
         look.Children.Add(new TextBlock { Text = "PREVIEW", Style = Ui.Res<Style>("Eyebrow"), Margin = new Thickness(0, 14, 0, 0) });
         look.Children.Add(previewHost);
         body.Children.Add(Ui.Card(look));
@@ -236,7 +236,7 @@ public sealed class OverlayView : UserControl, IPageLifecycle
     {
         var t = new ControlTemplate(typeof(Button));
         var b = new FrameworkElementFactory(typeof(Border));
-        b.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+        b.SetValue(Border.CornerRadiusProperty, new CornerRadius(0));
         b.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
         b.SetBinding(Border.BorderBrushProperty, new System.Windows.Data.Binding("BorderBrush") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
         b.SetValue(Border.BorderThicknessProperty, new Thickness(1));

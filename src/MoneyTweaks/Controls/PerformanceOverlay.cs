@@ -42,7 +42,7 @@ public sealed class FrametimeGraph : FrameworkElement
             for (int i = 1; i < _ms.Count; i++) c.LineTo(new Point(i * step, Y(_ms[i])), true, false);
         }
         g.Freeze();
-        dc.DrawGeometry(null, new Pen(Line, 1.4) { LineJoin = PenLineJoin.Round }, g);
+        dc.DrawGeometry(null, new Pen(Line, 1.4) { LineJoin = PenLineJoin.Miter }, g);
     }
 }
 
@@ -56,7 +56,7 @@ public sealed class OverlayPanel : Border
 
     public OverlayPanel()
     {
-        CornerRadius = new CornerRadius(6);
+        CornerRadius = new CornerRadius(0);
         Padding = new Thickness(8, 5, 8, 6);
         Child = _stack;
         foreach (var t in new[] { _fps, _graph as FrameworkElement, _hw, _ram, _temps, _note, _target }) _stack.Children.Add(t);

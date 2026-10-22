@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Current = this;
+        Controls.Motion.SquareCorners(this);
         VersionText.Text = $"v{App.Version} · free & open source";
         BuildNav();
 
@@ -119,8 +120,16 @@ public partial class MainWindow : Window
         if (App.ReduceMotion) return;
         var a = new DoubleAnimation(1, 0.6, TimeSpan.FromSeconds(7)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() };
         Storyboard.SetTargetProperty(a, new PropertyPath(OpacityProperty));
+        // Slow drift of the whole cached light layer (moves the cached bitmap; nothing is re-rendered).
+        if (Ambient.RenderTransform is not TranslateTransform) Ambient.RenderTransform = new TranslateTransform();
+        var dx = new DoubleAnimation(-28, 28, TimeSpan.FromSeconds(23)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+        var dy = new DoubleAnimation(18, -18, TimeSpan.FromSeconds(31)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+        Storyboard.SetTargetProperty(dx, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.X)"));
+        Storyboard.SetTargetProperty(dy, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
         _ambient = new Storyboard();
         _ambient.Children.Add(a);
+        _ambient.Children.Add(dx);
+        _ambient.Children.Add(dy);
         Timeline.SetDesiredFrameRate(_ambient, 20); // a slow fade doesn't need 60 fps
         _ambient.Begin(Ambient, true);
     }
@@ -306,7 +315,7 @@ public partial class MainWindow : Window
         var panel = new DockPanel();
         if (count is not null && !compact)
         {
-            var badge = new Border { CornerRadius = new CornerRadius(5), Padding = new Thickness(6, 0, 6, 1), Background = (Brush)FindResource("Hairline"), VerticalAlignment = VerticalAlignment.Center,
+            var badge = new Border { CornerRadius = new CornerRadius(0), Padding = new Thickness(6, 0, 6, 1), Background = (Brush)FindResource("Hairline"), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = count, FontSize = 10.5, FontFamily = (FontFamily)FindResource("DisplayFont"), Foreground = (Brush)FindResource("Subtle") } };
             DockPanel.SetDock(badge, Dock.Right);
             panel.Children.Add(badge);
@@ -394,16 +403,21 @@ public partial class MainWindow : Window
         if (rb is null || !rb.IsVisible) { NavIndicator.Opacity = 0; return; } // selected page sits in a collapsed group
         var y = rb.TranslatePoint(new Point(0, 0), NavGrid).Y;
         NavIndicator.Width = Math.Max(0, rb.ActualWidth);
+        if (NavIndicator.RenderTransform is not TranslateTransform move || move.IsFrozen) NavIndicator.RenderTransform = move = new TranslateTransform();
         if (NavIndicator.Opacity < 1 || App.ReduceMotion || _snapIndicator)
         {
-            NavIndicator.BeginAnimation(Canvas.TopProperty, null);
-            Canvas.SetTop(NavIndicator, y);
+            move.BeginAnimation(TranslateTransform.YProperty, null);
+            move.Y = y;
             NavIndicator.Height = rb.ActualHeight;
             NavIndicator.Opacity = 1;
             return;
         }
-        NavIndicator.BeginAnimation(Canvas.TopProperty, new DoubleAnimation(y, TimeSpan.FromMilliseconds(260)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        if (Math.Abs(move.Y - y) < 0.5) return;
+        // Glide (render transform only), then the edge bar stretches and brightens as the selection lands.
+        move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, TimeSpan.FromMilliseconds(320)) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
         NavIndicator.Height = rb.ActualHeight;
+        NavEdgeScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.2, 1, TimeSpan.FromMilliseconds(420)) { BeginTime = TimeSpan.FromMilliseconds(120), EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.5 } });
+        Controls.Motion.Pulse(NavEdge, 0.2, 520);
     }
 
     /// <summary>
@@ -504,11 +518,17 @@ public partial class MainWindow : Window
             Host.Content = page;
             if (!App.ReduceMotion)
             {
+                // Cinematic but quick: fade, rise and settle from 98.5% scale (render transforms only, no relayout).
                 page.Opacity = 0;
-                var shift = new TranslateTransform(0, 14);
-                page.RenderTransform = shift;
-                page.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(200)));
-                shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(280)) { EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut } });
+                var shift = new TranslateTransform(0, 18);
+                var scale = new ScaleTransform(0.985, 0.985);
+                page.RenderTransformOrigin = new Point(0.5, 0);
+                page.RenderTransform = new TransformGroup { Children = { scale, shift } };
+                var outQuint = new QuinticEase { EasingMode = EasingMode.EaseOut };
+                page.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(260)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(460)) { EasingFunction = outQuint });
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(460)) { EasingFunction = outQuint });
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(460)) { EasingFunction = outQuint });
             }
             else { page.BeginAnimation(OpacityProperty, null); page.Opacity = 1; page.RenderTransform = null; }
             if (page is UserControl { Content: ScrollViewer { Content: Panel body } }) Motion.Stagger(body);
@@ -547,17 +567,21 @@ public partial class MainWindow : Window
         var row = new DockPanel();
         row.Children.Add(new Border
         {
-            Width = 30, Height = 30, CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 12, 0), Background = Ui.Brush(tone + "Soft"), VerticalAlignment = VerticalAlignment.Top,
+            Width = 30, Height = 30, CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 0, 12, 0), Background = Ui.Brush(tone + "Soft"), VerticalAlignment = VerticalAlignment.Top,
             Child = new TextBlock { Text = icon, Style = Ui.Res<Style>("Icon"), FontSize = 13, Foreground = Ui.Brush(tone), HorizontalAlignment = HorizontalAlignment.Center }
         });
         row.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
         // Tone edge on the left, like the sidebar selection bar.
         var body = new Grid();
-        body.Children.Add(new Border { Width = 3, CornerRadius = new CornerRadius(1.5), Background = Ui.Brush(tone), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(-14, 2, 0, 2) });
+        body.Children.Add(new Border { Width = 3, CornerRadius = new CornerRadius(0), Background = Ui.Brush(tone), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(-14, 2, 0, 2) });
         body.Children.Add(row);
+        // Countdown line along the bottom edge: shows how long the notice stays.
+        var countdown = new ScaleTransform(1, 1);
+        body.Children.Add(new Border { Height = 1, Background = Ui.Brush(tone), Opacity = 0.6, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(-14, 0, -16, -12), RenderTransformOrigin = new Point(0, 0.5), RenderTransform = countdown });
+        if (!App.ReduceMotion) countdown.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 0, TimeSpan.FromSeconds(3.6)));
         var toast = new Border
         {
-            Style = Ui.Res<Style>("CardBorder"), Padding = new Thickness(14, 12, 16, 12), Margin = new Thickness(0, 10, 0, 0), CornerRadius = new CornerRadius(10),
+            Style = Ui.Res<Style>("CardBorder"), Padding = new Thickness(14, 12, 16, 12), Margin = new Thickness(0, 10, 0, 0), CornerRadius = new CornerRadius(0),
             Background = new SolidColorBrush(Color.FromArgb(0xF7, 0x13, 0x16, 0x1C)), Child = body, RenderTransform = new TranslateTransform(30, 0), Opacity = 0,
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 0, Opacity = 0.45 },
         };

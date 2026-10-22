@@ -49,8 +49,8 @@ public sealed partial class AdvisorView
             row.ColumnDefinitions.Add(new ColumnDefinition());
             row.Children.Add(new TextBlock { Text = f.Label, FontSize = 12, Foreground = Ui.Brush("Text"), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
             var track = new Grid { Height = 12, VerticalAlignment = VerticalAlignment.Center };
-            track.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(6) });
-            track.Children.Add(new Border { Background = Ui.Brush(LimiterTone(f.Kind)), CornerRadius = new CornerRadius(6), HorizontalAlignment = HorizontalAlignment.Left, Width = 0, Tag = f.Score });
+            track.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(0) });
+            track.Children.Add(new Border { Background = Ui.Brush(LimiterTone(f.Kind)), CornerRadius = new CornerRadius(0), HorizontalAlignment = HorizontalAlignment.Left, Width = 0, Tag = f.Score });
             track.SizeChanged += (_, _) => { if (track.Children[1] is Border b) b.Width = Math.Max(6, track.ActualWidth * f.Score); };
             Grid.SetColumn(track, 1);
             row.Children.Add(track);
@@ -66,7 +66,7 @@ public sealed partial class AdvisorView
             var sp = new StackPanel();
             sp.Children.Add(new TextBlock { Text = v.ToString(k.Contains("GB") ? "0.0" : k.Contains("ms") ? "0.0" : "0", CultureInfo.CurrentCulture), FontSize = 17, FontWeight = FontWeights.Bold, Foreground = Ui.Brush("Text") });
             sp.Children.Add(Ui.Muted(k, 11));
-            metrics.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 8, 8, 0), Child = sp });
+            metrics.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(0), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 8, 8, 0), Child = sp });
         }
         dash.Children.Add(metrics);
         foreach (var n in d.Notes) dash.Children.Add(new TextBlock { Text = n, FontSize = 11.5, Foreground = Ui.Brush("Gold"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
@@ -128,7 +128,7 @@ public sealed partial class AdvisorView
     {
         var sp = new StackPanel();
         var head = new WrapPanel();
-        head.Children.Add(new Border { Width = 30, Height = 30, CornerRadius = new CornerRadius(15), Background = Ui.Brush(rank == 1 ? "Accent" : "Surface"), Margin = new Thickness(0, 0, 10, 0),
+        head.Children.Add(new Border { Width = 30, Height = 30, CornerRadius = new CornerRadius(0), Background = Ui.Brush(rank == 1 ? "Accent" : "Surface"), Margin = new Thickness(0, 0, 10, 0),
             Child = new TextBlock { Text = rank.ToString(CultureInfo.InvariantCulture), FontWeight = FontWeights.Bold, FontSize = 14, Foreground = Ui.Brush(rank == 1 ? "OnAccent" : "Text"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } });
         head.Children.Add(Ui.Tag(x.Tier switch { RecTier.Free => "FREE", RecTier.LowCost => "LOW COST", _ => "HARDWARE" }, x.Tier == RecTier.Free ? "Success" : x.Tier == RecTier.LowCost ? "Accent" : "Violet"));
         sp.Children.Add(head);
@@ -210,7 +210,7 @@ public sealed partial class AdvisorView
                 }
                 if (s.Measured)
                 {
-                    var bar = new Rectangle { Width = Math.Max(2, X(hi) - left), Height = 20, RadiusX = 4, RadiusY = 4, Fill = Ui.Brush("Accent") };
+                    var bar = new Rectangle { Width = Math.Max(2, X(hi) - left), Height = 20, RadiusX = 0, RadiusY = 0, Fill = Ui.Brush("Accent") };
                     Canvas.SetLeft(bar, left); Canvas.SetTop(bar, y); canvas.Children.Add(bar);
                 }
                 else
@@ -219,7 +219,7 @@ public sealed partial class AdvisorView
                     var violet = ((SolidColorBrush)Ui.Brush("Violet")).Color;
                     stripes.GradientStops.Add(new GradientStop(Color.FromArgb(0x90, violet.R, violet.G, violet.B), 0)); stripes.GradientStops.Add(new GradientStop(Color.FromArgb(0x90, violet.R, violet.G, violet.B), 0.5));
                     stripes.GradientStops.Add(new GradientStop(Color.FromArgb(0x30, violet.R, violet.G, violet.B), 0.5)); stripes.GradientStops.Add(new GradientStop(Color.FromArgb(0x30, violet.R, violet.G, violet.B), 1));
-                    var range = new Rectangle { Width = Math.Max(4, X(hi) - X(lo)), Height = 20, RadiusX = 4, RadiusY = 4, Fill = stripes, Stroke = Ui.Brush("Violet"), StrokeThickness = 1 };
+                    var range = new Rectangle { Width = Math.Max(4, X(hi) - X(lo)), Height = 20, RadiusX = 0, RadiusY = 0, Fill = stripes, Stroke = Ui.Brush("Violet"), StrokeThickness = 1 };
                     Canvas.SetLeft(range, X(lo)); Canvas.SetTop(range, y); canvas.Children.Add(range);
                 }
                 var val = new TextBlock { Text = s.Measured ? $"{hi:0} FPS" : $"{lo:0}–{hi:0}", FontSize = 11, Foreground = Ui.Brush("Muted") };

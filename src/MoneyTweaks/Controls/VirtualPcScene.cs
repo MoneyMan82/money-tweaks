@@ -543,7 +543,7 @@ public sealed class VirtualPcScene : Grid
         var text = new TextBlock { Text = name, FontSize = 11.5, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White };
         var label = new Border
         {
-            Child = text, Padding = new Thickness(7, 2, 7, 3), CornerRadius = new CornerRadius(6),
+            Child = text, Padding = new Thickness(7, 2, 7, 3), CornerRadius = new CornerRadius(0),
             Background = new SolidColorBrush(Color.FromArgb(0xC8, 0x0B, 0x0E, 0x14)), BorderBrush = new SolidColorBrush(Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
         };
         _labels.Children.Add(label);

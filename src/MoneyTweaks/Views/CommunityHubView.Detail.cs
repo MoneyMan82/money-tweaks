@@ -71,7 +71,7 @@ public sealed partial class CommunityHubView
                 var im = new Image { Stretch = Stretch.Uniform, MaxHeight = 220, MaxWidth = 360 };
                 _ = LoadInto(im, img.ThumbUrl, 0);
                 var cell = new StackPanel { Margin = new Thickness(0, 0, 12, 8) };
-                var frame = new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), ClipToBounds = true, Child = im, Cursor = System.Windows.Input.Cursors.Hand };
+                var frame = new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(0), ClipToBounds = true, Child = im, Cursor = System.Windows.Input.Cursors.Hand };
                 var full = img;
                 frame.MouseLeftButtonUp += async (_, _) => await ShowFullAsync(full);
                 cell.Children.Add(frame);
@@ -198,7 +198,7 @@ public sealed partial class CommunityHubView
         form.Children.Add(reason);
         var details = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 60, MaxLength = 500, Tag = "What's wrong? (optional)", Margin = new Thickness(0, 0, 0, 6) };
         form.Children.Add(details);
-        var card = new Border { Tag = "report", Child = form, Padding = new Thickness(12), CornerRadius = new CornerRadius(8), Background = Ui.Brush("Surface"), Margin = new Thickness(0, 8, 0, 0) };
+        var card = new Border { Tag = "report", Child = form, Padding = new Thickness(12), CornerRadius = new CornerRadius(0), Background = Ui.Brush("Surface"), Margin = new Thickness(0, 8, 0, 0) };
         form.Children.Add(Ui.Row(
             Ui.Btn("Send report", async (_, _) => await Try(async () =>
             {
@@ -293,7 +293,7 @@ public sealed partial class CommunityHubView
         CrosshairSanitizer.Clean(profile);
         foreach (var l in profile.Layers.Where(l => l.Kind == LayerKind.Image)) l.ImageFile = null; // images show in the generated preview above
         var vis = new CrosshairVisual { Profile = profile, Zoom = FitZoom(profile, 260), Height = 260 };
-        sp.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), Child = vis, ClipToBounds = true, Margin = new Thickness(0, 0, 0, 8) });
+        sp.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(0), Child = vis, ClipToBounds = true, Margin = new Thickness(0, 0, 0, 8) });
         sp.Children.Add(Ui.Muted($"{profile.Layers.Count} layer(s){(profile.Firing.Enabled ? " · firing animation" : "")}{(profile.Layers.Any(l => l.Kind == LayerKind.Image) ? " · includes an image layer" : "")}", 12));
         sp.Children.Add(Ui.Row(Ui.Btn("Get crosshair", async (_, _) => await GetAsync(p, profile: false, preset: false), "PrimaryButton", new Thickness(0, 10, 0, 0))));
         return sp;

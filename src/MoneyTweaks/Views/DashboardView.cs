@@ -115,14 +115,14 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
         hero.Children.Add(heroRight);
         body.Children.Add(Ui.Hud(new Border
         {
-            Style = Ui.Res<Style>("CardBorder"), Background = Ui.Brush("HeroFill"), CornerRadius = new CornerRadius(16),
+            Style = Ui.Res<Style>("CardBorder"), Background = Ui.Brush("HeroFill"), CornerRadius = new CornerRadius(0),
             Padding = new Thickness(32, 28, 32, 28), Margin = new Thickness(0, 4, 14, 18), Child = hero // right edge lines up with the cards below
         }));
 
         // ── Live performance ───────────────────────────────────────────────────────────────────────────────────
         var liveHead = new DockPanel { Margin = new Thickness(0, 0, 0, 16) };
         var liveTag = new StackPanel { Orientation = Orientation.Horizontal };
-        liveTag.Children.Add(new System.Windows.Shapes.Ellipse { Width = 8, Height = 8, Fill = Ui.Brush("Success"), Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center });
+        liveTag.Children.Add(new System.Windows.Shapes.Rectangle { Width = 8, Height = 8, Fill = Ui.Brush("Success"), Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center });
         liveTag.Children.Add(Ui.Muted("Live · Windows performance counters", 11.5));
         DockPanel.SetDock(liveTag, Dock.Right);
         liveHead.Children.Add(liveTag);

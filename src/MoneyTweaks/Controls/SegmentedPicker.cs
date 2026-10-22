@@ -27,14 +27,14 @@ public sealed class SegmentedPicker : Border
         Background = Ui.Brush("InputFill");
         BorderBrush = Ui.Brush("BorderBrush");
         BorderThickness = new Thickness(1);
-        CornerRadius = new CornerRadius(11);
+        CornerRadius = new CornerRadius(0);
         Padding = new Thickness(3);
         HorizontalAlignment = HorizontalAlignment.Left;
         VerticalAlignment = VerticalAlignment.Center;
 
         _highlight = new Border
         {
-            CornerRadius = new CornerRadius(8), Background = Ui.Brush("AccentSoft"), BorderBrush = Ui.Brush("AccentGradient"), BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(0), Background = Ui.Brush("AccentSoft"), BorderBrush = Ui.Brush("AccentGradient"), BorderThickness = new Thickness(1),
             HorizontalAlignment = HorizontalAlignment.Left, RenderTransform = _slide, IsHitTestVisible = false, Opacity = 0,
         };
         foreach (var (label, value, tip) in options)

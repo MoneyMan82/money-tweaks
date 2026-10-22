@@ -126,7 +126,7 @@ public sealed class ScannerView : UserControl, IPageLifecycle
         sp.Children.Add(new TextBlock { Text = x.Why, Style = Ui.Res<Style>("MutedText"), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
         var ev = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 8, 0, 0),
+            Background = new SolidColorBrush(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(0), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 8, 0, 0),
             Child = new TextBlock { Text = string.Join("\n", x.Evidence.Select(e => "• " + e)), FontFamily = Ui.Res<FontFamily>("MonoFont"), FontSize = 11.5, Foreground = Ui.Brush("Muted"), TextWrapping = TextWrapping.Wrap }
         };
         sp.Children.Add(ev);

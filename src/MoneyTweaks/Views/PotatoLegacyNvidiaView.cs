@@ -188,7 +188,7 @@ public sealed partial class PotatoView
         box.Children.Add(Ui.Muted($"Method: {r.Method}" + (r.BackupNip is null ? "" : $" · backup: {r.BackupNip}") + (r.AppliedNip is null ? "" : $" · imported: {r.AppliedNip}"), 11.5));
         var border = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(12, 10, 12, 10), Margin = new Thickness(0, 12, 0, 0), Child = box,
+            Background = new SolidColorBrush(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(0), Padding = new Thickness(12, 10, 12, 10), Margin = new Thickness(0, 12, 0, 0), Child = box,
         };
         _lgReport.Children.Add(border);
     }

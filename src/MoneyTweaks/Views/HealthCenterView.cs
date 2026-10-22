@@ -183,7 +183,7 @@ public sealed partial class MonitorView : IAnchorTarget
         var top = new DockPanel();
         var badge = new Border
         {
-            Width = 46, Height = 46, CornerRadius = new CornerRadius(14), Margin = new Thickness(0, 0, 14, 0),
+            Width = 46, Height = 46, CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 0, 14, 0),
             Background = tone == "Muted" ? new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)) : Ui.Brush(tone + "Soft"),
             Child = new TextBlock { Text = icon, Style = Ui.Res<Style>("Icon"), FontSize = 20, Foreground = Ui.Brush(tone == "Muted" ? "Muted" : tone), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
         };
@@ -219,7 +219,7 @@ public sealed partial class MonitorView : IAnchorTarget
                 var p = a.Count(r => r.Status == HealthStatus.Problem); var w = a.Count(r => r.Status == HealthStatus.Warning);
                 var text = p + w == 0 ? (st == HealthStatus.Unknown ? "unable to check" : "all passed") : string.Join(", ", new[] { p > 0 ? $"{p} problem{(p > 1 ? "s" : "")}" : null, w > 0 ? $"{w} warning{(w > 1 ? "s" : "")}" : null }.Where(x => x is not null));
                 var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 22, 4) };
-                sp.Children.Add(new Border { Width = 8, Height = 8, CornerRadius = new CornerRadius(4), Background = Ui.Brush(Tone(st) == "Muted" ? "Muted" : Tone(st)), Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center });
+                sp.Children.Add(new Border { Width = 8, Height = 8, CornerRadius = new CornerRadius(0), Background = Ui.Brush(Tone(st) == "Muted" ? "Muted" : Tone(st)), Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center });
                 sp.Children.Add(new TextBlock { Text = $"{label}: {text}", FontSize = 12.5, Foreground = Ui.Brush("Text") });
                 areas.Children.Add(sp);
             }
@@ -284,7 +284,7 @@ public sealed partial class MonitorView : IAnchorTarget
 
         var details = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 8, 0, 0),
+            Background = new SolidColorBrush(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(0), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 8, 0, 0),
             Visibility = _openDetails.Contains(r.Id) ? Visibility.Visible : Visibility.Collapsed,
             Child = new TextBox
             {

@@ -673,7 +673,7 @@ public sealed class PotatoPreview : Grid
 
         _handle = new Border
         {
-            Width = 34, Height = 34, CornerRadius = new CornerRadius(17), Background = Brushes.White, IsHitTestVisible = false,
+            Width = 34, Height = 34, CornerRadius = new CornerRadius(0), Background = Brushes.White, IsHitTestVisible = false,
             Effect = new DropShadowEffect { BlurRadius = 10, ShadowDepth = 0, Opacity = 0.45 },
             Child = new TextBlock { Text = "◀ ▶", FontSize = 10, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(0x10, 0x20, 0x18)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
         };
@@ -719,7 +719,7 @@ public sealed class PotatoPreview : Grid
         var t = new TextBlock { Text = text, FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brushes.White, Padding = new Thickness(10, 5, 10, 5), IsHitTestVisible = false };
         var b = new Border
         {
-            Child = t, CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x08, 0x0C, 0x0A)),
+            Child = t, CornerRadius = new CornerRadius(0), Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x08, 0x0C, 0x0A)),
             Margin = new Thickness(12), HorizontalAlignment = h, VerticalAlignment = VerticalAlignment.Top, IsHitTestVisible = false
         };
         Children.Add(b);

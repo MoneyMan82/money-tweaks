@@ -98,9 +98,9 @@ public sealed partial class PotatoView : UserControl, IPageLifecycle
         studio.Children.Add(head);
         studio.Children.Add(_presets);
 
-        var frame = new Border { CornerRadius = new CornerRadius(12), ClipToBounds = true, Child = _preview, BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1) };
+        var frame = new Border { CornerRadius = new CornerRadius(0), ClipToBounds = true, Child = _preview, BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1) };
         frame.Clip = null;
-        studio.Children.Add(new Border { CornerRadius = new CornerRadius(12), Child = frame });
+        studio.Children.Add(new Border { CornerRadius = new CornerRadius(0), Child = frame });
         var under = new DockPanel { Margin = new Thickness(0, 8, 0, 0) };
         var rotate = new CheckBox { Content = "Auto-rotate", IsChecked = true };
         rotate.Click += (_, _) => _preview.AutoRotate = rotate.IsChecked == true;
@@ -705,7 +705,7 @@ public sealed class PingView : UserControl, IPageLifecycle
     private readonly TextBlock _grade = Ui.Text("Idle", 26, FontWeights.SemiBold);
     private readonly TextBlock _stats = Ui.Muted("");
     private readonly Canvas _chart = new() { Height = 160, ClipToBounds = true, Background = Brushes.Transparent };
-    private readonly Polyline _line = new() { Stroke = Ui.Brush("Accent"), StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Round };
+    private readonly Polyline _line = new() { Stroke = Ui.Brush("Accent"), StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Miter };
     private readonly TextBlock _chartHint = new()
     {
         Text = "Latency over the last 2 minutes appears here while monitoring runs.", FontSize = 12, Foreground = Ui.Brush("Subtle"),
@@ -740,7 +740,7 @@ public sealed class PingView : UserControl, IPageLifecycle
             chartHost.Children.Add(new Border { Height = 1, Background = guide, VerticalAlignment = va, IsHitTestVisible = false });
         chartHost.Children.Add(_chart);
         chartHost.Children.Add(_chartHint);
-        ms.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(6), Child = chartHost });
+        ms.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(0), Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(6), Child = chartHost });
         body.Children.Add(Ui.Card(ms));
         body.Children.Add(Ui.Card(DiagnosticSection()));
         var bs = Ui.Section("Stabilize", "Apply the network tweaks most associated with lag spikes. Each is reversible.");

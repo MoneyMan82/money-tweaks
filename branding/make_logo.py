@@ -82,7 +82,7 @@ def svg_doc(w, h, body, defs='', title='Money Tweaks'):
 
 
 def svg_tile(size=1024, small=False):
-    r = size * 0.225
+    r = 0  # square tile: the angular design has no rounded corners
     inset = size * 0.04
     defs = grad_def() + (f'<linearGradient id="mt-tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{TILE_TOP}"/>'
                          f'<stop offset="1" stop-color="{TILE_BOTTOM}"/></linearGradient>')
@@ -144,7 +144,7 @@ def raster_mark(img, box, mono=None, small=False, S=4, body=LIGHT):
 def raster_tile(size, small=None, S=4):
     if small is None: small = size <= 32
     big = Image.new('RGBA', (size * S, size * S), (0, 0, 0, 0))
-    inset, r = size * S * 0.04, size * S * 0.225
+    inset, r = size * S * 0.04, 0  # square tile
     mask = Image.new('L', big.size, 0)
     ImageDraw.Draw(mask).rounded_rectangle([inset, inset, size * S - inset, size * S - inset], radius=r, fill=255)
     big.paste(hgrad(big.size, TILE_TOP, TILE_BOTTOM, 0, size * S, vertical=True), (0, 0), mask)

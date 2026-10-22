@@ -1,10 +1,12 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 
 namespace MoneyTweaks.Controls;
 
@@ -33,7 +35,7 @@ public static class Motion
     }
 
     /// <summary>Staggered entrance for the first children of a panel (cards on a page). Later children appear immediately.</summary>
-    public static void Stagger(Panel panel, int stepMs = 40, int max = 10, int skip = 0)
+    public static void Stagger(Panel panel, int stepMs = 45, int max = 12, int skip = 0)
     {
         if (!Enabled) return;
         int i = 0;
@@ -42,7 +44,7 @@ public static class Motion
             if (skip-- > 0) continue;
             if (c.Visibility != Visibility.Visible) continue;
             if (i >= max) break;
-            FadeIn(c, i * stepMs, 14);
+            FadeIn(c, i * stepMs, 16, 380);
             i++;
         }
     }
@@ -103,7 +105,7 @@ public static class Motion
         el.RenderTransform = s;
         el.Opacity = 0;
         el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)) { EasingFunction = Out });
-        var grow = new DoubleAnimation(0.96, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.3 } };
+        var grow = new DoubleAnimation(0.96, 1, TimeSpan.FromMilliseconds(300)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.35 } };
         s.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
         s.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
     }
@@ -132,6 +134,90 @@ public static class Motion
             content.BeginAnimation(UIElement.OpacityProperty, fade);
         };
     }
+
+    private static readonly IEasingFunction OutQuint = new QuinticEase { EasingMode = EasingMode.EaseOut };
+
+    /// <summary>Draws a line chart in from left to right (dash offset animation, then the dash is removed).</summary>
+    public static void DrawIn(Shape line, int ms = 800, int delayMs = 0)
+    {
+        if (!Enabled) return;
+        double len = line switch
+        {
+            Polyline pl => Length(pl.Points),
+            Path { Data: { } g } => g.GetFlattenedPathGeometry().Figures.Sum(f => Length(f.Segments.OfType<PolyLineSegment>().SelectMany(s => s.Points).Prepend(f.StartPoint).ToList())),
+            _ => 0,
+        };
+        if (len <= 1 || line.StrokeThickness <= 0 || line.StrokeDashArray is { Count: > 0 }) return;
+        var units = len / line.StrokeThickness + 2;
+        line.StrokeDashArray = [units, units];
+        var a = new DoubleAnimation(units, 0, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delayMs), EasingFunction = OutQuart };
+        a.Completed += (_, _) => { line.BeginAnimation(Shape.StrokeDashOffsetProperty, null); line.StrokeDashArray = null; };
+        line.StrokeDashOffset = units;
+        line.BeginAnimation(Shape.StrokeDashOffsetProperty, a);
+    }
+
+    private static double Length(IList<Point> pts)
+    {
+        double d = 0;
+        for (int i = 1; i < pts.Count; i++) d += (pts[i] - pts[i - 1]).Length;
+        return d;
+    }
+
+    /// <summary>Bars grow up from their baseline (scale only, no layout), staggered by <paramref name="delayMs"/>.</summary>
+    public static void GrowUp(FrameworkElement bar, int delayMs = 0, int ms = 460)
+    {
+        if (!Enabled) return;
+        var s = new ScaleTransform(1, 0);
+        bar.RenderTransformOrigin = new Point(0.5, 1);
+        bar.RenderTransform = s;
+        s.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delayMs), EasingFunction = OutQuint });
+    }
+
+    /// <summary>Short brightness pulse (selection arrived, value updated).</summary>
+    public static void Pulse(UIElement el, double from = 0.35, int ms = 420)
+    {
+        if (!Enabled) return;
+        el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(from, 1, TimeSpan.FromMilliseconds(ms)) { EasingFunction = Out });
+    }
+
+    // ---- progress bars glide to new values (app-wide) --------------------------------------------------------------
+
+    private static readonly ConditionalWeakTable<ProgressBar, object> Gliding = new();
+
+    /// <summary>Every determinate progress bar animates to each new value instead of jumping (installed once).</summary>
+    public static void InstallProgressGlide() =>
+        EventManager.RegisterClassHandler(typeof(ProgressBar), RangeBase.ValueChangedEvent, new RoutedPropertyChangedEventHandler<double>(OnProgress));
+
+    private static void OnProgress(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!Enabled || sender is not ProgressBar pb || pb.IsIndeterminate || !pb.IsVisible || Gliding.TryGetValue(pb, out _)) return;
+        if (Math.Abs(e.NewValue - e.OldValue) < (pb.Maximum - pb.Minimum) * 0.004) return;
+        Gliding.Add(pb, true);
+        var a = new DoubleAnimation(e.OldValue, e.NewValue, TimeSpan.FromMilliseconds(320)) { EasingFunction = Out, FillBehavior = FillBehavior.Stop };
+        a.Completed += (_, _) => Gliding.Remove(pb);
+        pb.BeginAnimation(RangeBase.ValueProperty, a);
+    }
+
+    // ---- square window corners (Windows 11 rounds top-level windows by default) ------------------------------------
+
+    [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+    /// <summary>Asks Windows 11 not to round this window's corners (no effect on Windows 10, which never rounds).</summary>
+    public static void SquareCorners(Window w)
+    {
+        void Apply()
+        {
+            var h = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+            if (h == IntPtr.Zero) return;
+            int pref = 1; // DWMWCP_DONOTROUND
+            try { DwmSetWindowAttribute(h, 33, ref pref, sizeof(int)); } catch { }
+        }
+        if (new System.Windows.Interop.WindowInteropHelper(w).Handle != IntPtr.Zero) Apply(); else w.SourceInitialized += (_, _) => Apply();
+    }
+
+    /// <summary>Every window gets square corners as soon as it's created (installed once).</summary>
+    public static void InstallSquareWindows() =>
+        EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, _) => SquareCorners((Window)s)));
 
     // ---- frame-synced tween (for values WPF can't animate directly, like a grid column width) ----------------------
 

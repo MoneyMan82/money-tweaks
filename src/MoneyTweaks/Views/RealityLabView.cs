@@ -17,7 +17,7 @@ namespace MoneyTweaks.Views;
 /// </summary>
 public sealed partial class RealityLabView : UserControl, IPageLifecycle
 {
-    private readonly Border _sceneHost = new() { Height = 400, CornerRadius = new CornerRadius(12), ClipToBounds = true };
+    private readonly Border _sceneHost = new() { Height = 400, CornerRadius = new CornerRadius(0), ClipToBounds = true };
     private VirtualPcScene? _scene;
     private HardwareMonitor? _mon;
     private Task? _monInit;

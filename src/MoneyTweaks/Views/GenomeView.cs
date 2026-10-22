@@ -116,7 +116,7 @@ public sealed partial class GenomeView : UserControl, IPageLifecycle
         {
             var sp = new StackPanel { Margin = new Thickness(0, 0, 14, 0) };
             var head = new StackPanel { Orientation = Orientation.Horizontal };
-            head.Children.Add(new Border { Width = 26, Height = 26, CornerRadius = new CornerRadius(13), Background = Ui.Brush("Accent"), Margin = new Thickness(0, 0, 8, 0),
+            head.Children.Add(new Border { Width = 26, Height = 26, CornerRadius = new CornerRadius(0), Background = Ui.Brush("Accent"), Margin = new Thickness(0, 0, 8, 0),
                 Child = new TextBlock { Text = n.ToString(CultureInfo.InvariantCulture), FontWeight = FontWeights.Bold, Foreground = Ui.Brush("OnAccent"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } });
             head.Children.Add(Ui.Text(title, 14, FontWeights.SemiBold));
             sp.Children.Add(head);

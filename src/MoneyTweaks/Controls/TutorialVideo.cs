@@ -18,7 +18,7 @@ public sealed class TutorialVideo : StackPanel
 {
     private readonly Tutorial _tutorial;
     private readonly string _videoId;
-    private readonly Border _screen = new() { CornerRadius = new CornerRadius(12), ClipToBounds = true, Background = Brushes.Black };
+    private readonly Border _screen = new() { CornerRadius = new CornerRadius(0), ClipToBounds = true, Background = Brushes.Black };
     private WebView2CompositionControl? _web;
 
     public TutorialVideo(Tutorial t)
@@ -96,7 +96,7 @@ public sealed class TutorialVideo : StackPanel
             Margin = new Thickness(18, 14, 18, 0), VerticalAlignment = VerticalAlignment.Top, TextTrimming = TextTrimming.CharacterEllipsis,
         });
         var button = new Grid { Width = 68, Height = 48, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var bg = new Rectangle { RadiusX = 14, RadiusY = 14, Fill = new SolidColorBrush(Color.FromRgb(0xE0, 0x21, 0x2B)) };
+        var bg = new Rectangle { RadiusX = 0, RadiusY = 0, Fill = new SolidColorBrush(Color.FromRgb(0xE0, 0x21, 0x2B)) };
         button.Children.Add(bg);
         button.Children.Add(new Polygon { Points = new PointCollection { new(27, 15), new(27, 33), new(43, 24) }, Fill = Brushes.White });
         poster.Children.Add(button);

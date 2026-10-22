@@ -89,7 +89,7 @@ public sealed partial class CrosshairView : UserControl, IPageLifecycle
         pv.Children.Add(_toolbar);
         _previewArea.Children.Add(_previewImage);
         _previewArea.Children.Add(_preview);
-        pv.Children.Add(new Border { CornerRadius = new CornerRadius(10), ClipToBounds = true, Child = _previewArea, BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1) });
+        pv.Children.Add(new Border { CornerRadius = new CornerRadius(0), ClipToBounds = true, Child = _previewArea, BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1) });
         _previewCaption.Margin = new Thickness(0, 8, 0, 0);
         _previewCaption.TextWrapping = TextWrapping.Wrap;
         pv.Children.Add(_previewCaption);
@@ -189,7 +189,7 @@ public sealed partial class CrosshairView : UserControl, IPageLifecycle
         _notices.Children.Clear();
         void Note(string text, string tone)
         {
-            var b = new Border { Background = Ui.Brush(tone + "Soft"), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 0, 0, 10) };
+            var b = new Border { Background = Ui.Brush(tone + "Soft"), CornerRadius = new CornerRadius(0), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 0, 0, 10) };
             b.Child = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = Ui.Brush("Text"), FontSize = 12.5 };
             _notices.Children.Add(b);
         }
@@ -426,7 +426,7 @@ public sealed partial class CrosshairView : UserControl, IPageLifecycle
         name.Width = 96;
         name.VerticalAlignment = VerticalAlignment.Center;
         head.Children.Add(name);
-        var swatch = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(4), BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 8, 0) };
+        var swatch = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(0), BorderBrush = Ui.Brush("BorderBrush"), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 8, 0) };
         DockPanel.SetDock(swatch, Dock.Left);
         head.Children.Add(swatch);
         var box = new TextBox { Text = value, Width = 96, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "#RRGGBB or #AARRGGBB (AA = transparency)" };
