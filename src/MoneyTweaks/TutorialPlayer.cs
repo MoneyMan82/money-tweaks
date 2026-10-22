@@ -69,27 +69,8 @@ public sealed class TutorialPlayer : Window
     {
         try
         {
-            // The default data folder is next to the exe, which isn't writable in Program Files.
-            var data = Path.Combine(AppPaths.Root, "webview2");
-            var page = Path.Combine(data, "player");
-            Directory.CreateDirectory(page);
-            File.WriteAllText(Path.Combine(page, "index.html"), PlayerHtml(_videoId, _tutorial.Title));
-            // Pressing "Watch tutorial" is the user's go-ahead, so the video starts without a second click.
-            var env = await CoreWebView2Environment.CreateAsync(null, data, new CoreWebView2EnvironmentOptions("--autoplay-policy=no-user-gesture-required"));
-            await _web.EnsureCoreWebView2Async(env);
+            await _web.EnsureCoreWebView2Async(await SharedEnvironment());
             var core = _web.CoreWebView2;
-            core.Settings.AreDevToolsEnabled = false;
-            core.Settings.AreDefaultContextMenusEnabled = false;
-            core.Settings.IsStatusBarEnabled = false;
-            core.SetVirtualHostNameToFolderMapping(Host, page, CoreWebView2HostResourceAccessKind.DenyCors);
-            // The window only ever shows the player page; anything else goes to the default browser.
-            core.NavigationStarting += (_, e) =>
-            {
-                if (e.Uri.StartsWith($"https://{Host}/", StringComparison.OrdinalIgnoreCase)) return;
-                e.Cancel = true;
-                if (IsYouTube(e.Uri)) OpenInBrowser(e.Uri);
-            };
-            core.NewWindowRequested += (_, e) => { e.Handled = true; if (IsYouTube(e.Uri)) OpenInBrowser(e.Uri); };
             // The player's fullscreen button fills the screen with this window.
             var (style, state) = (WindowStyle, WindowState);
             core.ContainsFullScreenElementChanged += (_, _) =>
@@ -97,29 +78,74 @@ public sealed class TutorialPlayer : Window
                 if (core.ContainsFullScreenElement) { (style, state) = (WindowStyle, WindowState); WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; ((DockPanel)Content).Children[0].Visibility = Visibility.Collapsed; }
                 else { WindowStyle = style; WindowState = state; ((DockPanel)Content).Children[0].Visibility = Visibility.Visible; }
             };
-            core.Navigate($"https://{Host}/index.html");
-            Log.Info($"Tutorial playing in the app: {_tutorial.Title} ({_tutorial.Url})");
+            Load(core, _videoId, _tutorial.Title, fullscreen: true);
+            Log.Info($"Tutorial playing in a window: {_tutorial.Title} ({_tutorial.Url})");
         }
         catch (Exception ex)
         {
-            Log.Warn($"In-app video player unavailable ({ex.GetType().Name}: {ex.Message}); opening the browser instead");
             Close();
-            OpenInBrowser(_tutorial.Url);
-            MainWindow.Current?.ShowToast("The in-app player isn't available on this PC (it needs Microsoft Edge WebView2), so the video opened in your browser.", "Gold");
+            Unavailable(ex, _tutorial);
         }
+    }
+
+    private static Task<CoreWebView2Environment>? _env;
+
+    /// <summary>One shared WebView2 environment, data in Money Tweaks' own folder (next to the exe isn't writable in Program Files).</summary>
+    internal static Task<CoreWebView2Environment> SharedEnvironment() => _env ??= CreateEnvironment();
+
+    private static async Task<CoreWebView2Environment> CreateEnvironment()
+    {
+        try
+        {
+            // Pressing play/"Watch tutorial" is the user's go-ahead, so the video starts without a second click.
+            return await CoreWebView2Environment.CreateAsync(null, Path.Combine(AppPaths.Root, "webview2"), new CoreWebView2EnvironmentOptions("--autoplay-policy=no-user-gesture-required"));
+        }
+        catch { _env = null; throw; }
+    }
+
+    /// <summary>
+    /// Shows the player for one video in a WebView2: the page is served from a local folder under a private host name (so
+    /// YouTube gets the referrer its embeds require); only that page can load, links that leave it open in the browser.
+    /// </summary>
+    internal static void Load(CoreWebView2 core, string videoId, string title, bool fullscreen)
+    {
+        var page = Path.Combine(AppPaths.Root, "webview2", "player");
+        Directory.CreateDirectory(page);
+        var file = $"{videoId}{(fullscreen ? "" : "-inline")}.html";
+        File.WriteAllText(Path.Combine(page, file), PlayerHtml(videoId, title, fullscreen));
+        core.Settings.AreDevToolsEnabled = false;
+        core.Settings.AreDefaultContextMenusEnabled = false;
+        core.Settings.IsStatusBarEnabled = false;
+        core.SetVirtualHostNameToFolderMapping(Host, page, CoreWebView2HostResourceAccessKind.DenyCors);
+        core.NavigationStarting += (_, e) =>
+        {
+            if (e.Uri.StartsWith($"https://{Host}/", StringComparison.OrdinalIgnoreCase)) return;
+            e.Cancel = true;
+            if (IsYouTube(e.Uri)) OpenInBrowser(e.Uri);
+        };
+        core.NewWindowRequested += (_, e) => { e.Handled = true; if (IsYouTube(e.Uri)) OpenInBrowser(e.Uri); };
+        core.Navigate($"https://{Host}/{file}");
+    }
+
+    /// <summary>No WebView2 runtime (or it failed): the video opens in the browser instead.</summary>
+    internal static void Unavailable(Exception ex, Tutorial t)
+    {
+        Log.Warn($"In-app video player unavailable ({ex.GetType().Name}: {ex.Message}); opening the browser instead");
+        OpenInBrowser(t.Url);
+        MainWindow.Current?.ShowToast("The in-app player isn't available on this PC (it needs Microsoft Edge WebView2), so the video opened in your browser.", "Gold");
     }
 
     private static bool IsYouTube(string uri) =>
         Uri.TryCreate(uri, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps &&
         (u.Host is "youtu.be" or "youtube.com" or "www.youtube.com" or "m.youtube.com" or "www.youtube-nocookie.com");
 
-    private static string PlayerHtml(string id, string title) => $$"""
+    private static string PlayerHtml(string id, string title, bool fullscreen) => $$"""
         <!doctype html>
         <html><head><meta charset="utf-8"><meta name="referrer" content="strict-origin-when-cross-origin">
         <title>{{System.Net.WebUtility.HtmlEncode(title)}}</title>
         <style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{border:0;width:100%;height:100%}</style></head>
-        <body><iframe src="https://www.youtube-nocookie.com/embed/{{id}}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+        <body><iframe src="https://www.youtube-nocookie.com/embed/{{id}}?autoplay=1&rel=0&modestbranding=1&playsinline=1{{(fullscreen ? "" : "&fs=0")}}"
           title="{{System.Net.WebUtility.HtmlEncode(title)}}" referrerpolicy="strict-origin-when-cross-origin"
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></body></html>
+          allow="autoplay; encrypted-media; picture-in-picture{{(fullscreen ? "; fullscreen\" allowfullscreen" : "\"")}}></iframe></body></html>
         """;
 }

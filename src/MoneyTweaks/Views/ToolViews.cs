@@ -82,7 +82,9 @@ public sealed partial class PotatoView : UserControl, IPageLifecycle
 
     public PotatoView()
     {
-        var (root, body) = Ui.Page("Potato Graphics", "Get Fortnite's smooth, rounded, low-poly \"potato\" look and the FPS that comes with it. Pick a preset, compare it in the preview, review every change, then apply. Money Tweaks only changes Fortnite's own video settings, backs up the file first, and can put everything back in one click.", Ui.TutorialButton("potato"), eyebrow: "Gaming tools", icon: "\uE790");
+        var (tutorial, tutorialCard) = Ui.Tutorial("potato");
+        var (root, body) = Ui.Page("Potato Graphics", "Get Fortnite's smooth, rounded, low-poly \"potato\" look and the FPS that comes with it. Pick a preset, compare it in the preview, review every change, then apply. Money Tweaks only changes Fortnite's own video settings, backs up the file first, and can put everything back in one click.", tutorial, eyebrow: "Gaming tools", icon: "\uE790");
+        if (tutorialCard is not null) body.Children.Add(tutorialCard);
 
         // ---- Fortnite studio -----------------------------------------------------------------------------------
         var studio = new StackPanel();

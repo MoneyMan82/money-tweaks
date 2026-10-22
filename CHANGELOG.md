@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.52 – 2026-10-22
+- **Video tutorials are embedded in the page**: Potato Graphics and Fortnite Stretched show a "Video tutorial" card
+  with a 16:9 player right on the page. Press play and YouTube's privacy-enhanced player plays it in place; it scrolls
+  with the page like everything else. Nothing is loaded from YouTube until you press play, and leaving the page stops
+  it. "Watch tutorial" at the top jumps to it and starts it; "Pop out" plays it in its own window (with fullscreen);
+  "Open on YouTube" opens your browser.
+
 ## 1.51 – 2026-10-21
 - **Fixed: updates could stop at an older version.** v1.48.0 and v1.49.0 were released at the same moment, v1.48.0
   finished last, and GitHub marks the most recently published release as "latest", so the update check (which asked

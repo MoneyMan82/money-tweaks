@@ -101,13 +101,18 @@ public static class Ui
         return b;
     }
 
-    /// <summary>"Watch tutorial" button for a page with an official video (plays it inside the app), or null when there's none.</summary>
-    public static Button? TutorialButton(string pageTag)
+    /// <summary>
+    /// A page's video tutorial: the embedded player card, and a "Watch tutorial" header button that scrolls to it and starts
+    /// it. Both null when the page has no video.
+    /// </summary>
+    public static (Button? button, Border? card) Tutorial(string pageTag)
     {
-        if (Core.Model.Tutorials.For(pageTag) is not { } t) return null;
-        var b = Btn("▶  Watch tutorial", (_, _) => TutorialPlayer.Play(t));
-        b.ToolTip = "Plays the video tutorial in Money Tweaks (from YouTube)";
-        return b;
+        if (Core.Model.Tutorials.For(pageTag) is not { } t) return (null, null);
+        var video = new TutorialVideo(t);
+        var card = Card(video);
+        var b = Btn("▶  Watch tutorial", (_, _) => { ScrollTo(card); video.Play(); });
+        b.ToolTip = "Plays the video tutorial on this page";
+        return (b, card);
     }
 
     public static WrapPanel Row(params UIElement[] children)
