@@ -19,6 +19,9 @@ Resume point for future sessions. Keep it short.
 - Release: scripts/build-release.ps1 -> dist/ (self-contained single-file exe, portable zip, Inno Setup installer, SHA256SUMS).
   GitHub Actions: ci.yml (build+test), release.yml (on tag v* -> GitHub Release with assets).
 - Website: docs/ (GitHub Pages from main:/docs).
+- 1.54 Tweak Truth Index: `Core/Evidence/TweakEvidence.cs` (trials from BenchmarkStore studies whose `SwitchedIds` is one
+  tweak; validity filters; median/MAD aggregation; MinTrials 3), `EvidenceShare.cs` (sanitized submission, shared keys in
+  evidence-shared.json), `Views/EvidencePanel.cs` (in TweakListView details), Worker `src/evidence.ts` (no user id stored).
 - 1.45 Reality Lab (`lab` page; `Core/Lab/RealityLab.cs`, `Views/RealityLabView*.cs`, `Controls/VirtualPcScene.cs`): reuses
   HardwareMonitor, BenchmarkSampler, StressScene, TweakStateGuard (own restore file `lab-restore.json`), TweakService and the
   benchmark history (study TargetKind "lab"). Estimates are qualitative only (Expect enum), checked against BenchmarkStats verdicts.

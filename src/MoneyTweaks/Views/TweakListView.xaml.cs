@@ -295,6 +295,15 @@ public partial class TweakListView : UserControl, IPageLifecycle
         if (sender is FrameworkElement el && e.NewValue is true) Controls.Motion.FadeIn(el, 0, 6, 220);
     }
 
+    /// <summary>Builds the evidence panel each time a tweak's details open, so it reflects the latest measurements.</summary>
+    private void Evidence_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is not ContentControl { DataContext: TweakItem item } host) return;
+        if (e.NewValue is not true || item.Tweak.Kind != Core.Model.TweakKind.Toggle) { host.Content = null; return; }
+        try { host.Content = EvidencePanel.Build(item.Tweak); }
+        catch (Exception ex) { Core.Sys.Log.Error("Evidence panel failed", ex); host.Content = null; }
+    }
+
     /// <summary>Rollback for one tweak: restores its backed-up values through the same verified path as Undo all.</summary>
     private async void Undo_Click(object sender, RoutedEventArgs e)
     {

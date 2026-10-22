@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.54 – 2026-10-22
+- **Tweak Truth Index.** Every switchable tweak's details now show its evidence, in three clearly separated parts:
+  - **Measured on this PC** (from your benchmark history): per test type, each metric's number of tests, median
+    change, spread between tests, repeatability (share of tests reaching the same verdict), regression rate (share
+    where it got measurably worse) and a confidence level. A test counts only if exactly this one tweak differed
+    and it has 2+ runs with and without it; tests with different run lengths, battery/mains mixes, Fortnite in only
+    some runs or a mostly busy PC are listed as "not counted" with the reason, and frame rates capped by the display
+    are ignored. Tests that changed several tweaks together are never attributed. No conclusion or effect size is
+    shown before 3 valid tests; disagreeing tests are reported as "no consistent effect".
+  - **Expected benefit**: the existing estimate, labelled as an estimate and never mixed with measurements.
+  - **Other players** (Community Hub, loaded only when you ask): medians and better/worse shares overall and for your
+    GPU, CPU, Windows version and games, labelled community-submitted and shown only once a group has 5 results.
+    Offline, the measured part works as before and the hub part says it couldn't connect.
+- **Sharing is off by default** (Settings › Result sharing). When allowed, "Share my N results" shows exactly what will
+  be sent before sending: tweak, test type, per-metric changes and run counts, CPU/GPU model names, RAM rounded, Windows
+  build and app version. Never your account, PC or user name, serials, paths or times. Each test is shared once.
+- "Measure in Reality Lab" in a tweak's evidence runs a measured A/B test of just that tweak (it becomes a trial).
+- Benchmarks now record exactly which tweaks differed between "before" and "after" (older studies are matched from their
+  saved details where possible).
+- Community Hub API: `/api/community/evidence` (anonymous storage, strict validation, 50 shares/day, robust aggregates,
+  moderator clear). Tables are created automatically; free plan only.
+
 ## 1.53 – 2026-10-22
 - **Fixed: the Website button and links pointed to a dead address** (money-tweaks.pages.dev). The app's Website
   button, the README, and the site's own sharing card, canonical link, robots.txt and sitemap now use the live site,

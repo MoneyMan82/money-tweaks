@@ -688,6 +688,7 @@ public sealed partial class BenchmarkView : UserControl, IPageLifecycle
             if (applied.Count > 0)
             {
                 s.AppliedIds = s.AppliedIds.Union(applied).ToList();
+                s.SwitchedIds = s.SwitchedIds.Union(applied).ToList(); // kept after a rollback (Tweak Truth Index)
                 s.AppliedAt = DateTime.Now;
                 s.RolledBackAt = null;
                 Save();

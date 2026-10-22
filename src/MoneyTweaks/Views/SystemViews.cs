@@ -213,6 +213,24 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
         st.Children.Add(cc);
         body.Children.Add(Ui.Card(st));
 
+        var ev = Ui.Section("Result sharing (Tweak Truth Index)",
+            "Your measured tweak results always stay on this PC and appear in each tweak's details. You can choose to share them with the Community Hub so other players can see how tweaks behave on similar PCs.");
+        var share = new CheckBox { Content = "Allow sharing my measured results with the Community Hub", IsChecked = App.Settings.ShareEvidence, Margin = new Thickness(0, 4, 0, 4) };
+        share.Click += (_, _) =>
+        {
+            App.Settings.ShareEvidence = share.IsChecked == true;
+            App.Settings.Save();
+            MainWindow.Current?.ShowToast(App.Settings.ShareEvidence ? "Sharing allowed. Nothing is sent until you press Share on a tweak and confirm." : "Sharing is off. Your results stay on this PC.");
+        };
+        ev.Children.Add(share);
+        ev.Children.Add(Ui.Muted("Off by default. Even when on, nothing is sent automatically: you press Share in a tweak's details and see exactly what will be sent first. " +
+            "A shared result contains only: the tweak, how it was tested, the measured changes (percent and verdict per metric, number of runs), your CPU and graphics card model names, " +
+            "RAM size rounded (e.g. 32 GB), the Windows build number and the Money Tweaks version. Never your account, PC name, user name, serial numbers, file paths, IP-derived data or times. " +
+            "Sharing needs a Community Hub sign-in only to limit how much one account can send per day; the account isn't stored with the results.", 11.5));
+        var evCard = Ui.Card(ev);
+        _sections["evidence"] = evCard;
+        body.Children.Add(evCard);
+
         var ap = Ui.Section("Appearance");
         ap.Children.Add(new TextBlock { Text = "Motion & effects", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 2) });
         ap.Children.Add(Ui.Muted("Auto follows Windows (Settings › Accessibility › Visual effects › Animation effects) and your GPU. Reduced turns off page transitions, the ambient glow animation and the 3D preview's auto-rotate.", 12));

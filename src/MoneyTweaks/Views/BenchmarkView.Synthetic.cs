@@ -177,18 +177,18 @@ public sealed partial class BenchmarkView
         if (restoreProblems.Count > 0) Dialog.Show("Some settings were not restored", restoreText, DialogKind.Error);
         else if (error is not null && runs.Count == 0) Dialog.Show("Benchmark stopped", error + "\n\n" + restoreText, error.StartsWith("Stopped") ? DialogKind.Info : DialogKind.Error);
         if (runs.Count == 0) return;
-        if (_synthMode != "each") { RenderSyntheticResult(SaveSynthetic(preset.Name, runs.Select(x => (x.step.On, x.at, x.r)).ToList())); return; }
-        var perTweak = runs.GroupBy(x => x.step.TweakId!).Select(g => (TweakCatalog.Find(g.Key)!, SaveSynthetic($"{preset.Name} → {TweakCatalog.Find(g.Key)!.Name}", g.Select(x => (x.step.On, x.at, x.r)).ToList()))).ToList();
+        if (_synthMode != "each") { RenderSyntheticResult(SaveSynthetic(preset.Name, runs.Select(x => (x.step.On, x.at, x.r)).ToList(), original.Keys)); return; }
+        var perTweak = runs.GroupBy(x => x.step.TweakId!).Select(g => (TweakCatalog.Find(g.Key)!, SaveSynthetic($"{preset.Name} → {TweakCatalog.Find(g.Key)!.Name}", g.Select(x => (x.step.On, x.at, x.r)).ToList(), [g.Key]))).ToList();
         RenderPerTweak(perTweak, unmeasurable);
     }
 
-    private (BenchmarkStudy s, List<BenchmarkRun> runs) SaveSynthetic(string presetName, List<(bool on, DateTime at, SceneResult r)> runs)
+    private (BenchmarkStudy s, List<BenchmarkRun> runs) SaveSynthetic(string presetName, List<(bool on, DateTime at, SceneResult r)> runs, IEnumerable<string> switched)
     {
         var scene = $"Synthetic 3D · intensity {_synthIntensity} · {_synthRes.w}×{_synthRes.h} · {_synthDuration} s · {runs[0].r.Objects} objects, {runs[0].r.Triangles:N0} triangles" + (runs[0].r.RefreshHz > 0 ? $" · display {runs[0].r.RefreshHz} Hz" : "");
         var s = new BenchmarkStudy
         {
             Name = $"Synthetic 3D: {presetName} ({DateTime.Now:g})", TargetKind = "synthetic", TargetName = presetName,
-            DurationSec = _synthDuration, RunsPerPhase = _synthRuns, Endpoint = "", Scene = scene,
+            DurationSec = _synthDuration, RunsPerPhase = _synthRuns, Endpoint = "", Scene = scene, SwitchedIds = switched.ToList(),
         };
         _file.Studies.Add(s);
         var saved = new List<BenchmarkRun>();

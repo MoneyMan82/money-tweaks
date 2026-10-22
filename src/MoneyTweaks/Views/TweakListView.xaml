@@ -101,6 +101,8 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </StackPanel>
+                                <!-- Tweak Truth Index: measured evidence, estimate and community results (built when shown). -->
+                                <ContentControl IsVisibleChanged="Evidence_VisibleChanged" Margin="0,12,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

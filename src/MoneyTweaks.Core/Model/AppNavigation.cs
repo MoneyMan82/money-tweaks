@@ -88,6 +88,7 @@ public static class AppNavigation
         new("about#appearance", "\uE771", "Appearance", "settings", "Motion and effects, sidebar.", "theme animation motion sidebar", InSidebar: false),
         new("about#hotkeys", "\uE765", "Hotkeys", "settings", "Search, emergency stop and overlay hotkeys.", "shortcut keyboard hotkey", InSidebar: false),
         new("about#updates", "\uE896", "Updates", "settings", "Check and install updates.", "update version", InSidebar: false),
+        new("about#evidence", "\uE72E", "Result sharing", "settings", "Tweak Truth Index: whether your measured tweak results may be shared with the Community Hub (off by default).", "privacy share evidence results community truth index opt in", InSidebar: false),
         new("about#legacy", "\uE81C", "Legacy UI", "settings", "Switch back to the original Money Tweaks look.", "legacy classic old ui look theme green original", InSidebar: false),
     ];
 

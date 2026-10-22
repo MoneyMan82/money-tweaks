@@ -64,6 +64,8 @@ public sealed class AppSettings
     public List<string> DashboardHidden { get; set; } = [];
     /// <summary>Legacy UI: the original (1.0–1.3) green look with flat cards and no ambient glow. Applied at startup.</summary>
     public bool LegacyUi { get; set; }
+    /// <summary>Tweak Truth Index: the user allowed sharing sanitized measured results with the Community Hub. Off by default.</summary>
+    public bool ShareEvidence { get; set; }
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

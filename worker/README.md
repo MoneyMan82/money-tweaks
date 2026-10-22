@@ -150,6 +150,18 @@ account. Tell me the result.
   removes a post (hourly job).
 - Test sign-in exists only with `DEV_SIGN_IN=true` in a local `.dev.vars` file and only on localhost.
 
+## Tweak Truth Index (shared measured results)
+- `POST /api/community/evidence` (signed in, opt-in in the app): one sanitized test result. Strictly validated; only
+  these fields are stored: tweak id, test kind, game (fixed list), cleaned CPU/GPU model names, RAM size bucket,
+  Windows build, app version, per-metric change/verdict/run counts, and the arrival day. No user id, login, IP or time
+  of day is stored with a result. Sign-in only feeds a separate per-day counter (`evidence_quota`, 50 shares per
+  account per day, removed after two days). The same test (same key) is counted once.
+- `GET /api/community/evidence/{tweakId}`: medians and better/worse shares per test kind, overall and by GPU, CPU,
+  Windows version and game. A group shows numbers only once it has 5 results.
+- `POST /api/community/admin/evidence/{tweakId}/clear` (moderators): removes all shared results for a tweak.
+- The tables (`evidence`, `evidence_quota`) are created automatically on first use; `migrations/0003_evidence.sql`
+  and `console-setup.sql` contain the same statements if you prefer to add them yourself. Free plan only.
+
 ## For developers (local, no account needed)
 ```
 cd worker

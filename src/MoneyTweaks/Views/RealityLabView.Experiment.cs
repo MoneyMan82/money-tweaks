@@ -38,12 +38,29 @@ public sealed partial class RealityLabView
 
     private sealed record Choice(string Id, string Name, string Goal, IReadOnlyList<string> TweakIds, bool Curated);
 
+    /// <summary>A single tweak sent here from its evidence panel ("Measure in Reality Lab"); offered until the app closes.</summary>
+    private static string? _singleTweak;
+    private static bool _selectSingle;
+
+    /// <summary>Opens Reality Lab with one tweak chosen, so measuring it adds a trial to that tweak's evidence.</summary>
+    public static void Measure(string tweakId)
+    {
+        _singleTweak = tweakId;
+        _selectSingle = true;
+        MainWindow.Current?.Navigate("lab");
+    }
+
     private static List<Choice> Choices() =>
         RealityLab.Experiments.Select(e => new Choice(e.Id, e.Name, e.Goal, e.TweakIds, true))
+            .Concat(_singleTweak is { } id && TweakCatalog.Find(id) is { } t
+                ? [new Choice("tweak:" + id, t.Name, $"Just this one tweak: does “{t.Name}” measurably change anything here? Each run adds a trial to its evidence (Tweak Truth Index).", [id], false)]
+                : [])
             .Concat(PresetStore.BuiltIns.Concat(PresetStore.Load().Presets).Select(p => new Choice(p.Id, p.Name, p.Description, p.TweakIds, false)))
             .ToList();
 
     private Choice Selected => Choices().FirstOrDefault(c => c.Id == _selId) ?? Choices()[0];
+
+    private Border? _experimentCard;
 
     private UIElement BuildExperimentCard()
     {
@@ -92,7 +109,7 @@ public sealed partial class RealityLabView
         sp.Children.Add(_bar);
         sp.Children.Add(_status);
         RefreshPreview();
-        return Ui.Card(sp);
+        return _experimentCard = Ui.Card(sp);
     }
 
     /// <summary>Rough duration: each run settles (5–20 s) and measures; the scene adds warm-up and a 10 s priming run.</summary>
@@ -107,6 +124,7 @@ public sealed partial class RealityLabView
     private void FillPresetRow()
     {
         _presetRow.Children.Clear();
+        if (_selectSingle && _singleTweak is { } single) { _selectSingle = false; _selId = "tweak:" + single; RefreshPreview(); Dispatcher.BeginInvoke(() => Ui.ScrollTo(_experimentCard!), System.Windows.Threading.DispatcherPriority.Loaded); }
         AddChoices(_presetRow, Choices().Where(c => !c.Curated));
         if (Choices().All(c => c.Id != _selId)) { _selId = RealityLab.Experiments[0].Id; RefreshPreview(); }
     }
@@ -283,7 +301,7 @@ public sealed partial class RealityLabView
         {
             Name = $"Reality Lab: {choice.Name} ({DateTime.Now:g})", TargetKind = "lab", TargetName = choice.Name, DurationSec = RunSeconds, RunsPerPhase = Pairs, Endpoint = "",
             Scene = $"Reality Lab · {RunSeconds} s per run, idle resource use" + (_withScene ? $" + synthetic 3D scene (intensity {SceneIntensity}, {SceneRes.w}×{SceneRes.h})" : ""),
-            Notes = "Counterbalanced A/B; every tweak restored afterwards.",
+            Notes = "Counterbalanced A/B; every tweak restored afterwards.", SwitchedIds = original.Keys.ToList(),
         };
         var runs = new List<BenchmarkRun>();
         string? error = null;

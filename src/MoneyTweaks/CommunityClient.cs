@@ -245,6 +245,18 @@ public static class CommunityClient
     }
 
     /// <summary>Uploads a PNG/JPEG/WebP. Waits for the server's go-ahead first, so a refused upload (limit reached) isn't sent at all.</summary>
+    // ---- Tweak Truth Index ---------------------------------------------------------------------------------------------
+
+    public sealed record EvidenceShareResult(bool Accepted, bool Duplicate, int RemainingToday);
+
+    /// <summary>Shares one sanitized trial (the user opted in and confirmed this exact content). Needs sign-in (rate limit only).</summary>
+    public static Task<EvidenceShareResult> ShareEvidenceAsync(Core.Evidence.EvidenceSubmission s) =>
+        Post<EvidenceShareResult>("api/community/evidence", s);
+
+    /// <summary>Community aggregates for a tweak. Servers without the Tweak Truth Index answer 404 (code "not_found").</summary>
+    public static Task<Core.Evidence.CommunityEvidence> GetEvidenceAsync(string tweakId) =>
+        Get<Core.Evidence.CommunityEvidence>("api/community/evidence/" + Uri.EscapeDataString(tweakId));
+
     public static async Task<UploadResult> UploadAsync(byte[] data, string mime)
     {
         var req = Request(HttpMethod.Post, "api/community/images");

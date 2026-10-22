@@ -83,6 +83,11 @@ public sealed class BenchmarkStudy
     public DateTime? RolledBackAt { get; set; }
     /// <summary>Tweak ids this study's Apply actually changed (so rollback touches nothing else).</summary>
     public List<string> AppliedIds { get; set; } = [];
+    /// <summary>
+    /// Exactly the tweaks that differ between the Baseline and After runs (Tweak Truth Index). Studies saved before 1.54
+    /// don't have it; <see cref="Evidence.TweakEvidence.SwitchedIds"/> works it out from the older fields where possible.
+    /// </summary>
+    public List<string> SwitchedIds { get; set; } = [];
     public string Notes { get; set; } = "";
     // Test conditions kept identical for every run of the study.
     public int DurationSec { get; set; } = 30;

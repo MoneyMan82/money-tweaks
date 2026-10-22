@@ -5,6 +5,7 @@
 import { authenticate, createSession, quotaInfo, requireUser, signInDev, signInGitHub, signOut, type User } from "./auth";
 import { ApiError, type Env, type Limits, json, limits, missing } from "./env";
 import { CATEGORIES, GAMES, GUIDELINES, REPORT_REASONS } from "./rules";
+import * as evidence from "./evidence";
 import * as svc from "./service";
 import { mediaStore } from "./storage";
 
@@ -183,9 +184,17 @@ async function route(request: Request, env: Env): Promise<Response> {
     return a ? ok(a) : json({ error: "not_found", message: "User not found." }, 404);
   }
 
+  // ---- Tweak Truth Index (anonymous measured results, opt-in from the app) ----
+  if (p === "/evidence" && method === "POST") return ok(await evidence.submit(env, await user(), await body(request, 16 * 1024)));
+  if (seg[0] === "evidence" && seg.length === 2 && method === "GET") return json(await evidence.summary(env, decodeURIComponent(seg[1])), 200, { "cache-control": "public, max-age=300" });
+
   // ---- moderation ----
   if (seg[0] === "admin") {
     const u = await user();
+    if (seg[1] === "evidence" && seg.length === 4 && seg[3] === "clear" && method === "POST") {
+      if (!u.isAdmin) throw new ApiError(403, "forbidden", "Moderators only.");
+      return ok({ removed: await evidence.clearTweak(env, decodeURIComponent(seg[2])) });
+    }
     if (p === "/admin/queue" && method === "GET") return ok(await svc.queue(env, u));
     if (seg[1] === "images" && seg.length === 4 && method === "POST" && (seg[3] === "approve" || seg[3] === "reject")) { await svc.reviewImage(env, u, seg[2], seg[3] === "approve"); return done(); }
     if (seg[1] === "posts" && seg.length === 4 && method === "POST" && seg[3] === "remove") { await svc.setPostStatus(env, u, seg[2], "removed", ((await body(request)) as Record<string, unknown>).note); return done(); }
@@ -217,5 +226,6 @@ export default {
 
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(svc.cleanup(env, limits(env)).then((n) => { if (n > 0) console.log(`cleanup removed ${n} image(s)`); }));
+    ctx.waitUntil(evidence.cleanupQuota(env).catch((e) => console.error("evidence quota cleanup", e)));
   },
 } satisfies ExportedHandler<Env>;
