@@ -73,7 +73,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
         }
         sp.Children.Add(_viewChips);
 
-        _sceneHost.Background = new LinearGradientBrush(Color.FromRgb(0x0D, 0x12, 0x1C), Color.FromRgb(0x06, 0x08, 0x0C), 90);
+        _sceneHost.Background = new LinearGradientBrush(Color.FromRgb(0x10, 0x11, 0x18), Color.FromRgb(0x05, 0x06, 0x08), 90);
         _sceneHost.Child = Ui.Loading("Building the virtual PC…");
         var grid = new Grid { Margin = new Thickness(0, 4, 0, 0) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 320 });
@@ -87,7 +87,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
         _sceneNote.Margin = new Thickness(0, 10, 0, 0);
         _sceneNote.TextWrapping = TextWrapping.Wrap;
         SyncViewChips();
-        return Ui.Card(sp);
+        return Ui.Hud(Ui.Card(sp));
     }
 
     private void EnsureScene()

@@ -25,38 +25,53 @@ public static class Ui
         }
     }
 
-    /// <summary>Standard page: eyebrow, title, gradient underline, blurb, optional actions on the right.</summary>
+    /// <summary>
+    /// Standard page header (the "Vector" look): an icon tile with a violet→cyan rim, a cyan eyebrow and the title in
+    /// the display face, actions on the right, then a hairline rule with a short signature segment, and the blurb.
+    /// </summary>
     public static (ScrollViewer root, StackPanel body) Page(string title, string blurb, UIElement? headerRight = null, string? eyebrow = null, string? icon = null)
     {
-        var body = new StackPanel { Margin = new Thickness(28, 6, 28, 32) };
-        var head = new DockPanel { Margin = new Thickness(0, 0, 0, 20), LastChildFill = true };
+        var body = new StackPanel { Margin = new Thickness(32, 8, 32, 36) };
+        var head = new DockPanel { LastChildFill = true };
         if (headerRight is not null)
         {
             DockPanel.SetDock(headerRight, Dock.Right);
-            if (headerRight is FrameworkElement fe) { fe.VerticalAlignment = VerticalAlignment.Bottom; fe.Margin = new Thickness(16, 0, 0, 2); }
+            if (headerRight is FrameworkElement fe) { fe.VerticalAlignment = VerticalAlignment.Center; fe.Margin = new Thickness(16, 0, 0, 0); }
             head.Children.Add(headerRight);
         }
-        var t = new StackPanel();
         var titleRow = new StackPanel { Orientation = Orientation.Horizontal };
-        if (icon is not null)
-        {
-            titleRow.Children.Add(new Border
-            {
-                Width = 40, Height = 40, CornerRadius = new CornerRadius(12), Margin = new Thickness(0, 0, 14, 0), Background = Brush("AccentSoft"),
-                BorderBrush = Brush("CardRim"), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = icon, Style = Res<Style>("Icon"), FontSize = 18, Foreground = Brush("Accent"), HorizontalAlignment = HorizontalAlignment.Center }
-            });
-        }
+        if (icon is not null) titleRow.Children.Add(IconTile(icon, 46, 19));
         var titles = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        if (eyebrow is not null) titles.Children.Add(new TextBlock { Text = eyebrow.ToUpperInvariant(), Style = Res<Style>("Eyebrow"), Margin = new Thickness(0, 0, 0, 2) });
+        if (eyebrow is not null) titles.Children.Add(new TextBlock { Text = eyebrow.ToUpperInvariant(), Style = Res<Style>("Eyebrow"), Margin = new Thickness(0, 0, 0, 1) });
         titles.Children.Add(new TextBlock { Text = title, Style = Res<Style>("H1") });
         titleRow.Children.Add(titles);
-        t.Children.Add(titleRow);
-        t.Children.Add(new Border { Width = 56, Height = 3, CornerRadius = new CornerRadius(2), Background = Brush("AccentGradientH"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 10, 0, 10) });
-        t.Children.Add(new TextBlock { Text = blurb, Style = Res<Style>("MutedText"), FontSize = 13.5, LineHeight = 20, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Left });
-        head.Children.Add(t);
-        body.Children.Add(head);
+        head.Children.Add(titleRow);
+        var t = new StackPanel { Margin = new Thickness(0, 0, 0, 22) };
+        t.Children.Add(head);
+        t.Children.Add(Rule(new Thickness(0, 16, 0, 12)));
+        t.Children.Add(new TextBlock { Text = blurb, Style = Res<Style>("MutedText"), FontSize = 13.5, LineHeight = 21, MaxWidth = 780, HorizontalAlignment = HorizontalAlignment.Left });
+        body.Children.Add(t);
         return (new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, PanningMode = PanningMode.VerticalOnly }, body);
+    }
+
+    /// <summary>Square glyph tile: dark glass with a violet→cyan rim and a gradient glyph. Used by page headers and empty states.</summary>
+    public static Border IconTile(string icon, double size = 46, double glyph = 19) => new()
+    {
+        Width = size, Height = size, CornerRadius = new CornerRadius(size * 0.24), Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center,
+        Background = TileFill, BorderBrush = Brush("AccentGradient"), BorderThickness = new Thickness(1),
+        Child = new TextBlock { Text = icon, Style = Res<Style>("Icon"), FontSize = glyph, Foreground = Brush("AccentGradient"), HorizontalAlignment = HorizontalAlignment.Center },
+    };
+
+    private static readonly Brush TileFill = Frozen(new LinearGradientBrush(Color.FromRgb(0x1B, 0x18, 0x33), Color.FromRgb(0x0E, 0x16, 0x1C), 45));
+    private static Brush Frozen(Brush b) { b.Freeze(); return b; }
+
+    /// <summary>Hairline divider with a short violet→cyan segment at its start (the signature rule).</summary>
+    public static UIElement Rule(Thickness margin)
+    {
+        var g = new Grid { Height = 2, Margin = margin };
+        g.Children.Add(new Border { Height = 1, Background = Brush("Hairline"), VerticalAlignment = VerticalAlignment.Center });
+        g.Children.Add(new Border { Width = 64, Height = 2, CornerRadius = new CornerRadius(1), Background = Brush("AccentGradientH"), HorizontalAlignment = HorizontalAlignment.Left });
+        return g;
     }
 
     /// <summary>Scrolls the page's ScrollViewer so the element sits at the top (used for "page#section" navigation).</summary>
@@ -73,6 +88,19 @@ public static class Ui
     public static Border Card(UIElement child, Thickness? margin = null) =>
         new() { Style = Res<Style>("CardBorder"), Child = child, Margin = margin ?? new Thickness(0, 0, 0, 14) };
 
+    /// <summary>
+    /// Feature panel: a card with cyan corner brackets (the "command center" frame). For a page's main instrument only
+    /// (dashboard hero, the Reality Lab model, scanner readout), never for every card.
+    /// </summary>
+    public static Grid Hud(Border card)
+    {
+        var g = new Grid { Margin = card.Margin };
+        card.Margin = new Thickness(0);
+        g.Children.Add(card);
+        g.Children.Add(new HudCorners { IsHitTestVisible = false });
+        return g;
+    }
+
     /// <summary>A card that lights up its rim on hover and runs <paramref name="click"/>.</summary>
     public static Border ClickCard(UIElement child, Action click, Thickness? margin = null)
     {
@@ -85,10 +113,14 @@ public static class Ui
         return c;
     }
 
+    /// <summary>Section heading with the signature marker (a short violet→cyan bar), optional description below.</summary>
     public static StackPanel Section(string title, string? sub = null)
     {
         var s = new StackPanel();
-        s.Children.Add(new TextBlock { Text = title, Style = Res<Style>("H2") });
+        var head = new StackPanel { Orientation = Orientation.Horizontal };
+        head.Children.Add(new Border { Width = 3, Height = 15, CornerRadius = new CornerRadius(1.5), Background = Brush("AccentGradient"), Margin = new Thickness(0, 1, 10, 0), VerticalAlignment = VerticalAlignment.Center });
+        head.Children.Add(new TextBlock { Text = title, Style = Res<Style>("H2"), VerticalAlignment = VerticalAlignment.Center });
+        s.Children.Add(head);
         if (sub is not null) s.Children.Add(new TextBlock { Text = sub, Style = Res<Style>("MutedText"), Margin = new Thickness(0, 4, 0, 12) });
         else s.Children.Add(new Border { Height = 12 });
         return s;
@@ -128,13 +160,26 @@ public static class Ui
 
     public static Border Pill(string text, bool caution = false) => Tag(text, caution ? "Gold" : "Accent");
 
-    /// <summary>Small coloured label. <paramref name="tone"/>: Accent, Gold, Success, Danger, Violet, Muted.</summary>
+    /// <summary>Small coloured label. <paramref name="tone"/>: Accent, Gold, Success, Danger, Violet (cyan), Muted.</summary>
     public static Border Tag(string text, string tone) => new()
     {
         Style = Res<Style>("Badge"), Margin = new Thickness(0, 0, 6, 0),
-        Background = tone == "Muted" ? new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)) : Brush(tone + "Soft"),
-        Child = new TextBlock { Text = text, FontSize = 10.5, FontWeight = FontWeights.Bold, Foreground = Brush(tone == "Muted" ? "Muted" : tone) }
+        Background = tone == "Muted" ? MutedTagFill : Brush(tone + "Soft"),
+        BorderBrush = tone == "Muted" ? MutedTagRim : TagRim(tone), BorderThickness = new Thickness(1),
+        Child = new TextBlock { Text = text, FontSize = 10.5, FontWeight = FontWeights.SemiBold, Foreground = Brush(tone == "Muted" ? "Muted" : tone) }
     };
+
+    private static readonly Brush MutedTagFill = Frozen(new SolidColorBrush(Color.FromArgb(0x12, 0xFF, 0xFF, 0xFF)));
+    private static readonly Brush MutedTagRim = Frozen(new SolidColorBrush(Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF)));
+    private static readonly Dictionary<string, Brush> TagRims = [];
+
+    /// <summary>The tone's colour at low opacity, for a crisp 1 px tag outline.</summary>
+    private static Brush TagRim(string tone)
+    {
+        if (TagRims.TryGetValue(tone, out var b)) return b;
+        var c = Brush(tone) is SolidColorBrush s ? s.Color : Colors.White;
+        return TagRims[tone] = Frozen(new SolidColorBrush(Color.FromArgb(0x40, c.R, c.G, c.B)));
+    }
 
     /// <summary>Grid of equal-width cells that drops columns as the window narrows (never squeezes text).</summary>
     public static UniformGrid Grid(int columns, params UIElement[] children)
@@ -156,7 +201,7 @@ public static class Ui
             {
                 // Slightly thicker bottom edge reads as a physical key.
                 CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1, 1, 1, 2),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x33, 0x46)), Background = new SolidColorBrush(Color.FromRgb(0x16, 0x1C, 0x28)),
+                BorderBrush = Brush("ControlBorderHover"), Background = Brush("ControlFill"),
                 Padding = new Thickness(8, 3, 8, 3), MinWidth = 28, VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
@@ -171,13 +216,12 @@ public static class Ui
     /// <summary>Friendly empty state with an icon.</summary>
     public static UIElement Empty(string icon, string title, string sub)
     {
-        var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 18) };
-        sp.Children.Add(new Border
-        {
-            Width = 54, Height = 54, CornerRadius = new CornerRadius(27), Background = Brush("AccentSoft"), HorizontalAlignment = HorizontalAlignment.Center,
-            Child = new TextBlock { Text = icon, Style = Res<Style>("Icon"), FontSize = 22, Foreground = Brush("Accent"), HorizontalAlignment = HorizontalAlignment.Center }
-        });
-        sp.Children.Add(new TextBlock { Text = title, Style = Res<Style>("H2"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 12, 0, 4) });
+        var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 22) };
+        var tile = IconTile(icon, 52, 21);
+        tile.Margin = new Thickness(0);
+        tile.HorizontalAlignment = HorizontalAlignment.Center;
+        sp.Children.Add(tile);
+        sp.Children.Add(new TextBlock { Text = title, Style = Res<Style>("H2"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 14, 0, 4) });
         sp.Children.Add(new TextBlock { Text = sub, Style = Res<Style>("MutedText"), TextAlignment = TextAlignment.Center, MaxWidth = 380 });
         return sp;
     }
@@ -227,7 +271,10 @@ public sealed class RingArc : FrameworkElement
     public Brush? Stroke { get; set; }
 
     private static readonly Pen TrackPen = CreateTrackPen();
-    private static Pen CreateTrackPen() { var p = new Pen(new SolidColorBrush(Color.FromRgb(0x1C, 0x23, 0x32)), 10) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }; p.Freeze(); return p; }
+    private static readonly Pen TickMinor = FrozenPen(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF), 1);
+    private static readonly Pen TickMajor = FrozenPen(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF), 1.2);
+    private static Pen FrozenPen(Color c, double w) { var p = new Pen(new SolidColorBrush(c), w); p.Freeze(); return p; }
+    private static Pen CreateTrackPen() { var p = new Pen(new SolidColorBrush(Color.FromRgb(0x1A, 0x1D, 0x25)), 10) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }; p.Freeze(); return p; }
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -236,6 +283,14 @@ public sealed class RingArc : FrameworkElement
         var c = new Point(ActualWidth / 2, ActualHeight / 2);
         var track = TrackPen.Thickness == Thickness ? TrackPen : new Pen(TrackPen.Brush, Thickness);
         dc.DrawEllipse(null, track, c, r, r);
+        // Instrument ticks inside the ring: fine every 9°, stronger every 45°.
+        double inner = r - Thickness / 2 - 4;
+        if (inner > 20)
+            for (int i = 0; i < 40; i++)
+            {
+                double a = i * Math.PI / 20 - Math.PI / 2, len = i % 5 == 0 ? 5 : 2.5;
+                dc.DrawLine(i % 5 == 0 ? TickMajor : TickMinor, new Point(c.X + Math.Cos(a) * inner, c.Y + Math.Sin(a) * inner), new Point(c.X + Math.Cos(a) * (inner - len), c.Y + Math.Sin(a) * (inner - len)));
+            }
         var v = Math.Clamp(Value, 0, 100) / 100.0;
         if (v <= 0.001) return;
         var pen = new Pen(Stroke ?? Ui.Brush("AccentGradient"), Thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
@@ -304,12 +359,12 @@ public sealed class StatTile : Border
     {
         Style = Ui.Res<Style>("CardBorder");
         Margin = new Thickness(0, 0, 14, 14);
-        var fill = new LinearGradientBrush(Color.FromArgb(0x40, 0x4C, 0x8D, 0xFF), Color.FromArgb(0x00, 0x8B, 0x6C, 0xFF), 90);
+        var fill = new LinearGradientBrush(Color.FromArgb(0x38, 0x2F, 0xD8, 0xEE), Color.FromArgb(0x00, 0x8A, 0x6B, 0xFF), 90);
         fill.Freeze();
         _fill.Fill = fill;
         var head = new StackPanel { Orientation = Orientation.Horizontal };
-        head.Children.Add(new TextBlock { Text = icon, Style = Ui.Res<Style>("Icon"), Foreground = Ui.Brush("Accent"), FontSize = 14, Margin = new Thickness(0, 0, 8, 0) });
-        head.Children.Add(new TextBlock { Text = label.ToUpperInvariant(), FontSize = 10.5, Foreground = Ui.Brush("Muted"), FontWeight = FontWeights.Bold });
+        head.Children.Add(new TextBlock { Text = icon, Style = Ui.Res<Style>("Icon"), Foreground = Ui.Brush("Violet"), FontSize = 14, Margin = new Thickness(0, 0, 8, 0) });
+        head.Children.Add(new TextBlock { Text = label.ToUpperInvariant(), FontSize = 11, Foreground = Ui.Brush("Muted"), FontWeight = FontWeights.SemiBold, FontFamily = Ui.Res<FontFamily>("DisplayFont") });
         // Faint guide lines so the chart area reads as a chart while the first minute of samples fills it.
         var guide = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF)); guide.Freeze();
         foreach (var va in new[] { VerticalAlignment.Top, VerticalAlignment.Center, VerticalAlignment.Bottom })

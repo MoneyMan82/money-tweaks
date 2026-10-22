@@ -96,7 +96,7 @@ public sealed class ScannerView : UserControl, IPageLifecycle
         Fact("Power", $"{(f.PowerPlanName.Length > 0 ? f.PowerPlanName : "unknown")} · {(f.HasBattery ? (f.OnAc == false ? "on battery" : "laptop, plugged in") : "desktop")}");
         Fact("Network", f.Adapters.Count == 0 ? "no active adapter" : string.Join(", ", f.Adapters.Select(a => $"{a.Type} {a.SpeedBps / 1_000_000} Mbps")));
         Fact("Startup apps", $"{f.StartupEnabled.Count} enabled");
-        _summary.Children.Add(Ui.Card(facts));
+        _summary.Children.Add(Ui.Hud(Ui.Card(facts)));
 
         var visible = _findings.Where(x => _showIgnored || !_state.Ignored.Contains(x.Id)).ToList();
         var counts = new WrapPanel { Margin = new Thickness(0, 4, 0, 10) };

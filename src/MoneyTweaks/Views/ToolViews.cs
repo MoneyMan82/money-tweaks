@@ -833,6 +833,7 @@ public sealed class PingView : UserControl, IPageLifecycle
             catch (Exception ex) { result.Children.Add(Ui.Muted("Diagnostic failed: " + ex.Message)); }
             finally { run.IsEnabled = true; bar.Visibility = Visibility.Collapsed; }
         }, "PrimaryButton");
+        run.HorizontalAlignment = HorizontalAlignment.Left;
         sp.Children.Add(run);
         sp.Children.Add(bar);
         sp.Children.Add(result);

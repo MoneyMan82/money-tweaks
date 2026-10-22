@@ -50,7 +50,12 @@ public static class Dialog
         buttons.Children.Add(okBtn);
 
         var header = new StackPanel { Orientation = Orientation.Horizontal };
-        header.Children.Add(new TextBlock { Text = icon, Style = (Style)Application.Current.Resources["Icon"], Foreground = accent, FontSize = 20, Margin = new Thickness(0, 0, 10, 0) });
+        var soft = kind switch { DialogKind.Error => "DangerSoft", DialogKind.Warning => "GoldSoft", _ => "AccentSoft" };
+        header.Children.Add(new Border
+        {
+            Width = 34, Height = 34, CornerRadius = new CornerRadius(9), Margin = new Thickness(0, 0, 12, 0), Background = (Brush)Application.Current.Resources[soft],
+            Child = new TextBlock { Text = icon, Style = (Style)Application.Current.Resources["Icon"], Foreground = accent, FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center },
+        });
         header.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.Resources["H2"], VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 380 });
 
         var body = new StackPanel();
@@ -63,11 +68,15 @@ public static class Dialog
         if (optionBox is not null) body.Children.Add(optionBox);
         body.Children.Add(buttons);
 
+        // Graphite card with a thin tone line along the top edge (the kind of dialog), not a fully coloured frame.
+        var frame = new Grid();
+        frame.Children.Add(body);
+        frame.Children.Add(new Border { Height = 2, CornerRadius = new CornerRadius(1), Background = accent, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(-8, -22, -8, 0), Opacity = 0.9 });
         win.Content = new Border
         {
-            Background = (Brush)Application.Current.Resources["Surface"], BorderBrush = accent, BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14), Padding = new Thickness(22), Margin = new Thickness(12), Child = body,
-            Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 0, Opacity = 0.6 }
+            Background = (Brush)Application.Current.Resources["CardFill"], BorderBrush = (Brush)Application.Current.Resources["CardRim"], BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14), Padding = new Thickness(24, 22, 24, 22), Margin = new Thickness(14), Child = frame, ClipToBounds = false,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 32, ShadowDepth = 0, Opacity = 0.65 }
         };
         win.Loaded += (_, _) => Controls.Motion.PopIn((FrameworkElement)win.Content);
         Controls.Motion.AnimateClose(win, (FrameworkElement)win.Content);

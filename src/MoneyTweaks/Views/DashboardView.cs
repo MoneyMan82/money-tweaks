@@ -113,11 +113,11 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
         Grid.SetColumn(heroRight, 1);
         hero.Children.Add(heroLeft);
         hero.Children.Add(heroRight);
-        body.Children.Add(new Border
+        body.Children.Add(Ui.Hud(new Border
         {
-            Style = Ui.Res<Style>("CardBorder"), Background = Ui.Brush("HeroFill"), BorderBrush = Ui.Brush("CardRimHover"), CornerRadius = new CornerRadius(22),
-            Padding = new Thickness(30, 26, 30, 26), Margin = new Thickness(0, 4, 14, 18), Child = hero // right edge lines up with the cards below
-        });
+            Style = Ui.Res<Style>("CardBorder"), Background = Ui.Brush("HeroFill"), CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(32, 28, 32, 28), Margin = new Thickness(0, 4, 14, 18), Child = hero // right edge lines up with the cards below
+        }));
 
         // ── Live performance ───────────────────────────────────────────────────────────────────────────────────
         var liveHead = new DockPanel { Margin = new Thickness(0, 0, 0, 16) };
@@ -173,11 +173,10 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
         DockPanel.SetDock(arrow, Dock.Right);
         dp.Children.Add(arrow);
         var sp = new StackPanel();
-        sp.Children.Add(new Border
-        {
-            Width = 42, Height = 42, CornerRadius = new CornerRadius(13), Background = Ui.Brush("AccentGradient"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 14),
-            Child = new TextBlock { Text = icon, Style = Ui.Res<Style>("Icon"), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center }
-        });
+        var tile = Ui.IconTile(icon, 42, 17);
+        tile.HorizontalAlignment = HorizontalAlignment.Left;
+        tile.Margin = new Thickness(0, 0, 0, 14);
+        sp.Children.Add(tile);
         sp.Children.Add(Ui.Text(title, 14, FontWeights.SemiBold));
         sp.Children.Add(Ui.Muted(sub, 12));
         dp.Children.Add(sp);

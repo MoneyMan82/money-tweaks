@@ -12,7 +12,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <!-- risk strip -->
-                    <Border x:Name="strip" CornerRadius="16,0,0,16" Background="{StaticResource AccentGradient}" Opacity="0.85"/>
+                    <Border x:Name="strip" CornerRadius="14,0,0,14" Background="{StaticResource AccentGradient}" Opacity="0.85"/>
                     <StackPanel Grid.Column="1" Margin="18,14,8,14">
                         <WrapPanel>
                             <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
@@ -40,7 +40,7 @@
                         </WrapPanel>
                         <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" Margin="0,6,0,0" MaxWidth="820" HorizontalAlignment="Left"/>
                         <WrapPanel Margin="0,8,0,0">
-                            <Border x:Name="status" CornerRadius="7" Padding="8,2" Background="#10FFFFFF" Margin="0,0,10,0">
+                            <Border x:Name="status" CornerRadius="5" Padding="8,2" Background="#10FFFFFF" Margin="0,0,10,0">
                                 <TextBlock x:Name="statusText" Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
                             </Border>
                             <TextBlock Text="{Binding Message}" FontSize="11.5" Foreground="{StaticResource Gold}" TextWrapping="Wrap" MaxWidth="560" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -64,7 +64,7 @@
                                     ToolTip="Roll back: restore the original values backed up when this tweak was applied, and read them back"/>
                         </WrapPanel>
                         <!-- Notes (limitations, conflicts) live with the details: the gold badge above shows they exist and previews them on hover. -->
-                        <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" IsVisibleChanged="Details_VisibleChanged" Background="#FF0A0D13" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,10,0,0">
+                        <Border Visibility="{Binding Expanded, Converter={StaticResource B2V}}" IsVisibleChanged="Details_VisibleChanged" Background="{StaticResource Surface}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,10,0,0">
                             <StackPanel>
                                 <TextBlock Text="{Binding NotesText}" Visibility="{Binding HasNotes, Converter={StaticResource B2V}}" FontSize="11.5" Foreground="{StaticResource Gold}"
                                            TextWrapping="Wrap" Margin="0,0,0,8"/>
@@ -158,8 +158,10 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal">
-                <Border Width="48" Height="48" CornerRadius="14" Background="{StaticResource AccentGradient}" VerticalAlignment="Top" Margin="0,4,16,0">
-                    <TextBlock x:Name="CatIcon" Style="{StaticResource Icon}" FontSize="20" Foreground="White" HorizontalAlignment="Center"/>
+                <!-- Same icon tile as every page header (Ui.IconTile): dark glass, violet→cyan rim and glyph. -->
+                <Border Width="46" Height="46" CornerRadius="11" BorderBrush="{StaticResource AccentGradient}" BorderThickness="1" VerticalAlignment="Top" Margin="0,2,16,0">
+                    <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FF1B1833" Offset="0"/><GradientStop Color="#FF0E161C" Offset="1"/></LinearGradientBrush></Border.Background>
+                    <TextBlock x:Name="CatIcon" Style="{StaticResource Icon}" FontSize="19" Foreground="{StaticResource AccentGradient}" HorizontalAlignment="Center"/>
                 </Border>
                 <StackPanel MaxWidth="640">
                     <TextBlock x:Name="EyebrowText" Text="TWEAK CATEGORY" Style="{StaticResource Eyebrow}"/>
@@ -170,14 +172,18 @@
             <Border Grid.Column="1" Style="{StaticResource CardBorder}" Padding="16,12" VerticalAlignment="Top" MinWidth="200" Margin="16,0,0,0">
                 <StackPanel>
                     <TextBlock Text="APPLIED" Style="{StaticResource Eyebrow}" Foreground="{StaticResource Muted}"/>
-                    <TextBlock x:Name="AppliedBig" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="Bold" Text="–"/>
+                    <TextBlock x:Name="AppliedBig" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="SemiBold" Text="–"/>
                     <ProgressBar x:Name="AppliedBar" Margin="0,8,0,0" Maximum="1"/>
                 </StackPanel>
             </Border>
         </Grid>
 
-        <!-- Toolbar -->
-        <StackPanel Grid.Row="1" Margin="0,18,0,12">
+        <!-- Toolbar (opens with the signature rule, like every page header) -->
+        <StackPanel Grid.Row="1" Margin="0,16,0,12">
+            <Grid Height="2" Margin="0,0,0,16">
+                <Border Height="1" Background="{StaticResource Hairline}" VerticalAlignment="Center"/>
+                <Border Width="64" Height="2" CornerRadius="1" Background="{StaticResource AccentGradientH}" HorizontalAlignment="Left"/>
+            </Grid>
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="RecommendedButton" Content="★  Apply recommended" Style="{StaticResource PrimaryButton}" Click="ApplyRecommended_Click" Margin="0,0,8,0"/>
@@ -253,9 +259,9 @@
                                                     ToolTip="Click to collapse or expand this group">
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="hb" Background="Transparent" CornerRadius="10" Padding="8,7">
+                                                        <Border x:Name="hb" Background="Transparent" CornerRadius="8" Padding="8,7">
                                                             <Grid>
-                                                                <Border x:Name="hov" Background="#0CFFFFFF" CornerRadius="10" Margin="-8,-7" Opacity="0"/>
+                                                                <Border x:Name="hov" Background="#0CFFFFFF" CornerRadius="8" Margin="-8,-7" Opacity="0"/>
                                                                 <ContentPresenter/>
                                                             </Grid>
                                                         </Border>

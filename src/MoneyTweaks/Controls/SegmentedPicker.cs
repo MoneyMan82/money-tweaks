@@ -24,7 +24,7 @@ public sealed class SegmentedPicker : Border
     public SegmentedPicker(IEnumerable<(string label, string value, string? tip)> options, string selected)
     {
         Selected = selected;
-        Background = new SolidColorBrush(Color.FromRgb(0x0D, 0x11, 0x18));
+        Background = Ui.Brush("InputFill");
         BorderBrush = Ui.Brush("BorderBrush");
         BorderThickness = new Thickness(1);
         CornerRadius = new CornerRadius(11);

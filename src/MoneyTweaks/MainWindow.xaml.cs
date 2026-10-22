@@ -51,6 +51,8 @@ public partial class MainWindow : Window
         if (!App.BackgroundStart) Navigate("dashboard");
         Loaded += async (_, _) => { if (!App.BackgroundStart) FadeInWindow(); await StartupTasksAsync(); };
         SizeChanged += (_, _) => Dispatcher.BeginInvoke(MoveIndicator, DispatcherPriority.Loaded);
+        // Narrow windows: the search button keeps its icon and shortcut, so the breadcrumb next to it never gets covered.
+        SizeChanged += (_, e) => SearchHint.Text = e.NewSize.Width < 1240 ? "Search" : "Search pages, tweaks, games & settings";
     }
 
     private bool _startupDone, _opened;
@@ -182,8 +184,10 @@ public partial class MainWindow : Window
         var row = new DockPanel { Background = Brushes.Transparent, Margin = new Thickness(12, 14, 10, 6), Cursor = Cursors.Hand, ToolTip = collapsed ? $"Show {g.Label}" : $"Hide {g.Label}" };
         DockPanel.SetDock(chevron, Dock.Right);
         row.Children.Add(chevron);
-        var label = new TextBlock { Text = g.Label.ToUpperInvariant(), Foreground = (Brush)FindResource("Subtle"), FontSize = 10.5, FontWeight = FontWeights.Bold };
+        var label = new TextBlock { Text = g.Label.ToUpperInvariant(), Foreground = (Brush)FindResource("Subtle"), FontSize = 11, FontWeight = FontWeights.SemiBold, FontFamily = (FontFamily)FindResource("DisplayFont") };
+        DockPanel.SetDock(label, Dock.Left);
         row.Children.Add(label);
+        row.Children.Add(new Border { Height = 1, Background = (Brush)FindResource("Hairline"), Margin = new Thickness(10, 1, 10, 0), VerticalAlignment = VerticalAlignment.Center });
         row.MouseEnter += (_, _) => label.Foreground = (Brush)FindResource("Muted");
         row.MouseLeave += (_, _) => label.Foreground = (Brush)FindResource("Subtle");
         row.MouseLeftButtonUp += (_, _) =>
@@ -221,7 +225,7 @@ public partial class MainWindow : Window
         if (pages.Count == 0) return;
         panel.Children.Add(compact
             ? new Border { Height = 1, Background = (Brush)FindResource("BorderBrush"), Margin = new Thickness(12, 6, 12, 8), ToolTip = title }
-            : new TextBlock { Text = title, Foreground = (Brush)FindResource("Subtle"), FontSize = 10.5, FontWeight = FontWeights.Bold, Margin = new Thickness(12, 8, 0, 6) });
+            : new TextBlock { Text = title, Foreground = (Brush)FindResource("Subtle"), FontSize = 11, FontWeight = FontWeights.SemiBold, FontFamily = (FontFamily)FindResource("DisplayFont"), Margin = new Thickness(12, 8, 0, 6) });
         foreach (var p in pages) panel.Children.Add(NavItem(p.Tag, p.Icon, p.Label, null, compact, pin: true));
     }
 
@@ -302,8 +306,8 @@ public partial class MainWindow : Window
         var panel = new DockPanel();
         if (count is not null && !compact)
         {
-            var badge = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(7, 0, 7, 1), Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF)),
-                Child = new TextBlock { Text = count, FontSize = 10.5, Foreground = (Brush)FindResource("Muted") } };
+            var badge = new Border { CornerRadius = new CornerRadius(5), Padding = new Thickness(6, 0, 6, 1), Background = (Brush)FindResource("Hairline"), VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock { Text = count, FontSize = 10.5, FontFamily = (FontFamily)FindResource("DisplayFont"), Foreground = (Brush)FindResource("Subtle") } };
             DockPanel.SetDock(badge, Dock.Right);
             panel.Children.Add(badge);
         }
@@ -325,7 +329,7 @@ public partial class MainWindow : Window
         else
         {
             rb.Checked += Nav_Checked;
-            rb.Checked += (_, _) => ic.Foreground = (Brush)FindResource("Accent");
+            rb.Checked += (_, _) => ic.Foreground = (Brush)FindResource("AccentGradient");
             rb.Unchecked += (_, _) => ic.SetBinding(TextBlock.ForegroundProperty, fg);
         }
         return rb;
@@ -543,14 +547,19 @@ public partial class MainWindow : Window
         var row = new DockPanel();
         row.Children.Add(new Border
         {
-            Width = 30, Height = 30, CornerRadius = new CornerRadius(15), Margin = new Thickness(0, 0, 12, 0), Background = Ui.Brush(tone + "Soft"), VerticalAlignment = VerticalAlignment.Top,
+            Width = 30, Height = 30, CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 12, 0), Background = Ui.Brush(tone + "Soft"), VerticalAlignment = VerticalAlignment.Top,
             Child = new TextBlock { Text = icon, Style = Ui.Res<Style>("Icon"), FontSize = 13, Foreground = Ui.Brush(tone), HorizontalAlignment = HorizontalAlignment.Center }
         });
         row.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
+        // Tone edge on the left, like the sidebar selection bar.
+        var body = new Grid();
+        body.Children.Add(new Border { Width = 3, CornerRadius = new CornerRadius(1.5), Background = Ui.Brush(tone), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(-14, 2, 0, 2) });
+        body.Children.Add(row);
         var toast = new Border
         {
-            Style = Ui.Res<Style>("CardBorder"), Padding = new Thickness(14, 12, 16, 12), Margin = new Thickness(0, 10, 0, 0),
-            Background = new SolidColorBrush(Color.FromArgb(0xF5, 0x12, 0x17, 0x22)), Child = row, RenderTransform = new TranslateTransform(30, 0), Opacity = 0
+            Style = Ui.Res<Style>("CardBorder"), Padding = new Thickness(14, 12, 16, 12), Margin = new Thickness(0, 10, 0, 0), CornerRadius = new CornerRadius(10),
+            Background = new SolidColorBrush(Color.FromArgb(0xF7, 0x13, 0x16, 0x1C)), Child = body, RenderTransform = new TranslateTransform(30, 0), Opacity = 0,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 0, Opacity = 0.45 },
         };
         while (ToastHost.Children.Count >= 3) ToastHost.Children.RemoveAt(0);
         ToastHost.Children.Add(toast);

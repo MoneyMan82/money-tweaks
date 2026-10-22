@@ -296,7 +296,7 @@ public sealed partial class CommunityHubView
         if (chosen is not null)
         {
             var vis = new CrosshairVisual { Profile = chosen, Zoom = 3, Height = 120 };
-            sp.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0E, 0x14)), CornerRadius = new CornerRadius(8), Child = vis, Margin = new Thickness(140, 8, 0, 0), Width = 300, HorizontalAlignment = HorizontalAlignment.Left });
+            sp.Children.Add(new Border { Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(8), Child = vis, Margin = new Thickness(140, 8, 0, 0), Width = 300, HorizontalAlignment = HorizontalAlignment.Left });
         }
         return sp;
     }
@@ -339,7 +339,7 @@ public sealed partial class CommunityHubView
             var cell = new StackPanel { Margin = new Thickness(0, 0, 10, 8), Width = 170 };
             var im = new Image { Height = 100, Stretch = Stretch.UniformToFill };
             _ = LoadInto(im, img.ThumbUrl, 340);
-            cell.Children.Add(new Border { Child = im, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0E, 0x14)) });
+            cell.Children.Add(new Border { Child = im, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = Ui.Brush("Surface") });
             cell.Children.Add(Ui.Muted(img.Status == "pending" ? "Awaiting moderation" : img.Status == "approved" ? "Approved" : img.Status, 11.5));
             var i = img;
             cell.Children.Add(Ui.Btn("Remove", async (_, _) => await Try(async () =>
@@ -468,7 +468,7 @@ public sealed partial class CommunityHubView
             var cell = new StackPanel { Width = 220, Margin = new Thickness(0, 0, 12, 12) };
             var im = new Image { Height = 130, Stretch = Stretch.Uniform };
             _ = LoadInto(im, i.Image.ThumbUrl, 440);
-            cell.Children.Add(new Border { Child = im, Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0E, 0x14)), CornerRadius = new CornerRadius(6) });
+            cell.Children.Add(new Border { Child = im, Background = Ui.Brush("Surface"), CornerRadius = new CornerRadius(6) });
             cell.Children.Add(Ui.Muted($"{i.Owner} · {Ago(i.CreatedUtc)}", 11.5));
             cell.Children.Add(Ui.Muted(i.PostTitle is null ? "Not attached to a post yet" : "Post: " + i.PostTitle, 11.5));
             var id = i.Image.Id;

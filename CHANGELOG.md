@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.55 – 2026-10-22
+- **New look: "Vector".** A redesigned design system across the whole app, with every feature unchanged:
+  - Deep neutral graphite surfaces lit from the top-left (cards are a touch lighter at the top, their rim catches the
+    light); one electric violet accent for actions and selection, cyan for live data and focus. The violet→cyan
+    signature gradient is used only on small elements (selection bars, rings, progress, the header rule).
+  - Bahnschrift (the logo's face) for titles, eyebrows, group labels and numbers; Segoe UI for body text.
+  - New page header: icon tile with a violet→cyan rim, cyan eyebrow, title, and a hairline rule with a short signature
+    segment. Section headings carry a small gradient marker. The same header on the tweak lists.
+  - Feature panels (dashboard overview, Reality Lab model, scanner readout) get thin cyan corner brackets; gauges
+    get instrument tick marks. Tags have crisp 1 px outlines; chips, inputs and buttons are tighter and squarer.
+  - Sidebar: MONEY TWEAKS wordmark as in the logo, group labels with hairlines, gradient icon on the selected page.
+  - Dialogs: graphite cards with a thin coloured line for the kind (confirm, warning, error) and an icon tile.
+    Toasts have a tone edge and a soft shadow. The search palette is deeper with a shadow.
+  - Empty states use the icon tile; colour tokens replace remaining hard-coded colours.
+  - Narrow windows: the title-bar search shortens to "Search" so the breadcrumb stays readable.
+- Legacy UI still gives the original green look (its colour map covers the new palette).
+
 ## 1.54 – 2026-10-22
 - **Tweak Truth Index.** Every switchable tweak's details now show its evidence, in three clearly separated parts:
   - **Measured on this PC** (from your benchmark history): per test type, each metric's number of tests, median

@@ -22,6 +22,11 @@ public static class LegacyTheme
         ["4C8DFF"] = "2BE38B", ["2F6BE0"] = "17A865", ["8B6CFF"] = "14B8A6", ["F5B84A"] = "F5C451", ["3DDC97"] = "2BE38B",
         ["FF5C7A"] = "FF5D6C", ["E9EEF7"] = "E8F1EC", ["8A94A8"] = "8A9A92", ["5B6478"] = "5E6E66", ["BFD5FF"] = "BFF5DC",
         ["A8B8D8"] = "A8D8C0", ["2A3550"] = "2E4A3C", ["2B3550"] = "2E4A3C",
+        // "Vector" palette (1.55): violet accent, cyan secondary, neutral graphite.
+        ["06070A"] = "080C0A", ["0B0D12"] = "0F1512", ["111419"] = "141C18", ["161A21"] = "19231E", ["1E222B"] = "223029",
+        ["8A6BFF"] = "2BE38B", ["6A4DF0"] = "17A865", ["2FD8EE"] = "14B8A6", ["9479FF"] = "3BEA98", ["7657F6"] = "1FCF7D",
+        ["9C85FF"] = "5FF0AE", ["6B57D8"] = "2E4A3C", ["246877"] = "1F5A4A", ["DCD2FF"] = "BFF5DC", ["ECEFF6"] = "E8F1EC",
+        ["8D94A6"] = "8A9A92", ["5A6175"] = "5E6E66",
     };
 
     // Flat cards and hero (no rim light or gradient), as in the original look.

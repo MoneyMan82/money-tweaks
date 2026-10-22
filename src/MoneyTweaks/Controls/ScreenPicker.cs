@@ -17,7 +17,7 @@ public sealed record PickResult(int X, int Y, int Width, int Height, string Hex)
 public sealed class ScreenPicker : Window
 {
     private readonly Canvas _canvas = new();
-    private readonly Rectangle _sel = new() { Stroke = Brushes.White, StrokeThickness = 1.5, StrokeDashArray = [4, 3], Fill = new SolidColorBrush(Color.FromArgb(0x22, 0x4C, 0x8D, 0xFF)), Visibility = Visibility.Collapsed };
+    private readonly Rectangle _sel = new() { Stroke = Brushes.White, StrokeThickness = 1.5, StrokeDashArray = [4, 3], Fill = new SolidColorBrush(Color.FromArgb(0x22, 0x8A, 0x6B, 0xFF)), Visibility = Visibility.Collapsed };
     private readonly Border _info;
     private readonly Border _swatch = new() { Width = 22, Height = 22, CornerRadius = new CornerRadius(5), BorderBrush = Brushes.White, BorderThickness = new Thickness(1) };
     private readonly TextBlock _text = new() { Foreground = Brushes.White, FontSize = 12, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
