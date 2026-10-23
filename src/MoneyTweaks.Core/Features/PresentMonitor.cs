@@ -3,7 +3,8 @@ using MoneyTweaks.Core.Sys;
 
 namespace MoneyTweaks.Core.Features;
 
-public enum PresentApi { None, Dxgi, D3D9 }
+/// <summary>Where a process's frames were seen. Other = presented through the kernel directly (OpenGL, Vulkan and others).</summary>
+public enum PresentApi { None, Dxgi, D3D9, Other }
 
 /// <summary>Frame statistics for one process over a time window. Frame time = time between Present calls (PresentMon's MsBetweenPresents).</summary>
 public sealed record PresentStats(int Pid, PresentApi Api, double Fps, double AvgMs, double LastMs, double Low1PercentFps, int Frames, IReadOnlyList<double> RecentMs);
@@ -19,7 +20,7 @@ public sealed class FrameTracker
     {
         public readonly long[] T = new long[Capacity];
         public int Count, Head;
-        public int Dxgi, D3D9;
+        public int Dxgi, D3D9, Other;
         public long Last;
     }
     private readonly Dictionary<int, Ring> _byPid = [];
@@ -30,9 +31,12 @@ public sealed class FrameTracker
         lock (_gate)
         {
             if (!_byPid.TryGetValue(pid, out var r)) _byPid[pid] = r = new Ring();
-            // A process seen through DXGI also shows up through D3D9 in rare interop cases: keep one source per process.
-            if (api == PresentApi.Dxgi) r.Dxgi++; else r.D3D9++;
+            // One source per process, the most direct one: DXGI, then D3D9, then the kernel's present events (which DXGI and
+            // D3D9 presents also go through). If a runtime event shows up after kernel-only frames, start over with it.
+            if ((api is PresentApi.Dxgi or PresentApi.D3D9) && r.Dxgi == 0 && r.D3D9 == 0 && r.Other > 0) { r.Count = 0; r.Head = 0; }
+            switch (api) { case PresentApi.Dxgi: r.Dxgi++; break; case PresentApi.D3D9: r.D3D9++; break; default: r.Other++; break; }
             if (api == PresentApi.D3D9 && r.Dxgi > 0) return;
+            if (api == PresentApi.Other && (r.Dxgi > 0 || r.D3D9 > 0)) return;
             r.T[r.Head] = time100ns;
             r.Head = (r.Head + 1) % Capacity;
             r.Count = Math.Min(r.Count + 1, Capacity);
@@ -74,7 +78,7 @@ public sealed class FrameTracker
             if (now100ns is { } n && n - r.Last > Stale.Ticks) return null;
             long end = r.Last;
             t = Times(r).Where(x => x <= end && x >= end - window.Ticks).ToArray();
-            api = r.Dxgi > 0 ? PresentApi.Dxgi : PresentApi.D3D9;
+            api = r.Dxgi > 0 ? PresentApi.Dxgi : r.D3D9 > 0 ? PresentApi.D3D9 : PresentApi.Other;
         }
         return Compute(pid, api, t, graphPoints);
     }
@@ -115,15 +119,20 @@ public enum CaptureState { Stopped, Running, NeedsAdmin, Failed }
 
 /// <summary>
 /// Real-time ETW session on the same Present events PresentMon uses: Microsoft-Windows-DXGI Present_Start (DirectX 10/11/12,
-/// any window mode) and Microsoft-Windows-D3D9 Present_Start (DirectX 9). Nothing is injected into games: ETW events are
-/// written by Windows' own graphics runtime. Windows only lets administrators (or members of "Performance Log Users")
-/// start ETW sessions, so without that the state is NeedsAdmin. Vulkan and OpenGL don't raise these events.
+/// any window mode), Microsoft-Windows-D3D9 Present_Start (DirectX 9), and Microsoft-Windows-DxgKrnl Present_Info, which
+/// the kernel logs for presents that bypass those runtimes (OpenGL, Vulkan; PresentMon's "Other" runtime). Only that one
+/// kernel event is enabled, through an event-ID filter, so the session stays light. Nothing is injected into games: ETW
+/// events are written by Windows' own graphics stack. Windows only lets administrators (or members of "Performance Log
+/// Users") start ETW sessions, so without that the state is NeedsAdmin.
 /// </summary>
 public static unsafe class PresentMonitor
 {
     public const string SessionName = "MoneyTweaks-Present";
     private static readonly Guid DxgiProvider = new("CA11C036-0102-4A2D-A6AD-F03CFED5D3C9");
     private static readonly Guid D3D9Provider = new("783ACA0A-790E-4D7F-8451-AA850511C6B9");
+    private static readonly Guid DxgKrnlProvider = new("802EC45A-1E99-4B83-9920-87C98277BA9D");
+    private const ushort DxgKrnlPresentInfo = 184;
+    private const ulong DxgKrnlKeywords = 0x8000000000000001; // Base | Performance
     private static readonly Guid SessionGuid = new("6B8F3C2E-5D41-4E0B-9A77-4D2F1C0B7E11");
     private const ushort DxgiPresentStart = 42, D3D9PresentStart = 1;
 
@@ -192,6 +201,7 @@ public static unsafe class PresentMonitor
                     var e = EnableTraceEx2(_session, in g, EnableProvider, 4, ulong.MaxValue, 0, 0, IntPtr.Zero);
                     if (e != ErrorSuccess) Log.Warn($"ETW provider {g} not enabled: {e}");
                 }
+                KernelPresents = EnableKernelPresents();
 
                 _loggerName = Marshal.StringToHGlobalUni(SessionName);
                 _logfile = Marshal.AllocHGlobal(448); // EVENT_TRACE_LOGFILEW (x64)
@@ -213,7 +223,7 @@ public static unsafe class PresentMonitor
                 _thread = new Thread(() => { var h = handle; ProcessTrace(&h, 1, IntPtr.Zero, IntPtr.Zero); }) { IsBackground = true, Name = "PresentMonitor ETW" };
                 _thread.Start();
                 Log.Info("Frame-timing ETW session started (DXGI + D3D9 Present events)");
-                return Set(CaptureState.Running, "Measuring Present calls (DirectX 9/10/11/12).");
+                return Set(CaptureState.Running, KernelPresents ? "Measuring Present calls (DirectX 9/10/11/12, plus kernel presents for OpenGL/Vulkan)." : "Measuring Present calls (DirectX 9/10/11/12).");
             }
             catch (Exception ex)
             {
@@ -222,6 +232,36 @@ public static unsafe class PresentMonitor
             }
             finally { Marshal.FreeHGlobal(props); }
         }
+    }
+
+    /// <summary>True when the kernel present events (OpenGL/Vulkan frames) are enabled in the running session.</summary>
+    public static bool KernelPresents { get; private set; }
+
+    /// <summary>
+    /// Enables only DxgKrnl's Present_Info event (EVENT_FILTER_TYPE_EVENT_ID), never the provider's whole firehose. If the
+    /// filter isn't supported, the provider stays off rather than flooding the session while a game runs.
+    /// </summary>
+    private static bool EnableKernelPresents()
+    {
+        var filter = (byte*)NativeMemory.AllocZeroed(8);     // EVENT_FILTER_EVENT_ID: FilterIn, Reserved, Count, Events[1]
+        var desc = (byte*)NativeMemory.AllocZeroed(16);      // EVENT_FILTER_DESCRIPTOR: Ptr, Size, Type
+        var parms = (byte*)NativeMemory.AllocZeroed(48);     // ENABLE_TRACE_PARAMETERS (version 2)
+        try
+        {
+            filter[0] = 1;                                   // FilterIn: only the listed events
+            *(ushort*)(filter + 2) = 1;
+            *(ushort*)(filter + 4) = DxgKrnlPresentInfo;
+            *(ulong*)desc = (ulong)filter;
+            *(uint*)(desc + 8) = 6;                          // FIELD_OFFSET(Events) + 1 × USHORT
+            *(uint*)(desc + 12) = 0x80000200;                // EVENT_FILTER_TYPE_EVENT_ID
+            *(uint*)parms = 2;                               // ENABLE_TRACE_PARAMETERS_VERSION_2
+            *(IntPtr*)(parms + 32) = (IntPtr)desc;
+            *(uint*)(parms + 40) = 1;
+            var e = EnableTraceEx2(_session, in DxgKrnlProvider, EnableProvider, 4, DxgKrnlKeywords, 0, 0, (IntPtr)parms);
+            if (e != ErrorSuccess) { Log.Info($"Kernel present events not enabled ({e}); OpenGL/Vulkan frames won't be measured"); return false; }
+            return true;
+        }
+        finally { NativeMemory.Free(filter); NativeMemory.Free(desc); NativeMemory.Free(parms); }
     }
 
     private static CaptureState Set(CaptureState s, string msg)
@@ -275,6 +315,7 @@ public static unsafe class PresentMonitor
             PresentApi api;
             if (id == DxgiPresentStart && provider == DxgiProvider) api = PresentApi.Dxgi;
             else if (id == D3D9PresentStart && provider == D3D9Provider) api = PresentApi.D3D9;
+            else if (id == DxgKrnlPresentInfo && provider == DxgKrnlProvider) api = PresentApi.Other;
             else return;
             Interlocked.Increment(ref _events);
             Frames.Add((int)*(uint*)(rec + 12), *(long*)(rec + 16), api);

@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.58 – 2026-10-23
+- **Performance Overlay upgraded into a gaming HUD** (same page, same hotkey, existing settings carried over):
+  - Readings: FPS, frame time, 1% low, a frame-time graph (last two seconds, spikes highlighted), CPU usage and
+    temperature, GPU usage and temperature, RAM, **VRAM** and **ping**. Choose exactly which appear and **reorder** them.
+    A reading this PC can't provide shows "n/a" (FPS without admin rights says "admin"), never a made-up number.
+  - Three layouts: **Minimal** (one line), **Compact** (labelled row) and **Detailed** (list with usage bars and the graph),
+    each with graphs or text only. Themes: Vector, Mint, Ice, Amber, Mono or your own colours. A dark text outline keeps
+    numbers readable over bright scenes; numbers ease to new values and the graph glides (at most 30 fps, only while
+    something changes; off with reduced motion).
+  - **Move and scale anywhere**: "Move & resize on screen" or a second global hotkey (Ctrl+Shift+F11) lets you drag the
+    overlay to any spot on any display and scale it from its corner; the spot is remembered per display. Overall opacity,
+    background opacity and size are adjustable. **Click-through** can be switched off to drag it any time; it never takes
+    focus either way.
+  - **Game profiles**: the overlay recognises the game it measures and loads that game's layout. Fortnite (compact,
+    competitive), Geometry Dash (minimal FPS readout) and Roblox (compact) come built in; any game can be added by exe or
+    picked while it's open.
+  - Readings come from the Hardware Monitor's shared sampler (the GPU doing the most work, with its VRAM), so nothing is
+    measured twice. Frame timing additionally listens for the kernel's present events (PresentMon's "Other" runtime, for
+    OpenGL and Vulkan games such as Geometry Dash), with an event-ID filter so the session stays light. DirectX capture is
+    verified; the OpenGL/Vulkan path is not yet verified with a real game.
+  - Ping is the round trip to your ping host (internet latency), not a game server's ping, and is labelled as such.
+  - Everything the overlay starts (frame-timing session, sensor sampling, ping, hotkeys) stops when it's hidden or when
+    Money Tweaks exits.
+
 ## 1.57 – 2026-10-23
 - **Hardware Monitor upgraded into a monitoring center** (same page, same Health Center below it):
   - CPU: total and per-logical-processor usage and effective clock (Windows' own frequency counters), the performance

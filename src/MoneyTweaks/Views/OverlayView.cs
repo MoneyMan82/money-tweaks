@@ -27,7 +27,7 @@ public sealed class OverlayView : UserControl, IPageLifecycle
     {
         _toggle = Ui.Btn("Show overlay", (_, _) => OverlayService.Toggle(), "PrimaryButton");
         var (root, body) = Ui.Page("Performance Overlay",
-            "A small always-on-top readout of FPS, frame time, CPU/GPU load, RAM and temperatures while you play. Frame timing uses the same Windows ETW Present events as PresentMon; nothing is injected into games. The overlay is click-through and never takes focus.",
+            "An always-on-top gaming HUD: FPS, frame-time graph, 1% lows, CPU and GPU load and temperatures, RAM, VRAM and ping. Frame timing uses the same Windows ETW Present events as PresentMon; nothing is injected into games. Click-through by default, never takes focus, and each game can have its own layout.",
             _toggle, "Tools", "\uE9D2");
         body.Children.Add(Ui.Card(_status));
 
@@ -39,7 +39,7 @@ public sealed class OverlayView : UserControl, IPageLifecycle
         body.Children.Add(Ui.Card(look));
 
         body.Children.Add(Ui.Card(HotkeyCard()));
-        var games = Ui.Section("Games", "Per-game profiles. With automatic monitoring on, the overlay appears when one of these starts and disappears (and frame timing stops) when it closes. A game can have its own layout.");
+        var games = Ui.Section("Game profiles", "The overlay recognises the game it's measuring and loads that game's layout automatically. Fortnite, Geometry Dash and Roblox come with tuned layouts; add any other game by its .exe or pick it while it's open. With automatic monitoring on, the overlay also appears when one of these starts and disappears (and frame timing stops) when it closes.");
         games.Children.Add(_games);
         body.Children.Add(Ui.Card(games));
         body.Children.Add(Ui.Card(Compatibility()));
@@ -94,9 +94,15 @@ public sealed class OverlayView : UserControl, IPageLifecycle
         sec.Children.Add(row);
         if (PresentMonitor.State != CaptureState.Stopped) sec.Children.Add(Ui.Muted(PresentMonitor.Message, 12));
         sec.Children.Add(Ui.Muted(OverlayService.HotkeyStatus, 12));
+        sec.Children.Add(Ui.Muted(OverlayService.EditHotkeyStatus, 12));
         if (OverlayService.LastFrame is { Target: { } t } f && OverlayService.Visible)
-            sec.Children.Add(Ui.Muted($"Measuring: {t}. {GameWindow.Explain(f.Mode)}", 12));
+            sec.Children.Add(Ui.Muted($"Measuring: {t}. {GameWindow.Explain(f.Mode)} Layout: {(OverlayService.ActiveProfile is { } ap ? (S.ProfileFor(ap)?.Name ?? ap) + " profile" : "default")}.", 12));
         var actions = Ui.Row(Ui.Btn(_testing ? "Testing…" : "Test frame capture (3 s)", async (_, _) => await TestCaptureAsync()));
+        actions.Children.Add(Ui.Btn(OverlayService.Editing ? "Finish moving" : "Move & resize on screen", (_, _) => OverlayService.SetEditMode(!OverlayService.Editing), "BaseButton", new Thickness(8, 0, 0, 0)));
+        var ct = new ToggleButton { Style = Ui.Res<Style>("Switch"), IsChecked = S.ClickThrough, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 8, 0), ToolTip = "Clicks go through the overlay to the game" };
+        ct.Click += (_, _) => OverlayService.SetClickThrough(ct.IsChecked == true);
+        actions.Children.Add(ct);
+        actions.Children.Add(new TextBlock { Text = "Click-through", VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.Brush("Text") });
         if (PresentMonitor.State == CaptureState.NeedsAdmin && !Admin.IsElevated)
             actions.Children.Add(Ui.Btn("Restart as administrator", (_, _) => { if (Admin.RestartElevated()) { App.ExitRequested = true; Application.Current.Shutdown(); } }, "GoldButton"));
         ((Button)actions.Children[0]).IsEnabled = !_testing;
@@ -126,7 +132,7 @@ public sealed class OverlayView : UserControl, IPageLifecycle
             {
                 string name; try { using var p = Process.GetProcessById(a.pid); name = p.ProcessName; } catch { name = "process " + a.pid; }
                 var s = PresentMonitor.Frames.Stats(a.pid, TimeSpan.FromSeconds(3), 120, now);
-                return $"• {name}: {s?.Fps:0} FPS, {s?.AvgMs:0.0} ms ({(s?.Api == PresentApi.D3D9 ? "Direct3D 9" : "DXGI: DirectX 10/11/12")})";
+                return $"• {name}: {s?.Fps:0} FPS, {s?.AvgMs:0.0} ms ({s?.Api switch { PresentApi.D3D9 => "Direct3D 9", PresentApi.Other => "kernel presents: OpenGL/Vulkan/other", _ => "DXGI: DirectX 10/11/12" }})";
             }));
         }
         finally
@@ -156,40 +162,85 @@ public sealed class OverlayView : UserControl, IPageLifecycle
         _editor.Children.Add(targets);
 
         var l = Editing;
-        var metrics = new WrapPanel();
-        void Check(string label, bool value, Action<bool> set)
+        _editor.Children.Add(Ui.Text("Style", 13, FontWeights.SemiBold));
+        var style = new SegmentedPicker([("Minimal", "Minimal", "One line of numbers"), ("Compact", "Compact", "Labelled values in a row"), ("Detailed", "Detailed", "A labelled list with bars and the graph")], l.Style.ToString());
+        style.Margin = new Thickness(0, 4, 0, 4);
+        style.Changed += v => { l.Style = Enum.Parse<OverlayStyle>(v); Save(); UpdatePreview(); };
+        _editor.Children.Add(style);
+        var graphs = new SegmentedPicker([("Graphs", "True", "Frame-time graph and usage bars"), ("Text only", "False", "Numbers only")], l.Graphs.ToString());
+        graphs.Margin = new Thickness(0, 4, 0, 8);
+        graphs.Changed += v => { l.Graphs = v == "True"; Save(); UpdatePreview(); };
+        _editor.Children.Add(graphs);
+
+        _editor.Children.Add(Ui.Text("Readings (in this order)", 13, FontWeights.SemiBold));
+        _editor.Children.Add(Ui.Muted("Tick what to show, use the arrows to reorder. A reading this PC can't provide shows as n/a.", 11.5));
+        var list = new StackPanel { Margin = new Thickness(0, 6, 0, 4), MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left };
+        var items = l.EffectiveItems();
+        foreach (var id in items.Concat(OverlayMetric.All.Select(m => m.Id).Where(m => !items.Contains(m))).ToList())
         {
-            var cb = new CheckBox { Content = label, IsChecked = value, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 0, 16, 6) };
-            cb.Click += (_, _) => { set(cb.IsChecked == true); Save(); UpdatePreview(); };
-            metrics.Children.Add(cb);
+            var mid = id;
+            bool on = items.Contains(id);
+            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 2) };
+            var down = Ui.Btn("\uE70D", (_, _) => { l.Move(mid, 1); Save(); RenderEditor(); UpdatePreview(); }, "GhostButton");
+            var up = Ui.Btn("\uE70E", (_, _) => { l.Move(mid, -1); Save(); RenderEditor(); UpdatePreview(); }, "GhostButton");
+            foreach (var bt in new[] { down, up }) { bt.FontFamily = Ui.Res<FontFamily>("Icons"); bt.Padding = new Thickness(8, 2, 8, 2); bt.IsEnabled = on; DockPanel.SetDock(bt, Dock.Right); row.Children.Add(bt); }
+            up.IsEnabled = on && items.IndexOf(id) > 0;
+            down.IsEnabled = on && items.IndexOf(id) < items.Count - 1;
+            var cb = new CheckBox { IsChecked = on, Foreground = Ui.Brush("Text"), VerticalAlignment = VerticalAlignment.Center, ToolTip = OverlayMetric.All.First(m => m.Id == id).Hint };
+            cb.Content = OverlayMetric.Label(id);
+            cb.Click += (_, _) => { l.SetItem(mid, cb.IsChecked == true); Save(); RenderEditor(); UpdatePreview(); };
+            row.Children.Add(cb);
+            list.Children.Add(row);
         }
-        Check("FPS", l.Fps, v => l.Fps = v);
-        Check("Frame time", l.FrameTime, v => l.FrameTime = v);
-        Check("1% low", l.OnePercentLow, v => l.OnePercentLow = v);
-        Check("Frame-time graph", l.Graph, v => l.Graph = v);
-        Check("CPU", l.Cpu, v => l.Cpu = v);
-        Check("GPU", l.Gpu, v => l.Gpu = v);
-        Check("RAM", l.Ram, v => l.Ram = v);
-        Check("Temperatures", l.Temps, v => l.Temps = v);
-        Check("App name", l.Target, v => l.Target = v);
-        _editor.Children.Add(metrics);
+        _editor.Children.Add(list);
+
+        _editor.Children.Add(Ui.Text("Theme", 13, FontWeights.SemiBold));
+        var themes = new WrapPanel { Margin = new Thickness(0, 4, 0, 4) };
+        foreach (var name in OverlayTheme.All.Select(t => t.Name).Append("Custom"))
+        {
+            var n = name;
+            var rb = new RadioButton { Content = name, Style = Ui.Res<Style>("Chip"), GroupName = "ovl-theme" + _editing, IsChecked = l.EffectiveTheme == name, Margin = new Thickness(0, 0, 6, 6) };
+            rb.Checked += (_, _) => { if (l.EffectiveTheme == n) return; l.Theme = n; Save(); RenderEditor(); UpdatePreview(); };
+            themes.Children.Add(rb);
+        }
+        _editor.Children.Add(themes);
+        var outline = new CheckBox { Content = "Text outline (readable over bright scenes)", IsChecked = l.Outline, Foreground = Ui.Brush("Text"), Margin = new Thickness(0, 2, 0, 4) };
+        outline.Click += (_, _) => { l.Outline = outline.IsChecked == true; Save(); UpdatePreview(); };
+        _editor.Children.Add(outline);
 
         _editor.Children.Add(Slider("Text size", l.FontSize, 9, 28, 1, v => l.FontSize = v, v => $"{v:0} pt"));
+        _editor.Children.Add(Slider("Scale", l.Scale, 0.6, 2.5, 0.05, v => l.Scale = v, v => $"{v * 100:0}%"));
         _editor.Children.Add(Slider("Background opacity", l.Opacity, 0, 1, 0.05, v => l.Opacity = v, v => $"{v * 100:0}%"));
+        _editor.Children.Add(Slider("Overlay opacity", l.WindowOpacity, 0.3, 1, 0.05, v => l.WindowOpacity = v, v => $"{v * 100:0}%"));
         _editor.Children.Add(Slider("Distance from edge", l.Margin, 0, 120, 2, v => l.Margin = v, v => $"{v:0} px"));
 
         var pos = new WrapPanel { Margin = new Thickness(0, 8, 0, 4) };
         foreach (var c in Enum.GetValues<OverlayCorner>())
         {
             var corner = c;
-            var rb = new RadioButton { Content = c switch { OverlayCorner.TopLeft => "Top left", OverlayCorner.TopRight => "Top right", OverlayCorner.BottomLeft => "Bottom left", _ => "Bottom right" }, Style = Ui.Res<Style>("Chip"), GroupName = "ovl-pos" + _editing, IsChecked = l.Position == c, Margin = new Thickness(0, 0, 6, 6) };
-            rb.Checked += (_, _) => { l.Position = corner; Save(); };
+            var rb = new RadioButton { Content = c switch { OverlayCorner.TopLeft => "Top left", OverlayCorner.TopRight => "Top right", OverlayCorner.BottomLeft => "Bottom left", _ => "Bottom right" }, Style = Ui.Res<Style>("Chip"), GroupName = "ovl-pos" + _editing, IsChecked = !l.CustomPosition && l.Position == c, Margin = new Thickness(0, 0, 6, 6) };
+            rb.Checked += (_, _) => { l.Position = corner; l.CustomPosition = false; Save(); };
             pos.Children.Add(rb);
         }
+        var custom = new RadioButton { Content = "Where I dragged it", Style = Ui.Res<Style>("Chip"), GroupName = "ovl-pos" + _editing, IsChecked = l.CustomPosition, Margin = new Thickness(0, 0, 6, 6), ToolTip = "Use Move & resize on screen (or the move hotkey), then drag the overlay" };
+        custom.Checked += (_, _) => { if (!l.CustomPosition) { l.CustomPosition = true; Save(); } };
+        pos.Children.Add(custom);
         _editor.Children.Add(Ui.Text("Position", 13, FontWeights.SemiBold));
         _editor.Children.Add(pos);
-        _editor.Children.Add(ColorRow("Text colour", l.TextColor, v => l.TextColor = v, ["#FFFFFFFF", "#FFE6EDF5", "#FFFFE16B", "#FF7FD7FF"]));
-        _editor.Children.Add(ColorRow("Accent colour (FPS and graph)", l.AccentColor, v => l.AccentColor = v, ["#FF2BE38B", "#FF4FA3FF", "#FFFF5C7A", "#FFFFB020", "#FFB57CFF"]));
+        if (l.CustomPosition)
+            _editor.Children.Add(Ui.Muted($"Dragged position: {l.X * 100:0.#}% across, {l.Y * 100:0.#}% down on {(l.Monitor is { } m ? m.Replace(@"\\.\", "") : "the game's display")}.", 11.5));
+
+        var rate = new SegmentedPicker([("4× / s", "250", "Smoothest (default)"), ("2× / s", "500", "Lighter"), ("1× / s", "1000", "Lightest")], S.RefreshMs.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        rate.Margin = new Thickness(0, 4, 0, 4);
+        rate.Changed += v => { S.RefreshMs = int.Parse(v, System.Globalization.CultureInfo.InvariantCulture); Save(); };
+        _editor.Children.Add(Ui.Text("Refresh (all layouts)", 13, FontWeights.SemiBold));
+        _editor.Children.Add(rate);
+
+        if (l.EffectiveTheme == "Custom")
+        {
+            _editor.Children.Add(ColorRow("Text colour", l.TextColor, v => l.TextColor = v, ["#FFFFFFFF", "#FFE6EDF5", "#FFFFE16B", "#FF7FD7FF"]));
+            _editor.Children.Add(ColorRow("Accent colour (FPS and graph)", l.AccentColor, v => l.AccentColor = v, ["#FF2BE38B", "#FF4FA3FF", "#FFFF5C7A", "#FFFFB020", "#FFB57CFF"]));
+        }
     }
 
     private UIElement Slider(string label, double value, double min, double max, double step, Action<double> set, Func<double, string> fmt)
@@ -254,9 +305,11 @@ public sealed class OverlayView : UserControl, IPageLifecycle
         var rnd = new Random(7);
         for (int i = 0; i < 160; i++) { t += (long)((i % 47 == 0 ? 9.5 : 4.0 + rnd.NextDouble() * 0.6) * 10_000); times.Add(t); }
         var hw = LiveStats.Last;
-        _preview.Update(new OverlayFrame(FrameTracker.Compute(0, PresentApi.Dxgi, times), CaptureState.Running, null,
-            hw?.CpuPercent ?? 34, hw?.GpuPercent ?? 92, hw?.RamUsedGb ?? 17.0, hw?.RamTotalGb ?? 31.2, hw?.CpuTempC, hw?.GpuTempC ?? 64,
-            "Preview (sample frame data)", GameWindowMode.Borderless));
+        var (gl, gt, vram, vramTotal) = OverlayService.BusiestGpu(MoneyTweaks.Core.Monitoring.SensorHub.Shared.Last);
+        var sample = FrameTracker.Compute(0, PresentApi.Dxgi, times);
+        _preview.Update(new OverlayFrame(sample, CaptureState.Running, null,
+            hw?.CpuPercent ?? 34, gl ?? hw?.GpuPercent ?? 92, hw?.RamUsedGb ?? 17.0, hw?.RamTotalGb ?? 31.2, hw?.CpuTempC, gt ?? hw?.GpuTempC ?? 64,
+            "Preview: sample frame data", GameWindowMode.Borderless) { VramUsedMb = vram, VramTotalMb = vramTotal, PingMs = OverlayPing.LastMs, PingNote = OverlayPing.Running ? OverlayPing.Note : "off", GraphMs = sample?.RecentMs });
     }
 
     // ---- hotkey ----------------------------------------------------------------------------------------------------
@@ -281,6 +334,27 @@ public sealed class OverlayView : UserControl, IPageLifecycle
         row.Children.Add(save);
         sec.Children.Add(row);
         sec.Children.Add(msg);
+
+        sec.Children.Add(Ui.Text("Move & resize hotkey", 13, FontWeights.SemiBold));
+        sec.Children.Add(Ui.Muted("Press it in game to drag the overlay anywhere or scale it from its corner; press it again (or Done) to go back to click-through. Leave empty for none.", 11.5));
+        var ebox = new TextBox { Text = S.EditHotkey, Width = 200, VerticalAlignment = VerticalAlignment.Center };
+        var emsg = Ui.Muted(OverlayService.EditHotkeyStatus, 12);
+        var esave = Ui.Btn("Save hotkey", (_, _) =>
+        {
+            var text = ebox.Text.Trim();
+            if (text.Length > 0 && !OverlayHotkey.TryParse(text, out _, out _)) { emsg.Text = $"\"{text}\" isn't a valid hotkey. Example: Ctrl+Shift+F11."; return; }
+            if (text.Length > 0 && string.Equals(text, S.Hotkey, StringComparison.OrdinalIgnoreCase)) { emsg.Text = "That's already the show/hide hotkey."; return; }
+            var old = S.EditHotkey;
+            S.EditHotkey = text;
+            if (!OverlayService.RegisterEditHotkey()) { S.EditHotkey = old; OverlayService.RegisterEditHotkey(); }
+            App.SaveSettingsSoon();
+            emsg.Text = OverlayService.EditHotkeyStatus;
+        }, margin: new Thickness(8, 0, 0, 0));
+        var erow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
+        erow.Children.Add(ebox);
+        erow.Children.Add(esave);
+        sec.Children.Add(erow);
+        sec.Children.Add(emsg);
         return sec;
     }
 
@@ -365,13 +439,15 @@ public sealed class OverlayView : UserControl, IPageLifecycle
     {
         var sec = Ui.Section("Compatibility, permissions and anti-cheat");
         sec.Children.Add(Ui.Muted(
-            "• FPS and frame time: measured from Windows' ETW Present events, the same source PresentMon uses (time between the game's Present calls). Works for DirectX 10, 11 and 12 (DXGI) and DirectX 9, in windowed, borderless and exclusive fullscreen alike.\n" +
-            "• Not measured: Vulkan and OpenGL games (they don't raise these events) and games that present through other APIs. The overlay says \"no frames from this app\" instead of guessing.\n" +
+            "• FPS, frame time and 1% low: measured from Windows' ETW Present events, the same source PresentMon uses (time between the game's Present calls). DirectX 10, 11 and 12 (DXGI) and DirectX 9 are read from their runtimes; OpenGL and Vulkan games (Geometry Dash is OpenGL) from the kernel's present events, the way PresentMon's \"Other\" runtime does. The 1% low is the slowest 1% of the last second's frames, so it needs a game running at a steady rate to be meaningful.\n" +
+            "• If an app shows \"no frames\", the game isn't presenting through any of these paths (or is minimized). The overlay never guesses.\n" +
+            "• Ping: ICMP round trip to the ping host in Settings (your internet latency), not the game server's ping, which games don't expose to other apps.\n" +
             "• Visibility: the overlay is a normal transparent window, so it's drawn over windowed and borderless fullscreen games. True exclusive fullscreen doesn't let other windows draw on top, so it may be hidden there (frame timing keeps working); use borderless fullscreen.\n" +
             "• Permissions: Windows only lets administrators and members of the Performance Log Users group read these events. Without that, FPS shows \"needs admin\" and the other readings still work.\n" +
-            "• Sensors: CPU temperature only if your firmware exposes it; GPU temperature on NVIDIA through the driver (NVAPI). Missing sensors are shown as n/a.\n" +
+            "• Sensors: from the Hardware Monitor's sampler. CPU temperature only if your firmware exposes it or HWiNFO / MSI Afterburner share it; GPU load, temperature and VRAM through NVIDIA's NVML (Windows counters for other GPUs). Missing sensors are shown as n/a.\n" +
             "• Anti-cheat: Money Tweaks never injects DLLs, hooks games or reads game memory. Some games or anti-cheat systems still hide or block third-party overlays, or ask you to close them; respect the game's rules.\n" +
-            "• Overhead: frame timing and sensors only run while the overlay is visible; the overlay refreshes 4 times a second.", 12.5));
+            "• Overhead: frame timing, sensors and ping only run while the overlay is visible; the overlay refreshes 1–4 times a second and animates at most 30 frames a second, only while a value changes.\n" +
+            "• Verified so far: frame capture of DirectX 12 (DXGI) and Direct3D 9 apps, sensors, ping, hotkeys and click-through on Windows 11 with an NVIDIA GPU and two displays. Not yet verified: the OpenGL/Vulkan path with a real game, and drawing over exclusive fullscreen.", 12.5));
         return sec;
     }
 }
