@@ -27,6 +27,8 @@
   <ItemGroup>
     <!-- Legacy UI recolours a copy of the theme's source before the first window opens. -->
     <EmbeddedResource Include="Themes\Theme.xaml" LogicalName="MoneyTweaks.Themes.Theme.xaml" />
+    <!-- Third-party license notices, shown in Settings & About so even the single-file .exe carries them. -->
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.md" LogicalName="MoneyTweaks.THIRD-PARTY-NOTICES.md" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />

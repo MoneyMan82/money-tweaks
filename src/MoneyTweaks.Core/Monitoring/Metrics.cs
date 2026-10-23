@@ -31,7 +31,7 @@ public sealed record UnsupportedReading(MetricGroup Group, string Device, string
 
 public static class Metric
 {
-    public const string Percent = "%", Celsius = "°C", Mhz = "MHz", Watts = "W", Gb = "GB", Mb = "MB", MBps = "MB/s", KBps = "KB/s", Rpm = "RPM", PerSec = "/s";
+    public const string Percent = "%", Celsius = "°C", Mhz = "MHz", Watts = "W", Gb = "GB", Mb = "MB", MBps = "MB/s", KBps = "KB/s", Rpm = "RPM", PerSec = "/s", Volts = "V";
 
     public static string Format(double? v, string unit)
     {
@@ -49,6 +49,7 @@ public static class Metric
             KBps => x >= 1024 ? (x / 1024).ToString("0.0", c) + " MB/s" : x.ToString("0", c) + " KB/s",
             Rpm => x.ToString("0", c) + " RPM",
             PerSec => x.ToString("0", c) + " /s",
+            Volts => x.ToString("0.000", c) + " V",
             _ => x.ToString("0.##", c) + (unit.Length > 0 ? " " + unit : ""),
         };
     }

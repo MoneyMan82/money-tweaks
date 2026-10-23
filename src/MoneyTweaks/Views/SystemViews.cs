@@ -351,14 +351,33 @@ public sealed class AboutView : UserControl, IPageLifecycle, IAnchorTarget
             Ui.Btn("Report an issue", (_, _) => Open("https://github.com/MoneyMan82/money-tweaks/issues"), margin: new Thickness(0, 10, 8, 0))));
         body.Children.Add(Ui.Card(ab));
 
+        var lic = Ui.Section("Open-source licenses", "Money Tweaks is MIT-licensed. It includes LibreHardwareMonitorLib and its dependencies DiskInfoToolkit and RAMSPDToolkit (Mozilla Public License 2.0), HidSharp (Apache License 2.0) and .NET libraries (MIT), used unmodified. Their source code is available from their projects.");
+        var notices = new TextBox { Text = ThirdPartyNotices(), IsReadOnly = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Height = 220, FontFamily = Ui.Res<System.Windows.Media.FontFamily>("MonoFont"), FontSize = 11.5, Visibility = Visibility.Collapsed, Margin = new Thickness(0, 10, 0, 0) };
+        lic.Children.Add(Ui.Row(
+            Ui.Btn("Show license notices", (s, _) => { notices.Visibility = notices.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; ((Button)s).Content = notices.Visibility == Visibility.Visible ? "Hide license notices" : "Show license notices"; }, margin: new Thickness(0, 10, 8, 0)),
+            Ui.Btn("LibreHardwareMonitor source", (_, _) => Open("https://github.com/LibreHardwareMonitor/LibreHardwareMonitor"), margin: new Thickness(0, 10, 8, 0))));
+        lic.Children.Add(notices);
+        body.Children.Add(Ui.Card(lic));
+
         var na = Ui.Section("Not included", "These would need things Money Tweaks deliberately avoids (kernel drivers, paid content), so they are not available:");
-        na.Children.Add(Ui.Muted("• Controller response curves: need a virtual-controller driver. Use Steam Input instead.\n• Console (PlayStation/Xbox) guides: out of scope for a Windows app.\n• Full temperature/fan sensors: need a kernel driver. Use HWiNFO or LibreHardwareMonitor.\n• Fan control and full motherboard sensors (Money Tweaks shows CPU temperature where the firmware exposes it and NVIDIA GPU temperature).", 12.5));
+        na.Children.Add(Ui.Muted("• Controller response curves: need a virtual-controller driver. Use Steam Input instead.\n• Console (PlayStation/Xbox) guides: out of scope for a Windows app.\n• Installing sensor drivers: CPU and motherboard temperatures, power and fans are read through LibreHardwareMonitor only when its PawnIO driver is already installed and Money Tweaks runs as administrator; Money Tweaks never installs a driver itself.\n• Fan control: sensors are read-only.", 12.5));
         body.Children.Add(Ui.Card(na));
 
         var dis = Ui.Section("Disclaimer");
         dis.Children.Add(Ui.Muted("Money Tweaks is an independent project. It is not affiliated with, endorsed by or derived from Microsoft or any game publisher. Tweaks change Windows settings; while every change is reversible and backed up, you use this software at your own risk under the MIT License. Benefits vary by hardware; no specific FPS gain is promised.", 12.5));
         body.Children.Add(Ui.Card(dis));
         Content = root;
+    }
+
+    /// <summary>THIRD-PARTY-NOTICES.md, embedded in the executable.</summary>
+    private static string ThirdPartyNotices()
+    {
+        try
+        {
+            using var s = typeof(App).Assembly.GetManifestResourceStream("MoneyTweaks.THIRD-PARTY-NOTICES.md");
+            return s is null ? "Notices not found." : new System.IO.StreamReader(s).ReadToEnd();
+        }
+        catch (Exception ex) { return "Couldn't read the notices: " + ex.Message; }
     }
 
     private static void Open(string url)

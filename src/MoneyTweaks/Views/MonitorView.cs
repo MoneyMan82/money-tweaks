@@ -49,7 +49,7 @@ public sealed partial class MonitorView : UserControl, IPageLifecycle
     public MonitorView()
     {
         var (root, body) = Ui.Page("Hardware Monitor & Health Center",
-            "Live CPU, GPU, memory, storage and network readings from Windows performance counters, NVIDIA's driver telemetry (NVML), Windows storage counters, and HWiNFO or MSI Afterburner when they run. Nothing is installed. A reading this PC can't provide is marked Not available with the reason, never estimated. Below: driver, Windows and stability health checks.",
+            "Live CPU, GPU, memory, storage and network readings from Windows performance counters, NVIDIA's driver telemetry (NVML), LibreHardwareMonitor, Windows storage counters, and HWiNFO or MSI Afterburner when they run. Nothing is installed. A reading this PC can't provide is marked Not available with the reason, never estimated. Below: driver, Windows and stability health checks.",
             HealthScanButton(), eyebrow: "Tools", icon: "\uE9D9");
 
         // ---- toolbar ----
@@ -242,6 +242,9 @@ public sealed partial class MonitorView : UserControl, IPageLifecycle
         var cpu = Section("cpu", "Processor", "\uE950", _inventory is { } i1 ? $"{i1.Cpu.Name} · {i1.Cpu.Cores} cores / {i1.Cpu.Threads} threads" : "CPU");
         var cpuGrid = Grid3();
         foreach (var m in Ms("cpu.load", "cpu.clock", "cpu.temp", "cpu.power", "cpu.limit")) cpuGrid.Children.Add(Card([m]));
+        // Per-CCD / per-core temperatures, physical core clocks and voltages (LibreHardwareMonitor with its driver).
+        foreach (var m in metrics.Where(m => m.Group == MetricGroup.Cpu && (m.Id.StartsWith("cpu.temp.", StringComparison.Ordinal) || m.Id.StartsWith("cpu.core.", StringComparison.Ordinal) || m.Id.StartsWith("cpu.volt.", StringComparison.Ordinal))))
+            cpuGrid.Children.Add(Card([m]));
         foreach (var u in unsupported.Where(u => u.Group == MetricGroup.Cpu)) cpuGrid.Children.Add(new UnsupportedCard(u, false));
         cpu.Children.Add(cpuGrid);
         var threads = metrics.Where(m => m.Id.StartsWith("cpu.t", StringComparison.Ordinal) && m.Id.EndsWith(".load", StringComparison.Ordinal))
@@ -266,7 +269,11 @@ public sealed partial class MonitorView : UserControl, IPageLifecycle
             var gm = _inventory?.Gpus.FirstOrDefault(x => x.Name == any.Device);
             var sec = Section(g, any.Device, "\uE7F8", gm is null ? "Graphics" : $"{gm.Vendor} · {(gm.VramGb is { } v ? $"{v:0.#} GB VRAM" : "shared memory")}{(gm.Driver.Length > 0 ? " · driver " + gm.Driver : "")}");
             var grid = Grid3();
-            foreach (var m in Ms(g + ".load", g + ".3d", g + ".temp", g + ".clock", g + ".memclock", g + ".power", g + ".vram", g + ".fan")) grid.Children.Add(Card([m], title: m.Label));
+            string[] main = [g + ".load", g + ".3d", g + ".temp", g + ".clock", g + ".memclock", g + ".power", g + ".vram", g + ".fan"];
+            foreach (var m in Ms(main)) grid.Children.Add(Card([m], title: m.Label));
+            // Hot spot, memory junction, fan RPM, voltages and other rails (LibreHardwareMonitor).
+            foreach (var m in metrics.Where(m => m.Id.StartsWith(g + ".", StringComparison.Ordinal) && !main.Contains(m.Id) && !m.Id.EndsWith(".thermal", StringComparison.Ordinal)))
+                grid.Children.Add(Card([m], title: m.Label));
             foreach (var u in unsupported.Where(u => u.Group == MetricGroup.Gpu && u.Device == any.Device)) grid.Children.Add(new UnsupportedCard(u, false));
             sec.Children.Add(grid);
             var reasons = Ui.Muted("", 12);
@@ -323,7 +330,7 @@ public sealed partial class MonitorView : UserControl, IPageLifecycle
 
         // Fans
         var fans = metrics.Where(m => m.Group == MetricGroup.Fans).ToList();
-        var fanSec = Section("fans", "Fans", "\uE9CA", fans.Count > 0 ? $"{fans.Count} fan readings from HWiNFO" : "Motherboard and case fans");
+        var fanSec = Section("fans", "Fans & motherboard", "\uE9CA", fans.Count > 0 ? $"{fans.Count} fan and board readings" : "Motherboard and case fans, board temperatures");
         var fanGrid = Grid3();
         foreach (var m in fans) fanGrid.Children.Add(Card([m]));
         foreach (var u in unsupported.Where(u => u.Group == MetricGroup.Fans)) fanGrid.Children.Add(new UnsupportedCard(u, false));
@@ -338,8 +345,29 @@ public sealed partial class MonitorView : UserControl, IPageLifecycle
         sysBody.Children.Add(_timer);
         sysBody.Children.Add(_cost);
         sys.Children.Add(Ui.Card(sysBody, new Thickness(0, 0, 12, 12)));
+        sys.Children.Add(Ui.Card(SensorSources(), new Thickness(0, 0, 12, 12)));
 
         if (Motion.Enabled) { Motion.Stagger(_overview); Motion.Stagger(_pinned); }
+    }
+
+    /// <summary>LibreHardwareMonitor switch and status, with what its driver path needs on this PC.</summary>
+    private UIElement SensorSources()
+    {
+        var sp = new StackPanel();
+        var sw = new ToggleButton { Style = Ui.Res<Style>("Switch"), IsChecked = S.UseLibreHardwareMonitor, VerticalAlignment = VerticalAlignment.Center };
+        sw.Click += (_, _) => { S.UseLibreHardwareMonitor = sw.IsChecked == true; App.SaveSettingsSoon(); };
+        sp.Children.Add(SwitchLine(sw, "Use LibreHardwareMonitor sensors",
+            "Open-source sensor library (MPL-2.0). Adds GPU hot spot, memory junction and fan RPM, AMD GPU sensors and, with its PawnIO driver, CPU package and core temperatures, power, clocks, voltages and motherboard sensors. Read-only: it never changes fans or clocks."));
+        sp.Children.Add(Ui.Muted(Hub.LhmStatus, 12));
+        var reason = Core.Monitoring.LhmSource.DriverReason;
+        sp.Children.Add(Ui.Muted(reason is null ? "CPU and motherboard sensors: available (PawnIO driver active, running as administrator)." : "CPU and motherboard sensors: " + reason + ".", 12));
+        if (Core.Monitoring.LhmSource.PawnIoInstalled && !Admin.IsElevated)
+        {
+            var b = Ui.Btn("Restart as administrator", (_, _) => { if (Admin.RestartElevated()) { App.ExitRequested = true; Application.Current.Shutdown(); } }, "GoldButton", new Thickness(0, 8, 0, 0));
+            b.HorizontalAlignment = HorizontalAlignment.Left;
+            sp.Children.Add(b);
+        }
+        return sp;
     }
 
     private static string MemorySummary(HardwareInventory inv)

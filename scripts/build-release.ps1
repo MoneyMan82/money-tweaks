@@ -50,6 +50,7 @@ $exe = Join-Path $publish 'MoneyTweaks.exe'
 $built = (Get-Item $exe).VersionInfo.FileVersion
 if (-not $built.StartsWith($version)) { throw "Built MoneyTweaks.exe reports $built but the release is $version" }
 Copy-Item (Join-Path $root 'LICENSE') $publish
+Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.md') $publish   # MPL-2.0 / Apache-2.0 notices for bundled libraries
 Copy-Item (Join-Path $root 'README.md') $publish
 
 # Portable ZIP

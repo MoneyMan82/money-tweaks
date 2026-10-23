@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.59 – 2026-10-23
+- **LibreHardwareMonitor sensors** (LibreHardwareMonitorLib 0.9.6 from NuGet, MPL-2.0), read through the existing sensor
+  hub, so the Hardware Monitor, dashboard, performance overlay and compact window all get them from one sampler:
+  - GPU hot spot and memory junction temperatures, fan RPM and core voltage on NVIDIA; temperature, clocks, power and
+    voltages on AMD GPUs (including integrated graphics). These need no driver.
+  - CPU package and per-CCD / per-core temperatures, package power, physical core clocks, measured voltages, and
+    motherboard temperatures and fans: read only when the PawnIO driver the library uses is installed and Money Tweaks
+    runs as administrator. Money Tweaks never installs a driver. Without it the library reports placeholders
+    (0 °C, 0 W, 1.55 V), so those are never shown; the monitor says exactly what's missing and offers "Restart as
+    administrator" only when the driver is installed and elevation would help.
+  - Light on the CPU: CPU sensors every sample, GPUs every 2–3 s (NVIDIA's refresh is the costly one); memory, storage,
+    network, controllers and PSUs are left to Money Tweaks' own readers or not opened at all. The library is closed after a
+    minute with nothing watching and on exit. Read-only: it never controls fans or clocks.
+  - Can be turned off in Hardware Monitor → System → Sensor sources.
+- **Third-party notices**: THIRD-PARTY-NOTICES.md (MPL-2.0 for LibreHardwareMonitorLib, DiskInfoToolkit and RAMSPDToolkit
+  with links to their source, Apache-2.0 for HidSharp, MIT for .NET libraries) ships next to the app in the zip and
+  installer, and is shown in Settings & About → Open-source licenses (so the single .exe carries it too).
+
 ## 1.58 – 2026-10-23
 - **Performance Overlay upgraded into a gaming HUD** (same page, same hotkey, existing settings carried over):
   - Readings: FPS, frame time, 1% low, a frame-time graph (last two seconds, spikes highlighted), CPU usage and

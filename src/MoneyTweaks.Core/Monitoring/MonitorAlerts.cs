@@ -13,6 +13,8 @@ public sealed class MonitorSettings
     public List<string> Pinned { get; set; } = ["cpu.load", "cpu.temp", "gpu0.load", "gpu0.temp", "mem.load"];
     /// <summary>Keep recording history while other pages are open (after the monitor was opened once this session).</summary>
     public bool RecordInBackground { get; set; } = true;
+    /// <summary>Read sensors through LibreHardwareMonitorLib too (GPU extras always; CPU and motherboard with its PawnIO driver).</summary>
+    public bool UseLibreHardwareMonitor { get; set; } = true;
     /// <summary>Write every sample to a CSV file under the logs folder while on.</summary>
     public bool LogToFile { get; set; }
     /// <summary>The compact always-on-top window was open when Money Tweaks closed (reopened at start).</summary>

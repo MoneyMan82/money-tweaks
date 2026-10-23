@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Management;
 using System.Net.NetworkInformation;
 using System.Text;
+using LibreHardwareMonitor.Hardware;
 using MoneyTweaks.Core.Features;
 using MoneyTweaks.Core.Sys;
 using MoneyTweaks.Core.Tuning;
@@ -20,8 +21,11 @@ public sealed record SensorFrame(DateTime Utc, IReadOnlyDictionary<string, doubl
 ///
 /// Sources (all user-mode, nothing installed): Windows performance counters (CPU load, per-core load and effective clock,
 /// performance limit, disks, GPU engines and adapter memory), GlobalMemoryStatusEx, IP statistics, NVIDIA's NVML (GPU
-/// temperature, clocks, power, VRAM, fan, throttle reasons), Windows storage reliability counters (drive temperatures, admin
-/// only), firmware ACPI thermal zones, and the shared memory MSI Afterburner and HWiNFO publish when they run.
+/// temperature, clocks, power, VRAM, fan, throttle reasons), LibreHardwareMonitorLib (GPU hot spot / memory junction / fan
+/// RPM, AMD GPU sensors, and CPU package/core temperatures, power, clocks and voltages plus motherboard sensors when its
+/// PawnIO driver is installed and Money Tweaks runs as admin; see <see cref="LhmSource"/>), Windows storage reliability
+/// counters (drive temperatures, admin only), firmware ACPI thermal zones, and the shared memory MSI Afterburner and HWiNFO
+/// publish when they run.
 ///
 /// Sampling runs on a background timer that never overlaps itself and only while something is subscribed, so the UI thread
 /// never waits on a sensor and a closed monitor costs nothing.
@@ -77,6 +81,13 @@ public sealed class SensorHub : IDisposable
     private List<HwInfoReading>? _hwinfo;
     private string _cpuTop = "";
     private DateTime _cpuTopAt = DateTime.MinValue;
+    private readonly LhmSource _lhm = new();
+    private List<(HardwareType hw, string device, SensorType type, string name, double value)> _lhmNow = [];
+    private Timer? _idleClose;
+    private const string LhmSrc = "LibreHardwareMonitor";
+
+    /// <summary>What LibreHardwareMonitor is doing (devices, driver state), for the monitor page.</summary>
+    public string LhmStatus => Settings().UseLibreHardwareMonitor ? _lhm.Status : "Turned off in the Hardware Monitor settings.";
     private StreamWriter? _log;
     private List<string>? _logIds;
     private int _logRows;
@@ -100,7 +111,14 @@ public sealed class SensorHub : IDisposable
         lock (_gate)
         {
             _users.Remove(user);
-            if (_users.Count == 0) { _running = false; _timer?.Change(Timeout.Infinite, Timeout.Infinite); }
+            if (_users.Count == 0)
+            {
+                _running = false;
+                _timer?.Change(Timeout.Infinite, Timeout.Infinite);
+                // Nothing is watching: release LibreHardwareMonitor's driver and GPU handles after a minute (reopened on demand).
+                _idleClose ??= new Timer(_ => { bool idle; lock (_gate) idle = _users.Count == 0; if (idle) _lhm.Close(); });
+                _idleClose.Change(60_000, Timeout.Infinite);
+            }
         }
     }
 
@@ -231,6 +249,8 @@ public sealed class SensorHub : IDisposable
         var v = new Dictionary<string, double?>();
         var flags = new Dictionary<string, string>();
         if (now - _extrasAt > TimeSpan.FromSeconds(5)) { _hwinfo = HwInfo.Readings(); _extrasAt = now; }
+        if (Settings().UseLibreHardwareMonitor) _lhmNow = _lhm.Read();
+        else if (_lhmNow.Count > 0) { _lhmNow = []; _lhm.Close(); }
 
         SampleCpu(v, flags);
         SampleMemory(v);
@@ -238,6 +258,7 @@ public sealed class SensorHub : IDisposable
         SampleDisks(v, now);
         var (down, up) = SampleNetwork(v, now);
         SampleHwInfoExtras(v);
+        SampleBoard(v);
 
         var (total, avail, load) = MemoryInfo.Status();
         int procs = 0;
@@ -315,12 +336,32 @@ public sealed class SensorHub : IDisposable
         }
         else Missing(MetricGroup.Cpu, dev, "Usage", "Windows performance counters are unavailable (they may be disabled or corrupt; 'lodctr /r' rebuilds them).");
 
-        var t = _legacy?.CpuTemperature();
-        if (t is not null) { v["cpu.temp"] = t; Define("cpu.temp", MetricGroup.Cpu, dev, "Temperature", Metric.Celsius, HardwareMonitor.CpuTempSource(t)); }
-        else Missing(MetricGroup.Cpu, dev, "Temperature", "Your firmware doesn't expose it to Windows, and reading it directly needs a kernel driver (Money Tweaks installs none). Start HWiNFO with Shared Memory Support, or MSI Afterburner, and it appears here.");
+        // Package temperature: LibreHardwareMonitor (AMD Tctl/Tdie, Intel package) when its driver path is active, else the
+        // firmware / Afterburner / HWiNFO chain.
+        var lt = Lhm(HardwareType.Cpu, SensorType.Temperature, "Core (Tctl/Tdie)", "CPU Package", "Core (Tdie)", "Core (Tctl)", "Core Max");
+        var t = lt ?? _legacy?.CpuTemperature();
+        if (t is not null) { v["cpu.temp"] = t; Define("cpu.temp", MetricGroup.Cpu, dev, "Temperature", Metric.Celsius, lt is not null ? LhmSrc + " (PawnIO driver)" : HardwareMonitor.CpuTempSource(t)); }
+        else Missing(MetricGroup.Cpu, dev, "Temperature", DriverMissing("Your firmware doesn't expose it to Windows. "));
 
-        if (HwInfo.CpuPower(_hwinfo) is { } pw) { v["cpu.power"] = pw; Define("cpu.power", MetricGroup.Cpu, dev, "Package power", Metric.Watts, "HWiNFO shared memory"); }
-        else Missing(MetricGroup.Cpu, dev, "Package power", "Windows doesn't report CPU power without a kernel driver. HWiNFO with Shared Memory Support provides it.");
+        var lp = Lhm(HardwareType.Cpu, SensorType.Power, "Package");
+        if ((lp ?? HwInfo.CpuPower(_hwinfo)) is { } pw) { v["cpu.power"] = pw; Define("cpu.power", MetricGroup.Cpu, dev, "Package power", Metric.Watts, lp is not null ? LhmSrc + " (PawnIO driver)" : "HWiNFO shared memory"); }
+        else Missing(MetricGroup.Cpu, dev, "Package power", DriverMissing("Windows doesn't report CPU power. "));
+
+        // Everything else LibreHardwareMonitor reads on the CPU (only with its driver): per-CCD / per-core temperatures,
+        // physical core clocks and measured voltages (requested VIDs are left out: they aren't measurements).
+        foreach (var r in _lhmNow.Where(r => r.hw == HardwareType.Cpu))
+        {
+            string slug = LhmSource.Slug(r.name);
+            switch (r.type)
+            {
+                case SensorType.Temperature when r.value != lt:
+                    v["cpu.temp." + slug] = r.value; Define("cpu.temp." + slug, MetricGroup.Cpu, dev, r.name + " temperature", Metric.Celsius, LhmSrc + " (PawnIO driver)"); break;
+                case SensorType.Clock when r.name.StartsWith("Core #", StringComparison.Ordinal) && !r.name.Contains("Effective"):
+                    v["cpu.core." + slug] = r.value; Define("cpu.core." + slug, MetricGroup.Cpu, dev, r.name + " clock", Metric.Mhz, LhmSrc + " (PawnIO driver)"); break;
+                case SensorType.Voltage when !r.name.Contains("VID"):
+                    v["cpu.volt." + slug] = r.value; Define("cpu.volt." + slug, MetricGroup.Cpu, dev, r.name + " voltage", Metric.Volts, LhmSrc + " (PawnIO driver)"); break;
+            }
+        }
     }
 
     private void SampleMemory(Dictionary<string, double?> v)
@@ -372,22 +413,49 @@ public sealed class SensorHub : IDisposable
 
             double? temp = r?.TempC;
             string tempSrc = nvSrc;
+            if (temp is null && LhmGpu(name, SensorType.Temperature, "GPU Core") is { } lgt) { temp = lgt; tempSrc = LhmSrc; }
             if (temp is null && dx?.VendorId != 0x10DE)
             {
                 temp = HwInfoGpu("GPU Temperature", HwInfo.TypeTemperature); tempSrc = "HWiNFO shared memory";
                 if (temp is null && _gpus.Count(g => g.dx?.VendorId != 0x10DE) == 1) { temp = Afterburner.MonitoringValue(Afterburner.SrcGpuTemperature, cpu: false); tempSrc = "MSI Afterburner"; }
             }
             if (temp is not null) { v[$"{p}.temp"] = temp; Define($"{p}.temp", MetricGroup.Gpu, name, "Temperature", Metric.Celsius, tempSrc); }
-            else Missing(MetricGroup.Gpu, name, "Temperature", r is null ? "Only NVIDIA GPUs report it to Money Tweaks directly. For AMD and Intel GPUs, start HWiNFO with Shared Memory Support or MSI Afterburner." : "The driver didn't report a temperature for this GPU.");
+            else Missing(MetricGroup.Gpu, name, "Temperature", r is null ? "Neither NVIDIA's NVML nor LibreHardwareMonitor gets a core temperature for this GPU from its driver (other temperatures it does report are shown separately). HWiNFO or MSI Afterburner may provide it." : "The driver didn't report a temperature for this GPU.");
 
-            double? clock = r?.CoreMhz ?? (r is null ? HwInfoGpu("GPU Clock", 6) : null);
-            if (clock is not null) { v[$"{p}.clock"] = clock; Define($"{p}.clock", MetricGroup.Gpu, name, "Core clock", Metric.Mhz, r is not null ? nvSrc : "HWiNFO shared memory"); }
-            else Missing(MetricGroup.Gpu, name, "Core clock", "Not reported for this GPU (NVIDIA via NVML, others via HWiNFO).");
-            if (r?.MemMhz is { } mm) { v[$"{p}.memclock"] = mm; Define($"{p}.memclock", MetricGroup.Gpu, name, "Memory clock", Metric.Mhz, nvSrc); }
+            var lClock = r?.CoreMhz is null ? LhmGpu(name, SensorType.Clock, "GPU Core") : null;
+            double? clock = r?.CoreMhz ?? lClock ?? (r is null ? HwInfoGpu("GPU Clock", 6) : null);
+            if (clock is not null) { v[$"{p}.clock"] = clock; Define($"{p}.clock", MetricGroup.Gpu, name, "Core clock", Metric.Mhz, r?.CoreMhz is not null ? nvSrc : lClock is not null ? LhmSrc : "HWiNFO shared memory"); }
+            else Missing(MetricGroup.Gpu, name, "Core clock", "Not reported for this GPU (NVIDIA via NVML, AMD/Intel via LibreHardwareMonitor or HWiNFO).");
+            var lMem = r?.MemMhz is null ? LhmGpu(name, SensorType.Clock, "GPU Memory") : null;
+            if ((r?.MemMhz ?? lMem) is { } mm) { v[$"{p}.memclock"] = mm; Define($"{p}.memclock", MetricGroup.Gpu, name, "Memory clock", Metric.Mhz, r?.MemMhz is not null ? nvSrc : LhmSrc); }
 
-            double? power = r?.PowerW ?? (r is null ? HwInfoGpu("GPU Power", HwInfo.TypePower) ?? HwInfoGpu("Total Board Power", HwInfo.TypePower) ?? HwInfoGpu("GPU ASIC Power", HwInfo.TypePower) : null);
-            if (power is not null) { v[$"{p}.power"] = power; Define($"{p}.power", MetricGroup.Gpu, name, "Power", Metric.Watts, r is not null ? nvSrc : "HWiNFO shared memory", r?.PowerLimitW); }
-            else Missing(MetricGroup.Gpu, name, "Power", "Not reported for this GPU (NVIDIA via NVML, others via HWiNFO).");
+            var lPower = r?.PowerW is null ? LhmGpu(name, SensorType.Power, "GPU Package", "GPU Core") : null;
+            double? power = r?.PowerW ?? lPower ?? (r is null ? HwInfoGpu("GPU Power", HwInfo.TypePower) ?? HwInfoGpu("Total Board Power", HwInfo.TypePower) ?? HwInfoGpu("GPU ASIC Power", HwInfo.TypePower) : null);
+            if (power is not null) { v[$"{p}.power"] = power; Define($"{p}.power", MetricGroup.Gpu, name, "Power", Metric.Watts, r?.PowerW is not null ? nvSrc : lPower is not null ? LhmSrc + (LhmGpu(name, SensorType.Power, "GPU Package") is null ? " (the AMD driver's \"GPU Core\" power sensor)" : "") : "HWiNFO shared memory", r?.PowerLimitW); }
+            else Missing(MetricGroup.Gpu, name, "Power", "Not reported for this GPU (NVIDIA via NVML, AMD/Intel via LibreHardwareMonitor or HWiNFO).");
+
+            // The rest LibreHardwareMonitor reads for this GPU: hot spot and memory junction temperatures, fan RPM, voltage,
+            // other clocks and power rails.
+            foreach (var x in _lhmNow.Where(x => x.hw is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel && x.device == name))
+            {
+                string slug = LhmSource.Slug(x.name.Replace("GPU ", ""));
+                string label = x.name.StartsWith("GPU ", StringComparison.Ordinal) ? x.name[4..] : x.name;
+                foreach (var suffix in new[] { " Voltage", " Temperature" }) if (label.EndsWith(suffix, StringComparison.Ordinal)) label = label[..^suffix.Length];
+                switch (x.type)
+                {
+                    case SensorType.Temperature when x.name != "GPU Core":
+                        v[$"{p}.temp.{slug}"] = x.value; Define($"{p}.temp.{slug}", MetricGroup.Gpu, name, label + " temperature", Metric.Celsius, LhmSrc); break;
+                    case SensorType.Fan:
+                        v[$"{p}.fanrpm.{slug}"] = x.value; Define($"{p}.fanrpm.{slug}", MetricGroup.Gpu, name, label + " speed", Metric.Rpm, LhmSrc); break;
+                    case SensorType.Voltage:
+                        v[$"{p}.volt.{slug}"] = x.value; Define($"{p}.volt.{slug}", MetricGroup.Gpu, name, label + " voltage", Metric.Volts, LhmSrc); break;
+                    case SensorType.Clock when x.name is not ("GPU Core" or "GPU Memory"):
+                        v[$"{p}.clock.{slug}"] = x.value; Define($"{p}.clock.{slug}", MetricGroup.Gpu, name, label + " clock", Metric.Mhz, LhmSrc); break;
+                    case SensorType.Power when lPower is null || x.value != lPower:
+                        if (r?.PowerW is not null && x.name == "GPU Package") break;   // NVML already reports board power
+                        v[$"{p}.power.{slug}"] = x.value; Define($"{p}.power.{slug}", MetricGroup.Gpu, name, label + " power", Metric.Watts, LhmSrc); break;
+                }
+            }
             if (r?.PowerLimitW is { } plw) flags[$"{p}.powerlimit"] = plw.ToString("0", CultureInfo.InvariantCulture);
 
             double? vramUsed = r?.VramUsedMb, vramTotal = r?.VramTotalMb ?? (dx is { DedicatedVideoMemory: > 0 } ? dx.DedicatedVideoMemory / 1048576.0 : null);
@@ -497,7 +565,8 @@ public sealed class SensorHub : IDisposable
     {
         if (_hwinfo is null)
         {
-            Missing(MetricGroup.Fans, "", "Fan speeds", "Motherboard fan speeds need a kernel driver to read. HWiNFO with Shared Memory Support provides them; GPU fans are shown with the GPU.");
+            if (!_lhmNow.Any(r => r.hw is HardwareType.Motherboard or HardwareType.SuperIO && r.type == SensorType.Fan))
+                Missing(MetricGroup.Fans, "", "Fan speeds", DriverMissing("Motherboard fans are read through the board's Super I/O chip. ") + " GPU fans are shown with the GPU.");
             return;
         }
         foreach (var r in _hwinfo)
@@ -515,6 +584,40 @@ public sealed class SensorHub : IDisposable
             }
         }
     }
+
+    /// <summary>Motherboard (Super I/O) temperatures and fans from LibreHardwareMonitor, only with its driver.</summary>
+    private void SampleBoard(Dictionary<string, double?> v)
+    {
+        foreach (var r in _lhmNow.Where(r => r.hw is HardwareType.Motherboard or HardwareType.SuperIO))
+        {
+            string id = (r.type == SensorType.Fan ? "fan.lhm." : "board.temp.") + Short(r.device + "|" + r.name);
+            if (r.type == SensorType.Fan) { v[id] = r.value; Define(id, MetricGroup.Fans, r.device, r.name, Metric.Rpm, LhmSrc + " (PawnIO driver)"); }
+            else if (r.type == SensorType.Temperature) { v[id] = r.value; Define(id, MetricGroup.Fans, r.device, r.name + " temperature", Metric.Celsius, LhmSrc + " (PawnIO driver)"); }
+        }
+    }
+
+    /// <summary>A LibreHardwareMonitor CPU/board reading by sensor name (first match), or null.</summary>
+    private double? Lhm(HardwareType hw, SensorType type, params string[] names)
+    {
+        foreach (var n in names)
+            foreach (var r in _lhmNow)
+                if (r.hw == hw && r.type == type && r.name == n) return r.value;
+        return null;
+    }
+
+    /// <summary>A LibreHardwareMonitor reading of the GPU with this name (DXGI and the library use the same adapter names).</summary>
+    private double? LhmGpu(string device, SensorType type, params string[] names)
+    {
+        foreach (var n in names)
+            foreach (var r in _lhmNow)
+                if (r.hw is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel && r.device == device && r.type == type && r.name == n) return r.value;
+        return null;
+    }
+
+    /// <summary>Why a driver-level reading is missing, and what would provide it.</summary>
+    private string DriverMissing(string lead) =>
+        lead + (Settings().UseLibreHardwareMonitor ? "Through LibreHardwareMonitor it " + LhmSource.DriverReason + "." : "LibreHardwareMonitor is turned off in the monitor settings.")
+        + " HWiNFO with Shared Memory Support or MSI Afterburner can also share it.";
 
     /// <summary>Stable short id for a name (FNV-1a, 8 hex digits).</summary>
     public static string Short(string s)
@@ -608,6 +711,8 @@ public sealed class SensorHub : IDisposable
     {
         lock (_gate) { _disposed = true; _running = false; _timer?.Dispose(); _timer = null; }
         CloseLog();
+        _idleClose?.Dispose();
+        _lhm.Dispose();
         _legacy?.Dispose(); _procs?.Dispose(); _pageReads?.Dispose();
     }
 }

@@ -100,6 +100,20 @@ public class MonitoringTests
     }
 
     [Fact]
+    public void Third_party_notices_cover_every_bundled_library()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir is not null && !File.Exists(Path.Combine(dir, "THIRD-PARTY-NOTICES.md"))) dir = Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        var text = File.ReadAllText(Path.Combine(dir!, "THIRD-PARTY-NOTICES.md"));
+        foreach (var name in new[] { "LibreHardwareMonitorLib 0.9.6", "DiskInfoToolkit", "RAMSPDToolkit", "HidSharp", "Mozilla Public License Version 2.0", "Apache License", "github.com/LibreHardwareMonitor/LibreHardwareMonitor" })
+            Assert.Contains(name, text);
+        // The version in the notices must match the referenced package.
+        var csproj = File.ReadAllText(Path.Combine(dir!, "src", "MoneyTweaks.Core", "MoneyTweaks.Core.csproj"));
+        Assert.Contains("\"LibreHardwareMonitorLib\" Version=\"0.9.6\"", csproj);
+    }
+
+    [Fact]
     public void Gpu_clock_limit_reasons_are_named()
     {
         Assert.Empty(Nvml.Reasons(Nvml.ReasonIdle));
@@ -160,6 +174,12 @@ public class MonitoringTests
         foreach (var m in hub.Metrics.Where(m => m.Max is not null && m.Unit == Metric.Percent))
             if (first.Values.GetValueOrDefault(m.Id) is { } p) Assert.InRange(p, 0, 100);
         Assert.All(hub.Unsupported, u => Assert.False(string.IsNullOrWhiteSpace(u.Reason)));
+        // No placeholder zeros: a temperature, clock, power or voltage reading is always above zero.
+        foreach (var m in hub.Metrics.Where(m => m.Unit is Metric.Celsius or Metric.Mhz or Metric.Watts or Metric.Volts))
+            if (first.Values.GetValueOrDefault(m.Id) is { } x) Assert.True(x > 0, $"{m.Id} ({m.Source}) = {x}");
+        // Without LibreHardwareMonitor's driver path, none of its CPU or motherboard readings may appear.
+        if (!LhmSource.DriverActive)
+            Assert.DoesNotContain(hub.Metrics, m => m.Source.Contains("PawnIO"));
         Assert.True(hub.History.Count >= 2);
     }
 }
