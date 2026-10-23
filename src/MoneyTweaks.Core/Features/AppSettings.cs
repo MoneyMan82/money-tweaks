@@ -66,6 +66,8 @@ public sealed class AppSettings
     public bool LegacyUi { get; set; }
     /// <summary>Tweak Truth Index: the user allowed sharing sanitized measured results with the Community Hub. Off by default.</summary>
     public bool ShareEvidence { get; set; }
+    /// <summary>Hardware Monitor: refresh rate, history range, pinned metrics, logging, compact window and warnings.</summary>
+    public Monitoring.MonitorSettings Monitor { get; set; } = new();
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

@@ -59,11 +59,20 @@ public sealed class HardwareMonitor : IDisposable
         if (DateTime.UtcNow - _nicsAt > TimeSpan.FromSeconds(15)) { _nics = NetworkInterface.GetAllNetworkInterfaces(); _nicsAt = DateTime.UtcNow; }
         foreach (var n in _nics)
         {
-            if (n.OperationalStatus != OperationalStatus.Up || n.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+            if (!CountsTraffic(n)) continue;
             try { var s = n.GetIPStatistics(); rx += s.BytesReceived; tx += s.BytesSent; } catch { }
         }
         return (rx, tx);
     }
+
+    /// <summary>
+    /// True for an adapter whose traffic should be counted: up, not loopback or a tunnel, and not one of the per-adapter
+    /// filter-driver layers Windows also lists ("Ethernet-QoS Packet Scheduler-0000", "…-WFP Native MAC Layer LightWeight
+    /// Filter-0000"), which carry the same bytes as the adapter itself and would count them two to four times over.
+    /// </summary>
+    public static bool CountsTraffic(NetworkInterface n) =>
+        n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType is not (NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel)
+        && !System.Text.RegularExpressions.Regex.IsMatch(n.Name, @"-\d{4}$");
 
     private double? GpuPercent()
     {
@@ -102,6 +111,9 @@ public sealed class HardwareMonitor : IDisposable
         // when they run (their documented shared memory; they read the sensor with their own drivers, Money Tweaks installs none).
         return Tuning.Afterburner.CpuTemperature() ?? Tuning.HwInfo.CpuTemperature();
     }
+
+    /// <summary>CPU temperature from the firmware (ACPI), MSI Afterburner or HWiNFO, or null. Cached 5 s.</summary>
+    public double? CpuTemperature() => CpuTemp();
 
     /// <summary>Where the CPU temperature comes from right now.</summary>
     public static string CpuTempSource(double? t) => t is null ? "not available"

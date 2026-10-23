@@ -62,6 +62,7 @@ public partial class App : Application
         Controls.Motion.InstallSmoothScrolling(); // smooth wheel scrolling in every scrollable area (off with reduced motion)
         Controls.Motion.InstallProgressGlide();   // determinate progress bars glide to new values
         Controls.Motion.InstallSquareWindows();   // square window corners on Windows 11, like the rest of the design
+        MonitorService.Init();                    // sensor hub settings, CSV logging, warning toasts, compact window
         Log.Info($"Money Tweaks {Version} ({Environment.ProcessPath}) started on {OsInfo.ProductName} (admin: {Admin.IsElevated})");
 
         UpdateService.CleanupAfterUpdate();
@@ -138,6 +139,7 @@ public partial class App : Application
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile
         DisplayService.Shutdown(); // drops an unconfirmed test resolution
         if (FanCurveService.Running) FanCurveService.Stop(); // the curve only runs while Money Tweaks does: fan back to automatic
+        MonitorService.Shutdown(); // closes the compact window and flushes the sensor log
         TrayIcon.Dispose();
         Settings.Save();
         base.OnExit(e);

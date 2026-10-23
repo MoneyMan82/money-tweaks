@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.57 – 2026-10-23
+- **Hardware Monitor upgraded into a monitoring center** (same page, same Health Center below it):
+  - CPU: total and per-logical-processor usage and effective clock (Windows' own frequency counters), the performance
+    limit Windows reports (thermal/power limiting), temperature and package power where this PC provides them.
+  - GPU (every adapter): usage, 3D engine, temperature, core and memory clock, power against the power limit, VRAM used
+    against total, fan speed and the driver's current clock limiters (NVIDIA through NVML, the read-only telemetry library
+    that ships with the driver; other GPUs through Windows counters and HWiNFO / MSI Afterburner when they run).
+  - Memory in use, used and available, commit charge and page reads; every drive's active time, read/write throughput,
+    response time, temperature (Windows shares it with admins) and free space per volume; every network adapter's download
+    and upload; fan speeds from HWiNFO.
+  - Sensors are discovered at start and re-checked (a tool started later adds its readings). Anything this PC can't report
+    is shown as Not available with the reason. Nothing is estimated, and no driver is installed.
+- **Live graphs** with 1-minute, 5-minute, 15-minute and 1-hour history, hover readouts (time and every series), current /
+  min / average / max and units on every reading; graphs glide as samples arrive, rescale smoothly and wipe in on a new range.
+- **Compact overview, pinned favourites and collapsible detail sections** (CPU with every thread, each GPU, memory with
+  the installed modules, each drive, each adapter, fans, warnings, hardware models, system). Open/closed state is kept.
+- **Warnings**, configurable: high CPU / GPU / drive temperature, CPU performance limiting, GPU thermal throttling, memory
+  pressure and commit charge, sustained high CPU usage (with the busiest processes), sustained upload and a drive busy all
+  the time. The reading's card is highlighted, the warning is listed at the top, and a notice appears on other pages.
+- **Refresh every 0.5, 1, 2 or 5 s, pause/resume, CSV export of the recorded history, continuous CSV logging**, and an
+  optional **compact always-on-top window** with your pinned readings.
+- One shared background sampler now feeds the monitor, the dashboard gauges and the in-game overlay (a few milliseconds per
+  sample, off the UI thread, only while something is shown). The dashboard and overlay no longer count network traffic two
+  to four times on adapters that Windows also lists as filter-driver layers.
+
 ## 1.56 – 2026-10-22
 - **Square corners everywhere.** Every card, panel, button, input, dropdown, navigation item, dialog, popup, menu, tag,
   tooltip, progress bar, switch, slider, radio button and expander is now sharp and angular (0 rounded elements left in

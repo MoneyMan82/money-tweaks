@@ -7,52 +7,51 @@ using MoneyTweaks.Core.Catalog;
 using MoneyTweaks.Core.Engine;
 using MoneyTweaks.Core.Features;
 using MoneyTweaks.Core.Model;
+using MoneyTweaks.Core.Monitoring;
 using MoneyTweaks.Core.Sys;
 using MoneyTweaks.ViewModels;
 
 namespace MoneyTweaks.Views;
 
-/// <summary>Shared live counters so Dashboard and Hardware Monitor don't each create their own.</summary>
+/// <summary>
+/// Classic live snapshot (CPU, GPU 3D, RAM, disk, network, temperatures) for the dashboard, overlay and other views. Fed by
+/// the shared sensor hub, so they and the Hardware Monitor read the sensors once, not each on their own timer.
+/// </summary>
 public static class LiveStats
 {
-    private static HardwareMonitor? _mon;
-    private static readonly DispatcherTimer Timer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
+    private static readonly object Token = new();
     private static int _subscribers;
-    private static bool _busy;
+    private static bool _queued;
     public static event Action<HardwareSnapshot>? Sampled;
-    public static HardwareSnapshot? Last { get; private set; }
+    public static HardwareSnapshot? Last => SensorHub.Shared.Last?.Snapshot;
 
     public static void Subscribe(Action<HardwareSnapshot> h)
     {
         Sampled += h;
-        if (Last is not null) h(Last);
+        if (Last is { } l) h(l);
         if (_subscribers++ == 0)
         {
-            Timer.Tick -= Tick;
-            Timer.Tick += Tick;
-            Timer.Start();
+            SensorHub.Shared.Sampled += OnFrame;
+            SensorHub.Shared.Acquire(Token, record: false);
         }
     }
 
     public static void Unsubscribe(Action<HardwareSnapshot> h)
     {
         Sampled -= h;
-        if (--_subscribers <= 0) { _subscribers = 0; Timer.Stop(); }
+        if (--_subscribers <= 0)
+        {
+            _subscribers = 0;
+            SensorHub.Shared.Sampled -= OnFrame;
+            SensorHub.Shared.Release(Token);
+        }
     }
 
-    private static async void Tick(object? s, EventArgs e)
+    private static void OnFrame(SensorFrame f)
     {
-        if (_busy) return; // never queue overlapping samples
-        _busy = true;
-        try
-        {
-            if (_mon is null) { using var p = Perf.Measure("HardwareMonitor init", 0); _mon = await Task.Run(() => new HardwareMonitor()); }
-            var snap = await Task.Run(() => { using var p = Perf.Measure("monitor sample", 40); return _mon.Sample(); });
-            Last = snap;
-            Sampled?.Invoke(snap);
-        }
-        catch (Exception ex) { Log.Debug("monitor: " + ex.Message); }
-        finally { _busy = false; }
+        if (_queued) return;   // a slow UI never builds a backlog of samples
+        _queued = true;
+        Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.Background, () => { _queued = false; Sampled?.Invoke(f.Snapshot); });
     }
 
     public static void Fill(HardwareSnapshot s, StatTile net, StatTile disk, StatTile temp)
@@ -307,44 +306,5 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
     }
 
     public void OnShown() { LiveStats.Subscribe(OnSample); UpdateGreeting(); UpdateTags(); UpdateCategories(); _ = LoadScoreAsync(); _ = RefreshExtrasAsync(); }
-    public void OnHidden() => LiveStats.Unsubscribe(OnSample);
-}
-
-/// <summary>Live hardware monitor plus the Driver &amp; Windows Health Center (HealthCenterView.cs).</summary>
-public sealed partial class MonitorView : UserControl, IPageLifecycle
-{
-    private readonly RingGauge _cpu = new("CPU usage", 150, 12), _gpu = new("GPU 3D usage", 150, 12), _ram = new("Memory in use", 150, 12);
-    private readonly StatTile _net = new("Network", "\uE968"), _disk = new("Disk active time", "\uEDA2"), _temp = new("CPU temperature", "\uE706");
-    private readonly TextBlock _uptime = Ui.Muted("");
-    private readonly TextBlock _timer = Ui.Muted("");
-
-    public MonitorView()
-    {
-        var (root, body) = Ui.Page("Hardware Monitor & Health Center", "Live readings from Windows performance counters, updated every second. No drivers are installed. Temperatures only appear if your firmware exposes an ACPI thermal zone; for full sensor data use a dedicated tool such as HWiNFO. Below: driver, Windows and stability health checks.",
-            HealthScanButton(), eyebrow: "Tools", icon: "\uE9D9");
-        body.Children.Add(Ui.Section("Live hardware monitor"));
-        foreach (var r in new[] { _cpu, _gpu, _ram }) r.HorizontalAlignment = HorizontalAlignment.Center;
-        var rings = (ResponsiveGrid)Ui.Grid(3, _cpu, _gpu, _ram);
-        rings.MinItemWidth = 180;
-        body.Children.Add(Ui.Card(rings, new Thickness(0, 0, 14, 14)));
-        body.Children.Add(Ui.Grid(3, _net, _disk, _temp));
-        var info = Ui.Section("System");
-        info.Children.Add(_uptime);
-        info.Children.Add(_timer);
-        body.Children.Add(Ui.Card(info, new Thickness(0, 0, 14, 14)));
-        BuildHealth(body);
-        Content = root;
-    }
-
-    private void OnSample(HardwareSnapshot s)
-    {
-        LiveStats.FillRings(s, _cpu, _gpu, _ram);
-        LiveStats.Fill(s, _net, _disk, _temp);
-        _uptime.Text = $"Uptime: {(int)s.Uptime.TotalDays}d {s.Uptime.Hours}h {s.Uptime.Minutes}m · {s.ProcessCount} processes running";
-        var (min, max, cur) = TimerResolution.Query();
-        _timer.Text = $"Kernel timer resolution: {cur:0.###} ms (range {max:0.###} – {min:0.###} ms)";
-    }
-
-    public void OnShown() => LiveStats.Subscribe(OnSample);
     public void OnHidden() => LiveStats.Unsubscribe(OnSample);
 }
