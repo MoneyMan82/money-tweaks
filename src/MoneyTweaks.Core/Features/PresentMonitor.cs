@@ -86,6 +86,8 @@ public sealed class FrameTracker
     public static PresentStats? Compute(int pid, PresentApi api, IReadOnlyList<long> t, int graphPoints = 120)
     {
         if (t.Count < 2) return null;
+        // ETW delivers events in per-CPU batches; sort defensively so a late batch can't produce negative frame times.
+        if (!IsSorted(t)) { var sorted = t.ToArray(); Array.Sort(sorted); t = sorted; }
         var gaps = new double[t.Count - 1];
         for (int i = 1; i < t.Count; i++) gaps[i - 1] = (t[i] - t[i - 1]) / 10_000.0;
         double spanMs = (t[^1] - t[0]) / 10_000.0;
@@ -94,6 +96,12 @@ public sealed class FrameTracker
         // 1% low: average FPS of the slowest 1% of frames (at least one frame).
         var slow = gaps.OrderByDescending(g => g).Take(Math.Max(1, gaps.Length / 100)).Average();
         return new PresentStats(pid, api, fps, gaps.Average(), gaps[^1], slow > 0 ? 1000.0 / slow : 0, gaps.Length, gaps.TakeLast(graphPoints).ToArray());
+    }
+
+    private static bool IsSorted(IReadOnlyList<long> t)
+    {
+        for (int i = 1; i < t.Count; i++) if (t[i] < t[i - 1]) return false;
+        return true;
     }
 
     /// <summary>Present timestamps of one process newer than <paramref name="after100ns"/>, oldest first. Polled about once a
@@ -169,6 +177,8 @@ public static unsafe class PresentMonitor
         *(uint*)(b + 40) = 1;                      // Wnode.ClientContext: QPC timestamps
         *(uint*)(b + 44) = 0x00020000;             // Wnode.Flags: WNODE_FLAG_TRACED_GUID
         *(uint*)(b + 48) = 8;                      // BufferSize (KB): small buffers flush sooner, so frames arrive with less delay
+        *(uint*)(b + 52) = 16;                     // MinimumBuffers / MaximumBuffers: room for bursts while a game and the
+        *(uint*)(b + 56) = 64;                     // desktop both present at high rates, so events aren't dropped (≤ 512 KB)
         *(uint*)(b + 64) = 0x00000100;             // LogFileMode: EVENT_TRACE_REAL_TIME_MODE
         *(uint*)(b + 68) = 1;                      // FlushTimer: 1 s
         *(uint*)(b + 116) = PropsSize;             // LoggerNameOffset

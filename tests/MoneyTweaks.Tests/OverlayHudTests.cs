@@ -86,6 +86,18 @@ public class OverlayHudTests
     }
 
     [Fact]
+    public void Frame_stats_are_the_same_when_events_arrive_out_of_order()
+    {
+        var times = Enumerable.Range(0, 200).Select(i => i * 5 * Ms + (i % 7 == 0 ? 2 * Ms : 0)).ToList();
+        var inOrder = FrameTracker.Compute(1, PresentApi.Dxgi, times)!;
+        var shuffled = times.OrderBy(t => (t * 7919) % 101).ToList();      // per-CPU batches delivered out of order
+        var outOfOrder = FrameTracker.Compute(1, PresentApi.Dxgi, shuffled)!;
+        Assert.Equal(inOrder.Fps, outOfOrder.Fps, 6);
+        Assert.Equal(inOrder.Low1PercentFps, outOfOrder.Low1PercentFps, 6);
+        Assert.All(outOfOrder.RecentMs, ms => Assert.True(ms >= 0));
+    }
+
+    [Fact]
     public void Kernel_presents_count_only_for_apps_without_a_runtime_source()
     {
         var t = new FrameTracker();

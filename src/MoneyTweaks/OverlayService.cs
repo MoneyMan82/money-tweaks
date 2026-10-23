@@ -38,6 +38,16 @@ public static class OverlayService
     /// <summary>Test runs only: keep the overlay window off screen (it is still created, shown and updated for real).</summary>
     private static bool _offscreen;
     private static OverlayLayout? _applied;
+    // Profile switching waits until the measured app has been the same for a moment, so a quick alt-tab or a launcher
+    // window doesn't rebuild the overlay back and forth.
+    private static OverlayLayout? _pendingLayout;
+    private static long _pendingSince;
+    private const int ProfileSwitchDelayMs = 1200;
+    // Last good reading of each value and when it was read: a single late sample keeps showing it briefly instead of n/a.
+    private static readonly Dictionary<string, (double value, long at)> Held = [];
+    private const int HoldMs = 3000, FpsHoldMs = 1500;
+    private static (int pid, PresentStats stats, IReadOnlyList<double>? graph, long at)? _lastFrames;
+    private static readonly Dictionary<string, long> MissingLogged = [];
     private static int _layoutVersion, _appliedVersion = -1;
 
     /// <summary>The game being monitored automatically (exe and process), or null.</summary>
@@ -133,6 +143,7 @@ public static class OverlayService
             if (_offscreen) { _win.Left = -6000; _win.Top = -6000; }
         }
         _win.SetClickThrough(S.ClickThrough);
+        _applied = null;   // a fresh show picks the right layout immediately
         var state = PresentMonitor.Start();
         if (!_hubHeld) { SensorHub.Shared.Acquire(HubToken, record: false); _hubHeld = true; }
         _win.Show();
@@ -146,6 +157,9 @@ public static class OverlayService
     public static void Hide()
     {
         Refresh.Stop();
+        Held.Clear();
+        _lastFrames = null;
+        _pendingLayout = null;
         if (_win is { EditMode: true }) _win.SetEditMode(false);
         _win?.Hide();
         if (_hubHeld) { SensorHub.Shared.Release(HubToken); _hubHeld = false; }
@@ -255,8 +269,19 @@ public static class OverlayService
             var (pid, hwnd) = PickTarget();
             string? exe = pid == 0 ? null : NameOf(pid) + ".exe";
             var layout = LayoutFor(exe, out var profile);
+            long tick = Environment.TickCount64;
+            // The detected game's own profile applies at once; anything else waits until the app in front is settled.
+            bool detectedGame = _autoGame is { } ag && profile is not null && string.Equals(profile, OverlaySettings.Normalize(ag.exe), StringComparison.OrdinalIgnoreCase);
+            if (_applied is not null && !detectedGame && !ReferenceEquals(layout, _applied) && _appliedVersion == _layoutVersion)
+            {
+                // A different app is in front: switch layouts only once it has stayed there for a moment.
+                if (!ReferenceEquals(layout, _pendingLayout)) { _pendingLayout = layout; _pendingSince = tick; }
+                if (tick - _pendingSince < ProfileSwitchDelayMs) { layout = _applied; profile = ActiveProfile; }
+            }
+            else _pendingLayout = null;
             if (!ReferenceEquals(layout, _applied) || _appliedVersion != _layoutVersion)
             {
+                _pendingLayout = null;
                 _win.Panel.ApplyLayout(layout);
                 _win.Opacity = Math.Clamp(layout.WindowOpacity, 0.3, 1);
                 _applied = layout;
@@ -265,10 +290,15 @@ public static class OverlayService
                 Changed?.Invoke();
             }
             var items = layout.EffectiveItems();
-            if (items.Contains(OverlayMetric.Ping)) OverlayPing.Start(App.Settings.PingHost); else OverlayPing.Stop();
+            // Ping keeps running while the overlay is visible once a layout has used it (stopped on hide), so switching
+            // between layouts never resets it to n/a.
+            if (items.Contains(OverlayMetric.Ping)) OverlayPing.Start(App.Settings.PingHost);
 
             var stats = pid == 0 ? null : PresentMonitor.Frames.Stats(pid, TimeSpan.FromSeconds(1), 120, now);
             var graph = pid == 0 || !items.Contains(OverlayMetric.Graph) ? null : PresentMonitor.Frames.Stats(pid, TimeSpan.FromMilliseconds(FrametimeGraph.WindowMs + 300), 2000, now)?.RecentMs;
+            // Frame events arrive in batches; if one batch is late, keep the last result for the same app briefly.
+            if (stats is not null) _lastFrames = (pid, stats, graph, tick);
+            else if (_lastFrames is { } lf && lf.pid == pid && tick - lf.at < FpsHoldMs) { stats = lf.stats; graph ??= lf.graph; }
             string? note = null;
             if (PresentMonitor.State == CaptureState.Running && stats is null && pid != 0)
                 note = "No frames from this app (idle, minimized, or not drawing)";
@@ -278,13 +308,22 @@ public static class OverlayService
             var snap = hub?.Snapshot;
             var (gLoad, gTemp, vram, vramTotal) = BusiestGpu(hub);
             var mon = App.Settings.Monitor;
+            double? H(string key, double? v)
+            {
+                if (v is { } x && double.IsFinite(x)) { Held[key] = (x, tick); return x; }
+                if (Held.TryGetValue(key, out var h) && tick - h.at < HoldMs) return h.value;
+                if (items.Contains(key) || key is "ramtotal" or "vramtotal") LogMissing(key, exe);
+                return null;
+            }
             var frame = new OverlayFrame(stats, PresentMonitor.State, note,
-                snap?.CpuPercent, gLoad ?? snap?.GpuPercent, snap?.RamUsedGb, snap?.RamTotalGb, snap?.CpuTempC, gTemp ?? snap?.GpuTempC,
+                H(OverlayMetric.Cpu, snap?.CpuPercent), H(OverlayMetric.Gpu, gLoad ?? snap?.GpuPercent), H(OverlayMetric.Ram, snap?.RamUsedGb), H("ramtotal", snap?.RamTotalGb),
+                H(OverlayMetric.CpuTemp, snap?.CpuTempC), H(OverlayMetric.GpuTemp, gTemp ?? snap?.GpuTempC),
                 pid == 0 ? null : NameOf(pid), mode)
             {
-                VramUsedMb = vram, VramTotalMb = vramTotal, PingMs = OverlayPing.LastMs, PingNote = OverlayPing.Note, GraphMs = graph,
+                VramUsedMb = H(OverlayMetric.Vram, vram), VramTotalMb = H("vramtotal", vramTotal), PingMs = OverlayPing.LastMs, PingNote = OverlayPing.Note, GraphMs = graph,
                 CpuWarnC = mon.CpuTempWarnC, GpuWarnC = mon.GpuTempWarnC,
             };
+            if (stats is null && pid != 0 && items.Contains(OverlayMetric.Fps)) LogMissing("fps", exe, $"capture {PresentMonitor.State}, {PresentMonitor.EventsSeen} events");
             LastFrame = frame;
             _win.Panel.Update(frame);
             _win.UpdateLayout();
@@ -303,6 +342,16 @@ public static class OverlayService
             PresentMonitor.Frames.Prune(now);
         }
         catch (Exception ex) { Log.Debug("overlay tick: " + ex.Message); }
+    }
+
+    /// <summary>Notes in the log (at most once a minute per reading) when a reading the overlay shows is really missing.</summary>
+    private static void LogMissing(string what, string? exe, string? detail = null)
+    {
+        long now = Environment.TickCount64;
+        if (MissingLogged.TryGetValue(what, out var at) && now - at < 60_000) return;
+        MissingLogged[what] = now;
+        if (what is OverlayMetric.CpuTemp) return;   // expected on PCs without a CPU temperature source; the monitor explains it
+        Log.Debug($"overlay: {what} not available for {exe ?? "no app"}{(detail is null ? "" : " (" + detail + ")")}");
     }
 
     private static (int x, int y, int w, int h) PrimaryMonitor()
@@ -398,6 +447,9 @@ public static class OverlayPing
 {
     private static CancellationTokenSource? _cts;
     private static string _host = "";
+    private static int _generation;
+    /// <summary>Consecutive lost replies before the overlay shows the loss (one lost packet is normal on busy connections).</summary>
+    public const int LossesBeforeShown = 3;
     public static double? LastMs { get; private set; }
     public static string? Note { get; private set; }
     public static string Host => _host;
@@ -410,19 +462,26 @@ public static class OverlayPing
         Stop();
         _host = host;
         var cts = _cts = new CancellationTokenSource();
+        int gen = ++_generation;
         _ = Task.Run(async () =>
         {
             using var ping = new Ping();
+            int lost = 0;
             while (!cts.IsCancellationRequested)
             {
+                double? ms = null; string? note = null;
                 try
                 {
                     var r = await ping.SendPingAsync(host, TimeSpan.FromMilliseconds(1500), null, null, cts.Token);
-                    if (r.Status == IPStatus.Success) { LastMs = r.RoundtripTime; Note = null; }
-                    else { LastMs = null; Note = r.Status == IPStatus.TimedOut ? "timeout" : "no reply"; }
+                    if (r.Status == IPStatus.Success) ms = r.RoundtripTime;
+                    else note = r.Status == IPStatus.TimedOut ? "lost" : "no reply";
                 }
                 catch (OperationCanceledException) { break; }
-                catch (Exception ex) { LastMs = null; Note = ex is PingException ? "no network" : "n/a"; }
+                catch (Exception ex) { note = ex is PingException ? "offline" : "n/a"; }
+                // A loop from before a restart (or a stop) never writes over the current one.
+                if (gen != Volatile.Read(ref _generation) || cts.IsCancellationRequested) break;
+                if (ms is { } v) { lost = 0; LastMs = v; Note = null; }
+                else if (++lost >= LossesBeforeShown || LastMs is null) { LastMs = null; Note = note; }
                 try { await Task.Delay(2000, cts.Token); } catch { break; }
             }
         });
@@ -430,6 +489,7 @@ public static class OverlayPing
 
     public static void Stop()
     {
+        Interlocked.Increment(ref _generation);
         _cts?.Cancel();
         _cts = null;
         LastMs = null;

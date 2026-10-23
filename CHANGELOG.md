@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.60 – 2026-10-23
+- **Performance overlay fixes** (readings flashing n/a, ping glitching):
+  - Ping no longer resets to n/a whenever the overlay switches layouts: it keeps running while the overlay is visible.
+    One lost reply keeps the last value; "lost" only shows after three in a row. An older ping loop can no longer
+    overwrite a newer one after a restart.
+  - Switching to another window no longer flips the overlay between layouts: a non-game app has to stay in front for
+    about a second first. A detected game's own profile still applies immediately.
+  - A reading that is missing for a single sample (a late sensor sample or a late batch of frame events) keeps its last
+    value for up to 3 s (FPS 1.5 s) instead of flashing n/a. Readings that are really unavailable still say so, and are
+    now noted in the log once a minute with the reason.
+  - Values have a fixed width, so changing digits or "n/a" no longer resize the overlay and shift it sideways.
+  - The frame-time graph's glide no longer stacks animations (it jittered).
+  - Frame statistics are safe against out-of-order event batches, and the frame-timing session has more buffers so events
+    aren't dropped while a game and the desktop both draw at high rates.
+
 ## 1.59 – 2026-10-23
 - **LibreHardwareMonitor sensors** (LibreHardwareMonitorLib 0.9.6 from NuGet, MPL-2.0), read through the existing sensor
   hub, so the Hardware Monitor, dashboard, performance overlay and compact window all get them from one sampler:

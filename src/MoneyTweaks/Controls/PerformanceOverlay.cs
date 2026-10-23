@@ -79,12 +79,16 @@ public sealed class OverlayText : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         var f = Ft();
+        // Right-aligned within the reserved width (numbers line up and don't jump as digits change).
+        double dx0 = HorizontalAlignment == HorizontalAlignment.Right ? Math.Max(0, ActualWidth - (Math.Ceiling(f.WidthIncludingTrailingWhitespace) + 2)) : 0;
+        if (dx0 > 0) dc.PushTransform(new TranslateTransform(dx0, 0));
         if (Outline)
         {
             var o = _shadow ??= Make(Shadow);
             foreach (var (dx, dy) in new[] { (0.0, 1.0), (2.0, 1.0), (1.0, 0.0), (1.0, 2.0), (2.0, 2.0) }) dc.DrawText(o, new Point(dx, dy));
         }
         dc.DrawText(f, new Point(1, 1));
+        if (dx0 > 0) dc.Pop();
     }
 }
 
@@ -97,6 +101,7 @@ public sealed class FrametimeGraph : FrameworkElement
 {
     private IReadOnlyList<double> _ms = [];
     private double _shiftMs, _top = 33.4;
+    private int _anim;   // a new refresh ends the previous glide instead of fighting it
     public const double WindowMs = 2000;
     public Brush Line { get; set; } = Brushes.LimeGreen;
     public Brush Spike { get; set; } = Brushes.Orange;
@@ -113,8 +118,10 @@ public sealed class FrametimeGraph : FrameworkElement
             double fromTop = _top, start = Environment.TickCount64, dur = Math.Clamp(elapsedMs, 120, 600);
             _shiftMs = Math.Min(elapsedMs, 400);
             double fromShift = _shiftMs;
+            int me = ++_anim;
             OverlayAnimator.Run(() =>
             {
+                if (me != _anim) return false;
                 double p = Math.Min(1, (Environment.TickCount64 - start) / dur), e = 1 - Math.Pow(1 - p, 2);
                 _shiftMs = fromShift * (1 - p);
                 _top = fromTop + (top - fromTop) * e;
@@ -122,7 +129,7 @@ public sealed class FrametimeGraph : FrameworkElement
                 return p < 1;
             });
         }
-        else { _shiftMs = 0; _top = top; InvalidateVisual(); }
+        else { _anim++; _shiftMs = 0; _top = top; InvalidateVisual(); }
     }
 
     protected override void OnRender(DrawingContext dc)
@@ -370,6 +377,9 @@ public sealed class OverlayPanel : Border
     private Item NewItem(string id, double size, double unitSize)
     {
         var it = new Item { Id = id, Value = T(size, id == OverlayMetric.Fps ? _accent : _text, FontWeights.SemiBold) };
+        // Room for the widest usual value, so numbers changing width (9 → 10, 17 ms → n/a) don't resize and shift the overlay.
+        it.Value.MinWidth = size * (id is OverlayMetric.Ram or OverlayMetric.Vram ? 2.3 : id is OverlayMetric.FrameTime or OverlayMetric.Fps or OverlayMetric.Low1 ? 2.0 : 1.7);
+        it.Value.HorizontalAlignment = HorizontalAlignment.Right;
         string unit = id switch
         {
             OverlayMetric.Fps => "FPS", OverlayMetric.Low1 => _layout.Style == OverlayStyle.Minimal ? "1%" : "FPS", OverlayMetric.FrameTime or OverlayMetric.Ping => "ms",
