@@ -15,6 +15,8 @@ public sealed class MonitorSettings
     public bool RecordInBackground { get; set; } = true;
     /// <summary>Read sensors through LibreHardwareMonitorLib too (GPU extras always; CPU and motherboard with its PawnIO driver).</summary>
     public bool UseLibreHardwareMonitor { get; set; } = true;
+    /// <summary>Start the elevated CPU sensor helper with Money Tweaks (one administrator prompt per start). Off by default.</summary>
+    public bool StartCpuSensors { get; set; }
     /// <summary>Write every sample to a CSV file under the logs folder while on.</summary>
     public bool LogToFile { get; set; }
     /// <summary>The compact always-on-top window was open when Money Tweaks closed (reopened at start).</summary>

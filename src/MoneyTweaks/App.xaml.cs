@@ -68,6 +68,9 @@ public partial class App : Application
         if (Settings.LegacyUi) LegacyTheme.Apply(Resources); // before any window or style is created
         // Run by the uninstaller: undo everything Money Tweaks changed, then exit. No watchers, tray or main window.
         if (UninstallMode.Handles(e.Args)) { UninstallMode.Run(this, e.Args); return; }
+        // The elevated CPU sensor helper (started by Money Tweaks itself): stream sensors to the pipe, then exit. No UI.
+        if (e.Args.Length >= 3 && e.Args[0] == Core.Monitoring.ElevatedSensors.HelperArg && int.TryParse(e.Args[2], out var parentPid))
+        { ShutdownMode = ShutdownMode.OnExplicitShutdown; int code = Core.Monitoring.ElevatedSensors.RunHelper(e.Args[1], parentPid); Shutdown(code); return; }
         Controls.Motion.InstallSmoothScrolling(); // smooth wheel scrolling in every scrollable area (off with reduced motion)
         Controls.Motion.InstallProgressGlide();   // determinate progress bars glide to new values
         Controls.Motion.InstallSquareWindows();   // square window corners on Windows 11, like the rest of the design
@@ -156,6 +159,7 @@ public partial class App : Application
         DisplayService.Shutdown(); // drops an unconfirmed test resolution
         if (FanCurveService.Running) FanCurveService.Stop(); // the curve only runs while Money Tweaks does: fan back to automatic
         MonitorService.Shutdown(); // closes the compact window and flushes the sensor log
+        Core.Monitoring.ElevatedSensors.Stop(); // the CPU sensor helper (it also exits on its own when Money Tweaks does)
         TrayIcon.Dispose();
         Settings.Save();
         base.OnExit(e);

@@ -359,15 +359,45 @@ public sealed partial class MonitorView : UserControl, IPageLifecycle
         sp.Children.Add(SwitchLine(sw, "Use LibreHardwareMonitor sensors",
             "Open-source sensor library (MPL-2.0). Adds GPU hot spot, memory junction and fan RPM, AMD GPU sensors and, with its PawnIO driver, CPU package and core temperatures, power, clocks, voltages and motherboard sensors. Read-only: it never changes fans or clocks."));
         sp.Children.Add(Ui.Muted(Hub.LhmStatus, 12));
-        var reason = Core.Monitoring.LhmSource.DriverReason;
-        sp.Children.Add(Ui.Muted(reason is null ? "CPU and motherboard sensors: available (PawnIO driver active, running as administrator)." : "CPU and motherboard sensors: " + reason + ".", 12));
-        if (Core.Monitoring.LhmSource.PawnIoInstalled && !Admin.IsElevated)
+        var reason = LhmSource.DriverReason;
+        sp.Children.Add(Ui.Muted(reason is null ? "CPU temperature and other CPU / motherboard sensors: available" + (LhmSource.DriverActive ? " (PawnIO driver, Money Tweaks runs as administrator)." : " (PawnIO driver, through the sensor helper).") : "CPU temperature and other CPU / motherboard sensors: " + reason.Replace(" in Hardware Monitor → System → Sensor sources", " below") + ".", 12));
+        if (!ElevatedSensors.Status.StartsWith("Not started", StringComparison.Ordinal)) sp.Children.Add(Ui.Muted("Sensor helper: " + ElevatedSensors.Status, 12));
+        var actions = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        if (!LhmSource.PawnIoInstalled)
+            actions.Children.Add(Ui.Btn("Install PawnIO driver…", async (s, _) => await InstallPawnIoAsync((Button)s), "PrimaryButton", new Thickness(0, 0, 8, 6)));
+        else if (!Admin.IsElevated && !ElevatedSensors.Connected)
+            actions.Children.Add(Ui.Btn("Read CPU temperature", (_, _) => { if (!ElevatedSensors.Start()) MainWindow.Current?.ShowToast(ElevatedSensors.Status, "Gold"); else { MainWindow.Current?.ShowToast("Reading CPU sensors… they appear within a few seconds.", "Success"); _dirty = true; } }, "PrimaryButton", new Thickness(0, 0, 8, 6)));
+        if (actions.Children.Count > 0) sp.Children.Add(actions);
+        if (LhmSource.PawnIoInstalled && !Admin.IsElevated)
         {
-            var b = Ui.Btn("Restart as administrator", (_, _) => { if (Admin.RestartElevated()) { App.ExitRequested = true; Application.Current.Shutdown(); } }, "GoldButton", new Thickness(0, 8, 0, 0));
-            b.HorizontalAlignment = HorizontalAlignment.Left;
-            sp.Children.Add(b);
+            var auto = new ToggleButton { Style = Ui.Res<Style>("Switch"), IsChecked = S.StartCpuSensors, VerticalAlignment = VerticalAlignment.Center };
+            auto.Click += (_, _) => { S.StartCpuSensors = auto.IsChecked == true; App.SaveSettingsSoon(); };
+            sp.Children.Add(SwitchLine(auto, "Start CPU sensors with Money Tweaks", "Windows asks for administrator permission once each time Money Tweaks starts. A small helper then reads only the sensors; the rest of Money Tweaks keeps running without administrator rights."));
         }
+        if (!LhmSource.PawnIoInstalled)
+            sp.Children.Add(Ui.Muted("Why a driver: Ryzen and Intel CPUs report their temperature only through processor registers, which Windows lets only drivers read. PawnIO is the small, digitally signed driver LibreHardwareMonitor uses for this (pawnio.eu). Money Tweaks downloads the official installer from its GitHub release, checks its checksum and signature, and runs it only after you confirm; you can uninstall it from Windows Settings → Apps.", 11.5));
         return sp;
+    }
+
+    private async Task InstallPawnIoAsync(Button b)
+    {
+        if (!Dialog.Confirm("Install the PawnIO driver?",
+            "CPU temperature needs a kernel driver on this PC. PawnIO is the digitally signed driver LibreHardwareMonitor uses to read CPU and motherboard sensors.\n\n" +
+            $"Money Tweaks downloads the official installer ({ElevatedSensors.PawnIoUrl}), checks that it's exactly the published release and correctly signed, then opens it. Windows asks for administrator permission, and the installer shows what it does.\n\nYou can uninstall PawnIO any time from Windows Settings → Apps.",
+            "Download and install", DialogKind.Warning)) return;
+        b.IsEnabled = false;
+        b.Content = "Downloading…";
+        try
+        {
+            var path = await ElevatedSensors.DownloadPawnIoAsync();
+            b.Content = "Installing…";
+            bool ran = await Task.Run(() => ElevatedSensors.RunPawnIoInstaller(path));
+            if (!ran) MainWindow.Current?.ShowToast("Administrator permission was declined; PawnIO wasn't installed.", "Gold");
+            else if (LhmSource.PawnIoInstalled) { MainWindow.Current?.ShowToast("PawnIO installed. Starting the CPU sensors…", "Success"); ElevatedSensors.Start(); }
+            else MainWindow.Current?.ShowToast("The installer finished, but PawnIO isn't installed (it may have been cancelled).", "Gold");
+        }
+        catch (Exception ex) { Log.Warn("PawnIO install: " + ex.Message); Dialog.Show("PawnIO wasn't installed", ex.Message, DialogKind.Error); }
+        finally { _dirty = true; b.IsEnabled = true; }
     }
 
     private static string MemorySummary(HardwareInventory inv)

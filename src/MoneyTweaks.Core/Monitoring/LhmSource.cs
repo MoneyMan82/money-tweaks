@@ -22,7 +22,7 @@ public sealed class LhmSource : IDisposable
     private Computer? _computer;
     private readonly object _gate = new();
     private readonly Dictionary<IHardware, long> _nextUpdate = [];
-    private bool _failed;
+    private bool _failed, _cpuAndBoardOnly;
     public string Status { get; private set; } = "Not started.";
 
     /// <summary>True when CPU/motherboard sensors can be real: PawnIO installed and this process elevated.</summary>
@@ -33,10 +33,14 @@ public sealed class LhmSource : IDisposable
         get { try { return PawnIo.IsInstalled; } catch { return false; } }
     }
 
+    /// <summary>CPU/motherboard sensors are available: read here (elevated with PawnIO) or by the elevated sensor helper.</summary>
+    public static bool CpuSensorsAvailable => DriverActive || ElevatedSensors.HasDriver;
+
     /// <summary>Why low-level CPU and motherboard sensors are missing (null when they are available).</summary>
-    public static string? DriverReason => DriverActive ? null
-        : !PawnIoInstalled ? "needs the PawnIO driver, which isn't installed (Money Tweaks never installs drivers; LibreHardwareMonitor and other tools offer it), and administrator rights"
-        : "needs administrator rights: the PawnIO driver is installed, restart Money Tweaks as administrator to read it";
+    public static string? DriverReason => CpuSensorsAvailable ? null
+        : !PawnIoInstalled ? "needs the PawnIO driver, which isn't installed. Install it in Hardware Monitor → System → Sensor sources"
+        : ElevatedSensors.Connected ? "can't be read: the sensor helper runs but the PawnIO driver didn't open"
+        : "needs administrator permission: choose “Read CPU temperature” in Hardware Monitor → System → Sensor sources";
 
     private Computer? Open()
     {
@@ -47,14 +51,14 @@ public sealed class LhmSource : IDisposable
             bool driver = DriverActive;
             var c = new Computer
             {
-                IsCpuEnabled = true, IsGpuEnabled = true, IsMotherboardEnabled = driver,
+                IsCpuEnabled = true, IsGpuEnabled = !_cpuAndBoardOnly, IsMotherboardEnabled = driver,
                 // Memory, storage and network: Money Tweaks reads these itself (no duplicate polling). No controllers,
                 // PSUs or batteries: they open USB/HID devices other apps may be using.
                 IsMemoryEnabled = false, IsStorageEnabled = false, IsNetworkEnabled = false, IsControllerEnabled = false, IsPsuEnabled = false, IsBatteryEnabled = false,
             };
             c.Open();
             _computer = c;
-            Status = $"LibreHardwareMonitor {typeof(Computer).Assembly.GetName().Version?.ToString(3)}: {c.Hardware.Count} devices, {(driver ? "PawnIO driver active" : "without driver (GPU sensors only)")}; opened in {sw.ElapsedMilliseconds} ms.";
+            Status = $"LibreHardwareMonitor {typeof(Computer).Assembly.GetName().Version?.ToString(3)}: {c.Hardware.Count} devices, {(driver ? "PawnIO driver active" : _cpuAndBoardOnly ? "without driver (no CPU or motherboard sensors)" : "without driver (GPU sensors only)")}; opened in {sw.ElapsedMilliseconds} ms.";
             Log.Info("Sensors: " + Status);
         }
         catch (Exception ex)
@@ -78,8 +82,10 @@ public sealed class LhmSource : IDisposable
     private static void UpdateTree(IHardware h) { h.Update(); foreach (var s in h.SubHardware) UpdateTree(s); }
 
     /// <summary>Real readings from the library, keyed by device: (hardware type, device name, sensor type, sensor name, value).</summary>
-    internal List<(HardwareType hw, string device, SensorType type, string name, double value)> Read()
+    /// <param name="cpuAndBoardOnly">The elevated sensor helper: only CPU and motherboard sensors (set on the first read).</param>
+    internal List<(HardwareType hw, string device, SensorType type, string name, double value)> Read(bool cpuAndBoardOnly = false)
     {
+        if (_computer is null) _cpuAndBoardOnly = cpuAndBoardOnly;
         var list = new List<(HardwareType, string, SensorType, string, double)>();
         lock (_gate)
         {
@@ -97,6 +103,9 @@ public sealed class LhmSource : IDisposable
                 catch (Exception ex) { Log.Debug($"lhm {h.Name}: {ex.Message}"); }
             }
         }
+        // Not elevated here: CPU and motherboard values come from the elevated sensor helper when it runs (same filtering:
+        // the helper only sends readings it took with the driver active).
+        if (!DriverActive && !cpuAndBoardOnly && ElevatedSensors.HasDriver) list.AddRange(ElevatedSensors.Latest);
         return list;
     }
 

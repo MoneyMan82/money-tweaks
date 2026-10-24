@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.65 – 2026-10-24
+- **CPU temperature through LibreHardwareMonitor, no other monitoring app needed.** Hardware Monitor → System → Sensor
+  sources can install the PawnIO driver LibreHardwareMonitor uses (the official signed installer, pinned by SHA-256 and
+  checked with Windows' signature verification before it runs, only after you confirm) and start a small elevated sensor
+  helper, so CPU package/core temperature, power and motherboard sensors appear in the Hardware Monitor, dashboard and
+  performance overlay while the rest of Money Tweaks keeps running without administrator rights. Optional: start the
+  helper with Money Tweaks.
+- The helper only reads CPU and motherboard sensors and streams them over a private pipe; it accepts no commands and
+  exits with Money Tweaks. Placeholder readings without the driver are never shown; missing sensors say exactly why
+  (driver not installed, permission declined, driver not opened). Hints no longer point to MSI Afterburner or HWiNFO.
+
 ## 1.64 – 2026-10-24
 - **Reality Lab: four more verified GPU models** (CC BY 4.0, licenses re-checked on each Sketchfab page, bundled
   unmodified with checksum and attribution): GeForce RTX 3080 Founders Edition by _surovic_ (used for RTX 3080/3080 Ti/

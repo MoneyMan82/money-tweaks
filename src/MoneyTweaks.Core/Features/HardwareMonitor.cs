@@ -121,7 +121,7 @@ public sealed class HardwareMonitor : IDisposable
         : Tuning.HwInfo.CpuTemperature() is not null ? "HWiNFO" : "firmware (ACPI)";
 
     /// <summary>What to tell the user when no CPU temperature is available.</summary>
-    public const string CpuTempHint = "start MSI Afterburner, or HWiNFO with Shared Memory Support on, to read it";
+    public const string CpuTempHint = "turn on CPU temperature in Hardware Monitor → System → Sensor sources";
 
     private double? ReadTemp()
     {

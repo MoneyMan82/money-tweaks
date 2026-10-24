@@ -340,11 +340,11 @@ public sealed class SensorHub : IDisposable
         // firmware / Afterburner / HWiNFO chain.
         var lt = Lhm(HardwareType.Cpu, SensorType.Temperature, "Core (Tctl/Tdie)", "CPU Package", "Core (Tdie)", "Core (Tctl)", "Core Max");
         var t = lt ?? _legacy?.CpuTemperature();
-        if (t is not null) { v["cpu.temp"] = t; Define("cpu.temp", MetricGroup.Cpu, dev, "Temperature", Metric.Celsius, lt is not null ? LhmSrc + " (PawnIO driver)" : HardwareMonitor.CpuTempSource(t)); }
+        if (t is not null) { v["cpu.temp"] = t; Define("cpu.temp", MetricGroup.Cpu, dev, "Temperature", Metric.Celsius, lt is not null ? LhmSrc + (LhmSource.DriverActive ? " (PawnIO driver)" : " (PawnIO driver, sensor helper)") : HardwareMonitor.CpuTempSource(t)); }
         else Missing(MetricGroup.Cpu, dev, "Temperature", DriverMissing("Your firmware doesn't expose it to Windows. "));
 
         var lp = Lhm(HardwareType.Cpu, SensorType.Power, "Package");
-        if ((lp ?? HwInfo.CpuPower(_hwinfo)) is { } pw) { v["cpu.power"] = pw; Define("cpu.power", MetricGroup.Cpu, dev, "Package power", Metric.Watts, lp is not null ? LhmSrc + " (PawnIO driver)" : "HWiNFO shared memory"); }
+        if ((lp ?? HwInfo.CpuPower(_hwinfo)) is { } pw) { v["cpu.power"] = pw; Define("cpu.power", MetricGroup.Cpu, dev, "Package power", Metric.Watts, lp is not null ? LhmSrc + (LhmSource.DriverActive ? " (PawnIO driver)" : " (PawnIO driver, sensor helper)") : "HWiNFO shared memory"); }
         else Missing(MetricGroup.Cpu, dev, "Package power", DriverMissing("Windows doesn't report CPU power. "));
 
         // Everything else LibreHardwareMonitor reads on the CPU (only with its driver): per-CCD / per-core temperatures,
@@ -355,11 +355,11 @@ public sealed class SensorHub : IDisposable
             switch (r.type)
             {
                 case SensorType.Temperature when r.value != lt:
-                    v["cpu.temp." + slug] = r.value; Define("cpu.temp." + slug, MetricGroup.Cpu, dev, r.name + " temperature", Metric.Celsius, LhmSrc + " (PawnIO driver)"); break;
+                    v["cpu.temp." + slug] = r.value; Define("cpu.temp." + slug, MetricGroup.Cpu, dev, r.name + " temperature", Metric.Celsius, LhmSrc + (LhmSource.DriverActive ? " (PawnIO driver)" : " (PawnIO driver, sensor helper)")); break;
                 case SensorType.Clock when r.name.StartsWith("Core #", StringComparison.Ordinal) && !r.name.Contains("Effective"):
-                    v["cpu.core." + slug] = r.value; Define("cpu.core." + slug, MetricGroup.Cpu, dev, r.name + " clock", Metric.Mhz, LhmSrc + " (PawnIO driver)"); break;
+                    v["cpu.core." + slug] = r.value; Define("cpu.core." + slug, MetricGroup.Cpu, dev, r.name + " clock", Metric.Mhz, LhmSrc + (LhmSource.DriverActive ? " (PawnIO driver)" : " (PawnIO driver, sensor helper)")); break;
                 case SensorType.Voltage when !r.name.Contains("VID"):
-                    v["cpu.volt." + slug] = r.value; Define("cpu.volt." + slug, MetricGroup.Cpu, dev, r.name + " voltage", Metric.Volts, LhmSrc + " (PawnIO driver)"); break;
+                    v["cpu.volt." + slug] = r.value; Define("cpu.volt." + slug, MetricGroup.Cpu, dev, r.name + " voltage", Metric.Volts, LhmSrc + (LhmSource.DriverActive ? " (PawnIO driver)" : " (PawnIO driver, sensor helper)")); break;
             }
         }
     }
@@ -591,8 +591,8 @@ public sealed class SensorHub : IDisposable
         foreach (var r in _lhmNow.Where(r => r.hw is HardwareType.Motherboard or HardwareType.SuperIO))
         {
             string id = (r.type == SensorType.Fan ? "fan.lhm." : "board.temp.") + Short(r.device + "|" + r.name);
-            if (r.type == SensorType.Fan) { v[id] = r.value; Define(id, MetricGroup.Fans, r.device, r.name, Metric.Rpm, LhmSrc + " (PawnIO driver)"); }
-            else if (r.type == SensorType.Temperature) { v[id] = r.value; Define(id, MetricGroup.Fans, r.device, r.name + " temperature", Metric.Celsius, LhmSrc + " (PawnIO driver)"); }
+            if (r.type == SensorType.Fan) { v[id] = r.value; Define(id, MetricGroup.Fans, r.device, r.name, Metric.Rpm, LhmSrc + (LhmSource.DriverActive ? " (PawnIO driver)" : " (PawnIO driver, sensor helper)")); }
+            else if (r.type == SensorType.Temperature) { v[id] = r.value; Define(id, MetricGroup.Fans, r.device, r.name + " temperature", Metric.Celsius, LhmSrc + (LhmSource.DriverActive ? " (PawnIO driver)" : " (PawnIO driver, sensor helper)")); }
         }
     }
 
@@ -616,8 +616,7 @@ public sealed class SensorHub : IDisposable
 
     /// <summary>Why a driver-level reading is missing, and what would provide it.</summary>
     private string DriverMissing(string lead) =>
-        lead + (Settings().UseLibreHardwareMonitor ? "Through LibreHardwareMonitor it " + LhmSource.DriverReason + "." : "LibreHardwareMonitor is turned off in the monitor settings.")
-        + " HWiNFO with Shared Memory Support or MSI Afterburner can also share it.";
+        lead + (Settings().UseLibreHardwareMonitor ? "Through LibreHardwareMonitor it " + LhmSource.DriverReason + "." : "LibreHardwareMonitor is turned off in Hardware Monitor → System → Sensor sources.");
 
     /// <summary>Stable short id for a name (FNV-1a, 8 hex digits).</summary>
     public static string Short(string s)

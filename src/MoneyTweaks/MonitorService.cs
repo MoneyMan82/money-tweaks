@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using MoneyTweaks.Core.Monitoring;
+using MoneyTweaks.Core.Sys;
 using MoneyTweaks.Views;
 
 namespace MoneyTweaks;
@@ -27,6 +28,9 @@ public static class MonitorService
             MainWindow.Current?.ShowToast($"{a.Title}. {a.Detail}", a.Level == AlertLevel.Critical ? "Danger" : "Gold");
         });
         if (S.LogToFile) Hub.Acquire(LogToken);
+        // Opted in: start the CPU sensor helper (Windows asks for administrator permission once).
+        if (S.StartCpuSensors && S.UseLibreHardwareMonitor && !Admin.IsElevated && LhmSource.PawnIoInstalled && !App.ScreenshotMode)
+            Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => ElevatedSensors.Start());
         if (S.CompactOpen && !App.ScreenshotMode) Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => CompactMonitorWindow.Open());
     }
 
