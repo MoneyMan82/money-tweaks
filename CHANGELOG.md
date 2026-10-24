@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.63 – 2026-10-24
+- **Reality Lab: verified third-party GPU models.** Downloadable models are used only when their license explicitly
+  allows commercial use, modification and redistribution (CC0, CC BY 3.0/4.0); each is bundled unmodified with its
+  source, license, attribution and SHA-256 in `Assets/Gpu/manifest.json` (checked before every load) and in
+  THIRD-PARTY-NOTICES.md, and the attribution is shown next to the model.
+  - Bundled: "Graphics card" by pgonarg (Poly Pizza, CC BY 3.0), shown for GeForce RTX 3080/3090 Founders Edition cards.
+  - Evaluated but not bundled (listed in the manifest with the reason): a NonCommercial RTX 4090 Founders Edition, two
+    CC BY Sketchfab models that need a signed-in account to download, an unlicensed RTX 4070, AI-generated galleries.
+  - No verified, redistributable RTX 4070 SUPER model was found; that card and every other card keep the generated
+    model, now clearly labelled "Generic model". A small GLB (glTF 2.0) reader draws the bundled files, with their fans
+    spinning at the card's fan speed; rotate and zoom as before.
+
 ## 1.62 – 2026-10-24
 - **Reality Lab: your graphics card in 3D.** A new panel shows this PC's GPU as a 3D model with studio lighting (key,
   fill, rim and a heat-coloured glow), drag to rotate, scroll to zoom, double-click to reset and a slow turntable:

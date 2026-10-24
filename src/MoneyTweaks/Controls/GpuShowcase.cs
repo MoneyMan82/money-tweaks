@@ -35,6 +35,8 @@ public sealed class GpuShowcase : Grid
     private DateTime _lastInput = DateTime.MinValue;
 
     public GpuMatch Match { get; }
+    /// <summary>The verified third-party model being shown (manifest entry), or null when the generated generic model is.</summary>
+    public GpuAsset? Asset { get; }
     public int Triangles => _rig.Triangles;
 
     public GpuShowcase(GpuMatch match, bool detailed = true)
@@ -52,7 +54,9 @@ public sealed class GpuShowcase : Grid
         root.Children.Add(new DirectionalLight(Color.FromRgb(0x9A, 0xA4, 0xC0), new Vector3D(0.1, -0.35, 1)));     // rim from behind
         root.Children.Add(new DirectionalLight(Color.FromRgb(0x30, 0x34, 0x40), new Vector3D(0, 1, 0)));           // bounce from the floor
         root.Children.Add(_glow);
-        var card = GpuModel3D.Build(match, _rig, detailed);
+        Asset = GpuAssetCatalog.Manifest.For(match);
+        Model3D? card = Asset is not null && GpuAssetCatalog.Read(Asset) is { } glb ? Verified(glb, match) : null;
+        if (card is null) { Asset = null; card = GpuModel3D.Build(match, _rig, detailed); }
         root.Children.Add(card);
 
         // Floor: a soft shadow and a faint reflection pool under the card.
@@ -88,6 +92,28 @@ public sealed class GpuShowcase : Grid
         MouseWheel += (_, e) => { _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 0.9 : 1.1), 0.45, 1.8); _lastInput = DateTime.UtcNow; PlaceCamera(); e.Handled = true; };
         Cursor = Cursors.Hand;
         ToolTip = "Drag to turn, scroll to zoom, double-click to reset";
+    }
+
+    /// <summary>The verified GLB, centred and scaled to the card's real length (its longest side).</summary>
+    private Model3D? Verified(byte[] glb, GpuMatch match)
+    {
+        try
+        {
+            var r = GlbModel.Load(glb);
+            var b = r.Bounds;
+            double longest = Math.Max(b.SizeX, Math.Max(b.SizeY, b.SizeZ));
+            if (longest <= 0) return null;
+            double k = match.Shape.lengthMm / 100.0 / longest;
+            var t = new Transform3DGroup();
+            t.Children.Add(new TranslateTransform3D(-(b.X + b.SizeX / 2), -(b.Y + b.SizeY / 2), -(b.Z + b.SizeZ / 2)));
+            t.Children.Add(new ScaleTransform3D(k, k, k));
+            r.Model.Transform = t;
+            _rig.Fans.AddRange(r.Fans);
+            _rig.Triangles = r.Triangles;
+            _rig.Size = new Size3D(b.SizeX * k, b.SizeY * k, b.SizeZ * k);
+            return r.Model;
+        }
+        catch (Exception ex) { MoneyTweaks.Core.Sys.Log.Warn("GPU model couldn't be read: " + ex.Message); return null; }
     }
 
     public bool Running

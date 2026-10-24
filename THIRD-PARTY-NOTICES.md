@@ -43,6 +43,13 @@ is available at the address above, under the terms of the MPL-2.0.
 - License: MIT, Copyright (c) .NET Foundation and Contributors / Xamarin Inc. and Microsoft.
 - Source: https://github.com/dotnet/runtime and https://github.com/mono/mono
 
+## 3D model: "Graphics card" by pgonarg
+
+- License: Creative Commons Attribution 3.0 (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/
+- Attribution: "Graphics card" by pgonarg (https://poly.pizza/m/i45v5trpyR), licensed under CC BY 3.0. Unmodified.
+- File: src/MoneyTweaks/Assets/Gpu/rtx30-founders-pgonarg.glb (SHA-256 2fd7239e31a32c366d2d2864c59478adf64d3ffc85acf69108325751e310aac4),
+  shown in Reality Lab for GeForce RTX 3080/3090 Founders Edition cards. Details: src/MoneyTweaks/Assets/Gpu/manifest.json.
+
 ---
 
 ## Mozilla Public License 2.0

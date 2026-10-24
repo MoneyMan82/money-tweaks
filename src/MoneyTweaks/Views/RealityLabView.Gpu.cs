@@ -64,13 +64,13 @@ public sealed partial class RealityLabView
         using (Perf.Measure("build GPU model", 20))
             _showcase = new GpuShowcase(m, detailed: !SoftwareRendering);
         _gpuHost.Child = _showcase;
-        RenderGpuInfo(adapter, m);
+        RenderGpuInfo(adapter, m, _showcase.Asset);
         UpdateGpuTelemetry();
         SyncRunning();
         Log.Info($"Reality Lab: GPU model built ({_showcase.Triangles} triangles, {m.Design})");
     }
 
-    private void RenderGpuInfo(DxgiAdapter? adapter, GpuMatch m)
+    private void RenderGpuInfo(DxgiAdapter? adapter, GpuMatch m, GpuAsset? asset)
     {
         _gpuInfo.Children.Clear();
         _gpuInfo.Children.Add(new TextBlock { Text = m.Design switch { GpuDesign.Integrated => "INTEGRATED GRAPHICS", GpuDesign.Laptop => "LAPTOP GPU", GpuDesign.Unknown => "NOT IN THE MODEL LIBRARY", _ => (m.Maker ?? m.Spec!.Vendor).ToUpperInvariant() }, Style = Ui.Res<Style>("Eyebrow") });
@@ -89,7 +89,10 @@ public sealed partial class RealityLabView
             Row(m.Design == GpuDesign.Partner ? "Model size (typical)" : "Size", $"{len} × {h} mm, {slots.ToString("0.#", CultureInfo.CurrentCulture)} slots, {fans} fan{(fans == 1 ? "" : "s")}");
             _gpuInfo.Children.Add(specs);
         }
-        var note = Ui.Muted("The model is drawn by Money Tweaks from published dimensions; it is not a scan of your exact card. Drag to turn it, scroll to zoom.", 11);
+        var note = Ui.Muted(asset is not null
+            ? $"3D model: “{asset.Title}” by {asset.Author}, {asset.License.Replace("-", " ")}, used unmodified ({asset.Source}). It shows the {asset.Depicts}. Drag to turn it, scroll to zoom."
+            : m.IsCard ? "Generic model: no 3D model of this card with a license that allows redistribution was found, so Money Tweaks draws one from published dimensions. Drag to turn it, scroll to zoom."
+            : "Drag to turn it, scroll to zoom.", 11);
         note.TextWrapping = TextWrapping.Wrap;
         note.Margin = new Thickness(0, 8, 0, 6);
         _gpuInfo.Children.Add(note);

@@ -1,0 +1,28 @@
+{
+  "about": "Third-party 3D graphics card models bundled with Money Tweaks. Only licenses that explicitly allow commercial use, modification and redistribution are accepted (CC0-1.0, CC-BY-3.0, CC-BY-4.0); attribution is shown in Reality Lab and in THIRD-PARTY-NOTICES.md. Files are bundled unmodified; the app only scales and orients them when drawing.",
+  "assets": [
+    {
+      "file": "rtx30-founders-pgonarg.glb",
+      "title": "Graphics card",
+      "author": "pgonarg",
+      "source": "https://poly.pizza/m/i45v5trpyR",
+      "download": "https://static.poly.pizza/94cc02b3-3cd1-447a-b79a-2ae808b78391.glb",
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "attribution": "\"Graphics card\" by pgonarg (https://poly.pizza/m/i45v5trpyR), licensed under CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/). Unmodified.",
+      "sha256": "2fd7239e31a32c366d2d2864c59478adf64d3ffc85acf69108325751e310aac4",
+      "retrieved": "2026-10-24",
+      "depicts": "NVIDIA GeForce RTX 30-series Founders Edition style (X-shaped frame, one fan on each side, flow-through cooler), low-poly",
+      "design": "NvidiaFounders",
+      "matches": ["rtx3080", "rtx3080ti", "rtx3090", "rtx3090ti"]
+    }
+  ],
+  "evaluatedNotBundled": [
+    { "title": "GeForce RTX 4090 Founders Edition", "author": "exela", "source": "https://sketchfab.com/3d-models/geforce-rtx-4090-founders-edition-d417c0b4c3bd475eb9669afcd14a2601", "license": "CC-BY-NC-4.0", "reason": "NonCommercial license: redistribution in Money Tweaks is not permitted." },
+    { "title": "Asus ROG Geforce RTX 4090 v2.0", "author": "MG990", "source": "https://sketchfab.com/3d-models/asus-rog-geforce-rtx-4090-v20-6f527569f14b4efc94c7072842bd41ac", "license": "CC-BY-4.0", "reason": "License qualifies, but Sketchfab only serves the file to a signed-in account; not downloaded." },
+    { "title": "MSI RTX 3080 Graphics card", "author": "kaif.3d", "source": "https://sketchfab.com/3d-models/msi-rtx-3080-graphics-card-e5c384afae914d548a591f722e1878fc", "license": "CC-BY-4.0", "reason": "License qualifies, but Sketchfab only serves the file to a signed-in account; not downloaded." },
+    { "title": "RTX 4070", "author": "digitalrazor3d", "source": "https://sketchfab.com/3d-models/rtx-4070-174798ba45fc47218920d229a684bf88", "license": "none", "reason": "No license and not downloadable." },
+    { "title": "Pci E Card", "author": "iPoly3D", "source": "https://poly.pizza/m/lHRTD47DCP", "license": "CC0-1.0", "reason": "A generic expansion card without a cooler, not a graphics card." },
+    { "title": "Meshy GPU gallery", "author": "various", "source": "https://www.meshy.ai/tags/gpu", "license": "CC0-1.0 (stated)", "reason": "AI-generated, not accurate depictions; download needs an account." }
+  ]
+}
