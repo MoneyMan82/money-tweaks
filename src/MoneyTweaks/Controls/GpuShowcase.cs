@@ -54,9 +54,11 @@ public sealed class GpuShowcase : Grid
         root.Children.Add(new DirectionalLight(Color.FromRgb(0x9A, 0xA4, 0xC0), new Vector3D(0.1, -0.35, 1)));     // rim from behind
         root.Children.Add(new DirectionalLight(Color.FromRgb(0x30, 0x34, 0x40), new Vector3D(0, 1, 0)));           // bounce from the floor
         root.Children.Add(_glow);
-        Asset = GpuAssetCatalog.Manifest.For(match);
-        Model3D? card = Asset is not null && GpuAssetCatalog.Read(Asset) is { } glb ? Verified(glb, match) : null;
-        if (card is null) { Asset = null; card = GpuModel3D.Build(match, _rig, detailed); }
+        // The best verified model whose file reads and passes its checksum; otherwise the generated generic model.
+        Model3D? card = null;
+        foreach (var a in GpuAssetCatalog.Manifest.Candidates(match))
+            if (GpuAssetCatalog.Read(a) is { } glb && Verified(glb, match, a) is { } m) { card = m; Asset = a; break; }
+        card ??= GpuModel3D.Build(match, _rig, detailed);
         root.Children.Add(card);
 
         // Floor: a soft shadow and a faint reflection pool under the card.
@@ -95,16 +97,25 @@ public sealed class GpuShowcase : Grid
     }
 
     /// <summary>The verified GLB, centred and scaled to the card's real length (its longest side).</summary>
-    private Model3D? Verified(byte[] glb, GpuMatch match)
+    private Model3D? Verified(byte[] glb, GpuMatch match, GpuAsset asset)
     {
         try
         {
             var r = GlbModel.Load(glb);
-            var b = r.Bounds;
+            // Stand it up (length along X, fans facing the viewer), then centre and scale.
+            var stand = new Transform3DGroup();
+            if (asset.Rotate is [var rx, var ry, var rz])
+            {
+                if (rx != 0) stand.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), rx)));
+                if (ry != 0) stand.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), ry)));
+                if (rz != 0) stand.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 0, 1), rz)));
+            }
+            var b = stand.TransformBounds(r.Bounds);
             double longest = Math.Max(b.SizeX, Math.Max(b.SizeY, b.SizeZ));
             if (longest <= 0) return null;
             double k = match.Shape.lengthMm / 100.0 / longest;
             var t = new Transform3DGroup();
+            t.Children.Add(stand);
             t.Children.Add(new TranslateTransform3D(-(b.X + b.SizeX / 2), -(b.Y + b.SizeY / 2), -(b.Z + b.SizeZ / 2)));
             t.Children.Add(new ScaleTransform3D(k, k, k));
             r.Model.Transform = t;

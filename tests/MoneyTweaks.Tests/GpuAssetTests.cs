@@ -29,9 +29,11 @@ public class GpuAssetTests
             Assert.Contains(a.License, GpuAssetManifest.AllowedLicenses);
             Assert.StartsWith("https://", a.Source);
             Assert.StartsWith("https://creativecommons.org/", a.LicenseUrl);
-            Assert.Contains(a.Author, a.Attribution);
+            var author = a.Author.Split([" (", ","], StringSplitOptions.None)[0];   // the name, without profile link or former names
+            Assert.Contains(author, a.Attribution);
             Assert.Contains(a.Source, a.Attribution);
-            Assert.Contains(a.Author, notices);
+            Assert.Contains(author, notices);
+            Assert.Contains(a.Sha256, notices);
             Assert.All(a.Matches, id => Assert.Contains(GpuModels.All, s => s.Id == id));
         }
         // Nothing NonCommercial or unlicensed is ever bundled.
@@ -40,15 +42,20 @@ public class GpuAssetTests
     }
 
     [Theory]
-    [InlineData("NVIDIA GeForce RTX 3080", 0x146710DEu, true)]     // Founders Edition: the verified RTX 30 Founders model
-    [InlineData("NVIDIA GeForce RTX 3090", 0x147010DEu, true)]
-    [InlineData("NVIDIA GeForce RTX 3080", 0x38971462u, false)]    // MSI partner card: generic model, never the Founders look
-    [InlineData("NVIDIA GeForce RTX 4070 SUPER", 0x89741043u, false)] // this PC's ASUS card: no verified model exists
-    [InlineData("NVIDIA GeForce RTX 4090", 0x16F110DEu, false)]   // 40-series Founders looks different: not the 30-series model
-    [InlineData("NVIDIA GeForce RTX 3070", 0x148410DEu, false)]   // 3070 Founders has two front fans and no X frame
-    public void Verified_models_are_only_used_for_the_cards_they_depict(string name, uint subsys, bool expected)
+    [InlineData("NVIDIA GeForce RTX 3080", 0x146710DEu, "rtx3080-founders-surovic.glb")]      // Founders Edition: the detailed RTX 30 Founders model
+    [InlineData("NVIDIA GeForce RTX 3090", 0x147010DEu, "rtx3080-founders-surovic.glb")]      // same design
+    [InlineData("NVIDIA GeForce RTX 3080", 0x38971462u, null)]                                // MSI partner card: never the Founders look
+    [InlineData("NVIDIA GeForce RTX 4090", 0x16F110DEu, "rtx4090-founders-gihyeon.glb")]
+    [InlineData("NVIDIA GeForce RTX 4080 SUPER", 0x18A110DEu, "rtx4090-founders-gihyeon.glb")] // 4080 Founders shares the 4090's design
+    [InlineData("NVIDIA GeForce RTX 4090", 0x88E21043u, null)]                                // ASUS 4090: not the Founders model
+    [InlineData("NVIDIA GeForce RTX 5070", 0x53131462u, "rtx5070-msi-ventus3x-darky.glb")]    // MSI 5070: the MSI Ventus model
+    [InlineData("NVIDIA GeForce RTX 5070", 0x89F01043u, null)]                                // ASUS 5070: not an MSI card
+    [InlineData("NVIDIA GeForce RTX 5070 Ti", 0x41501458u, "rtx5070ti-hakai315.glb")]        // any 5070 Ti: the typical 5070 Ti model
+    [InlineData("NVIDIA GeForce RTX 4070 SUPER", 0x89741043u, null)]                          // this PC's ASUS card: no verified model
+    [InlineData("NVIDIA GeForce RTX 3070", 0x148410DEu, null)]                                // 3070 Founders looks different
+    public void Verified_models_are_only_used_for_the_cards_they_depict(string name, uint subsys, string? file)
     {
         var match = GpuModels.Match(name, 0x10DE, subsys);
-        Assert.Equal(expected, Manifest().For(match) is not null);
+        Assert.Equal(file, Manifest().For(match)?.File);
     }
 }

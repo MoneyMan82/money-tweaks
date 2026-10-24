@@ -43,12 +43,36 @@ is available at the address above, under the terms of the MPL-2.0.
 - License: MIT, Copyright (c) .NET Foundation and Contributors / Xamarin Inc. and Microsoft.
 - Source: https://github.com/dotnet/runtime and https://github.com/mono/mono
 
-## 3D model: "Graphics card" by pgonarg
+## 3D graphics card models (Reality Lab)
 
-- License: Creative Commons Attribution 3.0 (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/
-- Attribution: "Graphics card" by pgonarg (https://poly.pizza/m/i45v5trpyR), licensed under CC BY 3.0. Unmodified.
-- File: src/MoneyTweaks/Assets/Gpu/rtx30-founders-pgonarg.glb (SHA-256 2fd7239e31a32c366d2d2864c59478adf64d3ffc85acf69108325751e310aac4),
-  shown in Reality Lab for GeForce RTX 3080/3090 Founders Edition cards. Details: src/MoneyTweaks/Assets/Gpu/manifest.json.
+Bundled unmodified in src/MoneyTweaks/Assets/Gpu; full details, checksums and the models that were evaluated but not
+bundled are in src/MoneyTweaks/Assets/Gpu/manifest.json.
+
+- **GeForce RTX 3080 Graphics Card** by _surovic_ (https://sketchfab.com/samuelsurovic)
+  - License: Creative Commons Attribution 4.0 (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+  - Source: https://sketchfab.com/3d-models/geforce-rtx-3080-graphics-card-8b947ee1bf7a4e3d8ffa1c24893ac160
+  - Attribution: "GeForce RTX 3080 Graphics Card" by _surovic_ (https://sketchfab.com/3d-models/geforce-rtx-3080-graphics-card-8b947ee1bf7a4e3d8ffa1c24893ac160), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Unmodified.
+  - File: rtx3080-founders-surovic.glb (SHA-256 465433f4ccd6f2797b54034cbb637c8567734c0cc8cef94c9fad7f31a5499514), shown for: GeForce RTX 3080 Founders Edition (the RTX 3080 Ti, 3090 and 3090 Ti Founders Editions share this design).
+- **Graphics card** by pgonarg
+  - License: Creative Commons Attribution 3.0 (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/
+  - Source: https://poly.pizza/m/i45v5trpyR
+  - Attribution: "Graphics card" by pgonarg (https://poly.pizza/m/i45v5trpyR), licensed under CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/). Unmodified.
+  - File: rtx30-founders-pgonarg.glb (SHA-256 2fd7239e31a32c366d2d2864c59478adf64d3ffc85acf69108325751e310aac4), shown for: NVIDIA GeForce RTX 30-series Founders Edition style (low-poly); fallback if the detailed model can't be read.
+- **RTX 4090 Founders edition** by GIHYEON (https://sketchfab.com/GIHYEON)
+  - License: Creative Commons Attribution 4.0 (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+  - Source: https://sketchfab.com/3d-models/rtx-4090-founders-edition-463a9f8002694aa0ac2324637eacc8d3
+  - Attribution: "RTX 4090 Founders edition" by GIHYEON (https://sketchfab.com/3d-models/rtx-4090-founders-edition-463a9f8002694aa0ac2324637eacc8d3), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Unmodified.
+  - File: rtx4090-founders-gihyeon.glb (SHA-256 10a6327217ea8e835b79cc5dd1625f4a703774b0aff2c2e8623e224439a33fdc), shown for: GeForce RTX 4090 Founders Edition (the RTX 4080 and 4080 SUPER Founders Editions share this design and size).
+- **MSI GeForce RTX 5070 VENTUS 3X OC** by darky.vip21 (https://sketchfab.com/darky.vip21)
+  - License: Creative Commons Attribution 4.0 (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+  - Source: https://sketchfab.com/3d-models/msi-geforce-rtx-5070-ventus-3x-oc-732fd2bb31404894a220904526d13c03
+  - Attribution: "MSI GeForce RTX 5070 VENTUS 3X OC" by darky.vip21 (https://sketchfab.com/3d-models/msi-geforce-rtx-5070-ventus-3x-oc-732fd2bb31404894a220904526d13c03), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Unmodified.
+  - File: rtx5070-msi-ventus3x-darky.glb (SHA-256 f604090423ad41b2b67639fac3e41f6a7fb90a993f9ffe4d42c79350e0ac5c05), shown for: MSI GeForce RTX 5070 VENTUS 3X OC.
+- **NVIDIA RTX5070ti** by hakai315, formerly hikami3150 (https://sketchfab.com/hakai315)
+  - License: Creative Commons Attribution 4.0 (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+  - Source: https://sketchfab.com/3d-models/nvidia-rtx5070ti-1035d0d5985d4c3b8c91e3da9eb1fade
+  - Attribution: "NVIDIA RTX5070ti" by hakai315 (https://sketchfab.com/3d-models/nvidia-rtx5070ti-1035d0d5985d4c3b8c91e3da9eb1fade), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Unmodified.
+  - File: rtx5070ti-hakai315.glb (SHA-256 457420ed38f4c19ee9adeec91b51cd5e2f9fed71dd2d4a592be55e621e7f1b31), shown for: a typical triple-fan GeForce RTX 5070 Ti (no maker branding; there is no Founders Edition 5070 Ti).
 
 ---
 

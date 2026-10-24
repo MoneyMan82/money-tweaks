@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.64 – 2026-10-24
+- **Reality Lab: four more verified GPU models** (CC BY 4.0, licenses re-checked on each Sketchfab page, bundled
+  unmodified with checksum and attribution): GeForce RTX 3080 Founders Edition by _surovic_ (used for RTX 3080/3080 Ti/
+  3090/3090 Ti Founders Edition), RTX 4090 Founders Edition by GIHYEON (4090, and the 4080/4080 SUPER Founders Editions
+  that share its design), MSI GeForce RTX 5070 VENTUS 3X OC by darky.vip21 (only for MSI RTX 5070 cards), and an RTX 5070
+  Ti by hakai315 (any 5070 Ti, labelled as a typical card).
+- Not bundled: the free RTX 5090 Founders Edition (Sketchfab Standard license doesn't allow redistributing the file) and the
+  RTX 5090 ROG Astral (CC BY, but 209 MB / 3.1 million triangles). Both are listed in the manifest with the reason.
+- The GLB reader now draws embedded base-colour textures. Models can be rotated upright per manifest entry, and
+  maker-specific models are only used for that maker's cards.
+
 ## 1.63 – 2026-10-24
 - **Reality Lab: verified third-party GPU models.** Downloadable models are used only when their license explicitly
   allows commercial use, modification and redistribution (CC0, CC BY 3.0/4.0); each is bundled unmodified with its

@@ -36,9 +36,9 @@ public static class GpuAssetCatalog
 
 /// <summary>
 /// Minimal glTF 2.0 binary (GLB) reader for WPF 3D: node hierarchy (TRS or matrix), triangle primitives with positions,
-/// normals and 8/16/32-bit indices, and PBR base colours (linear → sRGB; metal/roughness approximated with a specular
-/// layer). Textures aren't read: a part with only a texture is drawn in its base colour. Nodes named "fan" are returned
-/// so they can spin around their own centre.
+/// normals, texture coordinates and 8/16/32-bit indices, and PBR base colour (embedded PNG/JPEG base-colour texture, or
+/// the colour factor converted linear → sRGB; metal/roughness approximated with a specular layer). Nodes named "fan" are
+/// returned so they can spin around their own centre.
 /// </summary>
 public static class GlbModel
 {
@@ -57,7 +57,8 @@ public static class GlbModel
         var fans = new List<AxisAngleRotation3D>();
         var bounds = Rect3D.Empty;
         int tris = 0;
-        var materials = j.TryGetProperty("materials", out var mats) ? mats.EnumerateArray().Select(MaterialOf).ToList() : [];
+        var images = new Dictionary<int, ImageSource?>();
+        var materials = j.TryGetProperty("materials", out var mats) ? mats.EnumerateArray().Select(m => MaterialOf(m, j, bin, images)).ToList() : [];
 
         void Visit(int nodeIdx, Matrix3D parent)
         {
@@ -73,6 +74,8 @@ public static class GlbModel
                     var mesh = new MeshGeometry3D();
                     var attrs = p.GetProperty("attributes");
                     foreach (var v in Floats(j, bin, attrs.GetProperty("POSITION").GetInt32(), 3)) mesh.Positions.Add(world.Transform(new Point3D(v[0], v[1], v[2])));
+                    if (attrs.TryGetProperty("TEXCOORD_0", out var ta))
+                        foreach (var v in Floats(j, bin, ta.GetInt32(), 2)) mesh.TextureCoordinates.Add(new System.Windows.Point(v[0], v[1]));
                     if (attrs.TryGetProperty("NORMAL", out var na))
                         foreach (var v in Floats(j, bin, na.GetInt32(), 3)) { var nv = world.Transform(new Vector3D(v[0], v[1], v[2])); nv.Normalize(); mesh.Normals.Add(nv); }
                     if (p.TryGetProperty("indices", out var ia)) foreach (var i in Indices(j, bin, ia.GetInt32())) mesh.TriangleIndices.Add(i);
@@ -80,7 +83,7 @@ public static class GlbModel
                     if (world.Determinant < 0) for (int i = 0; i + 2 < mesh.TriangleIndices.Count; i += 3) (mesh.TriangleIndices[i + 1], mesh.TriangleIndices[i + 2]) = (mesh.TriangleIndices[i + 2], mesh.TriangleIndices[i + 1]);
                     mesh.Freeze();
                     tris += mesh.TriangleIndices.Count / 3;
-                    var mat = p.TryGetProperty("material", out var mx) && mx.GetInt32() < materials.Count ? materials[mx.GetInt32()] : MaterialOf(default);
+                    var mat = p.TryGetProperty("material", out var mx) && mx.GetInt32() < materials.Count ? materials[mx.GetInt32()] : MaterialOf(default, j, bin, images);
                     var gm = new GeometryModel3D(mesh, mat) { BackMaterial = mat };
                     parts.Add(gm);
                     bounds.Union(mesh.Bounds);
@@ -154,18 +157,53 @@ public static class GlbModel
         }
     }
 
-    private static Material MaterialOf(JsonElement m)
+    /// <summary>An embedded image (PNG/JPEG in a buffer view), decoded once and frozen; null if it can't be read.</summary>
+    private static ImageSource? Image(JsonElement j, byte[] bin, int texture, Dictionary<int, ImageSource?> cache)
+    {
+        var tex = j.GetProperty("textures")[texture];
+        if (!tex.TryGetProperty("source", out var src)) return null;
+        int idx = src.GetInt32();
+        if (cache.TryGetValue(idx, out var hit)) return hit;
+        ImageSource? result = null;
+        try
+        {
+            var img = j.GetProperty("images")[idx];
+            if (img.TryGetProperty("bufferView", out var bvi))
+            {
+                var bv = j.GetProperty("bufferViews")[bvi.GetInt32()];
+                int off = bv.TryGetProperty("byteOffset", out var o) ? o.GetInt32() : 0, len = bv.GetProperty("byteLength").GetInt32();
+                var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bmp.DecodePixelWidth = 1024;   // plenty for a card a few hundred pixels wide; keeps memory down
+                bmp.StreamSource = new MemoryStream(bin, off, len, writable: false);
+                bmp.EndInit();
+                bmp.Freeze();
+                result = bmp;
+            }
+        }
+        catch (Exception ex) { Log.Debug("GLB texture: " + ex.Message); }
+        return cache[idx] = result;
+    }
+
+    private static Material MaterialOf(JsonElement m, JsonElement j, byte[] bin, Dictionary<int, ImageSource?> images)
     {
         double[] c = [0.6, 0.6, 0.6, 1]; double metal = 0, rough = 1;
+        ImageSource? texture = null;
         if (m.ValueKind == JsonValueKind.Object && m.TryGetProperty("pbrMetallicRoughness", out var pbr))
         {
+            if (pbr.TryGetProperty("baseColorTexture", out var bt)) texture = Image(j, bin, bt.GetProperty("index").GetInt32(), images);
             if (pbr.TryGetProperty("baseColorFactor", out var f)) c = f.EnumerateArray().Select(e => e.GetDouble()).ToArray();
             if (pbr.TryGetProperty("metallicFactor", out var mf)) metal = mf.GetDouble();
             if (pbr.TryGetProperty("roughnessFactor", out var rf)) rough = rf.GetDouble();
         }
         static byte S(double lin) => (byte)Math.Round(Math.Clamp(Math.Pow(Math.Clamp(lin, 0, 1), 1 / 2.2), 0, 1) * 255);   // linear → sRGB
         var g = new MaterialGroup();
-        g.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb((byte)(c[3] * 255), S(c[0]), S(c[1]), S(c[2])))));
+        // A texture is drawn as is (WPF can't multiply it by the colour factor, which is usually white with a texture).
+        Brush diffuse = texture is not null
+            ? new ImageBrush(texture) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new System.Windows.Rect(0, 0, 1, 1), TileMode = TileMode.Tile }
+            : new SolidColorBrush(Color.FromArgb((byte)(c[3] * 255), S(c[0]), S(c[1]), S(c[2])));
+        g.Children.Add(new DiffuseMaterial(diffuse));
         double spec = Math.Clamp((1 - rough) * 0.6 + metal * 0.3, 0.15, 0.85);
         g.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb((byte)(spec * 255), 255, 255, 255)), 20 + 60 * (1 - rough)));
         g.Freeze();
