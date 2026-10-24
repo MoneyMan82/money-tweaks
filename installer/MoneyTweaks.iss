@@ -60,6 +60,26 @@ Filename: "{app}\MoneyTweaks.exe"; Parameters: "--restarted"; Description: "{cm:
 Filename: "{app}\MoneyTweaks.exe"; Parameters: "--restarted"; Flags: nowait; Check: WizardSilent
 
 [UninstallDelete]
-; Tweaks stay applied after uninstall; backups in %LOCALAPPDATA%\MoneyTweaks are kept on purpose so you can
-; reinstall and undo them later. Delete that folder manually if you no longer need it.
+; %LOCALAPPDATA%\MoneyTweaks (logs, and backups of anything that couldn't be undone, e.g. when administrator permission
+; was declined) is kept so a reinstall can still undo those. Delete it manually if you no longer need it.
 Type: dirifempty; Name: "{app}"
+
+[Code]
+// Before any file is removed (usUninstall): undo everything Money Tweaks applied - tweaks from their backups, an active
+// gaming profile, CPU/GPU tuning, NVIDIA profile changes, game config files, display modes and its startup entry. The
+// app closes a running copy first and asks for administrator rights only if system-wide changes are still applied.
+// A silent uninstall runs it without a window. In-app updates don't run the uninstaller, so updating never undoes anything.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ResultCode: Integer;
+  Params: String;
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    Params := '--uninstall-restore';
+    if UninstallSilent then
+      Params := Params + ' --quiet';
+    if not Exec(ExpandConstant('{app}\MoneyTweaks.exe'), Params, '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
+      Log('Money Tweaks restore could not be started: ' + SysErrorMessage(ResultCode));
+  end;
+end;

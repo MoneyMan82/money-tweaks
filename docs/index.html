@@ -324,6 +324,8 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <div class="card reveal" style="margin-bottom:16px">
         <h3>Recent releases <span class="muted" style="font-size:14px;font-weight:400">· October 2026</span></h3>
         <ul class="list">
+          <li><b>1.61:</b> Uninstalling now undoes everything Money Tweaks applied (tweaks, profiles, tuning, NVIDIA and game settings, display changes) before removing the app.</li>
+          <li><b>1.60:</b> Performance overlay fixes: ping and readings no longer flash n/a, no layout flipping when switching windows, the overlay no longer shifts as numbers change.</li>
           <li><b>1.59:</b> More sensors through LibreHardwareMonitor: GPU hot spot, memory junction and fan RPM, AMD GPU sensors, and CPU package/core temperatures and motherboard sensors where its PawnIO driver is installed. Read-only, never installs drivers, placeholders never shown.</li>
           <li><b>1.58:</b> Performance Overlay becomes a gaming HUD: FPS, frame-time graph, 1% lows, CPU/GPU load and temperatures, RAM, VRAM and ping; minimal, compact and detailed layouts with themes; drag and scale anywhere; click-through; per-game profiles for Fortnite, Geometry Dash and Roblox.</li>
           <li><b>1.57:</b> Hardware Monitor upgraded: per-core CPU, full GPU telemetry, drives and adapters, 1-minute to 1-hour graphs with hover details, warnings for heat, throttling and memory pressure, pinned favourites, CSV logging and export, and a compact always-on-top window. Unsupported readings are marked, never estimated.</li>
@@ -403,7 +405,7 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <details class="reveal"><summary>Why does Windows say it's an unrecognized app?</summary><p>The builds aren't code-signed. You can verify the SHA-256 hash, read the source, or build it yourself with one command.</p></details>
       <details class="reveal"><summary>How do I update?</summary><p>Money Tweaks checks GitHub for new versions when it starts and shows an <b>Update now</b> banner. The download is checksum-verified and the app restarts on the new version. You can also use Settings &amp; About → Check for updates. Version 1.0.0 had no updater, so install 1.1.0 once manually.</p></details>
       <details class="reveal"><summary>How do the version numbers work?</summary><p>Since 1.23, releases count up in hundredths (1.24, 1.25, 1.26), with a third number for small fixes (1.25.1). GitHub tags end in .0 (v1.26.0) so older copies can still update themselves.</p></details>
-      <details class="reveal"><summary>What happens when I uninstall?</summary><p>Applied tweaks stay applied. Undo them first from Backup &amp; Restore if you want Windows back to how it was. Your backups in %LOCALAPPDATA%\MoneyTweaks are kept so a reinstall can still undo them.</p></details>
+      <details class="reveal"><summary>What happens when I uninstall?</summary><p>The uninstaller undoes everything Money Tweaks applied before it removes the app: every tweak goes back to its backed-up value, and gaming profiles, CPU/GPU tuning, NVIDIA profile changes, game settings files and display changes are restored too. It asks for administrator permission only if system-wide changes are applied. If you decline, those stay, and their backups in %LOCALAPPDATA%\MoneyTweaks are kept so a reinstall can still undo them. The portable ZIP has no uninstaller: use Backup &amp; Restore → Undo everything before deleting it.</p></details>
     </div>
   </section>
 

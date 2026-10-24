@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.61 – 2026-10-24
+- **Uninstalling undoes everything Money Tweaks applied**, before any file is removed:
+  - Every tweak goes back to its backed-up value (newest first, each verified by reading it back), an active gaming
+    profile is turned off, CPU/GPU tuning is reverted, NVIDIA profile changes are restored, Potato Graphics and Fortnite
+    settings files are put back, displays switched to a stretched resolution return to their original mode, and Money
+    Tweaks' "start with Windows" entry is removed. It reuses the same restore code as the app's own Undo buttons.
+  - A running Money Tweaks is asked to close first (its normal shutdown), so nothing re-applies while undoing.
+  - Administrator permission is asked for once, and only if system-wide changes are still applied. If it's declined, those
+    stay applied and their backups are kept in %LOCALAPPDATA%\MoneyTweaks, so reinstalling can still undo them.
+  - A window shows progress and a summary of anything that couldn't be undone and why; a silent uninstall does the same
+    without the window. In-app updates don't run the uninstaller, so updating never undoes anything.
+
 ## 1.60 – 2026-10-23
 - **Performance overlay fixes** (readings flashing n/a, ping glitching):
   - Ping no longer resets to n/a whenever the overlay switches layouts: it keeps running while the overlay is visible.

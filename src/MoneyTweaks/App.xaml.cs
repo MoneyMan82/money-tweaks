@@ -28,8 +28,15 @@ public partial class App : Application
         Log.Info("Sent to the background by the user (tray icon only)");
     }
     private static Mutex? _single;
-    private static EventWaitHandle? _showSignal;
-    private const string MutexName = @"Local\MoneyTweaks.SingleInstance", ShowName = @"Local\MoneyTweaks.Show";
+    private static EventWaitHandle? _showSignal, _exitSignal;
+    private const string MutexName = @"Local\MoneyTweaks.SingleInstance", ShowName = @"Local\MoneyTweaks.Show", ExitName = @"Local\MoneyTweaks.Exit";
+
+    /// <summary>Asks a running copy to exit normally (used by the uninstaller). False if none is listening.</summary>
+    public static bool SignalExit()
+    {
+        try { using var ev = EventWaitHandle.OpenExisting(ExitName); ev.Set(); return true; }
+        catch { return false; }
+    }
 
     /// <summary>Fewer animations/effects: user setting, else Windows' "Animation effects" off or a GPU below render tier 2.</summary>
     public static bool ReduceMotion => Settings.ReduceMotion ?? (!SystemParameters.ClientAreaAnimation || (System.Windows.Media.RenderCapability.Tier >> 16) < 2);
@@ -59,6 +66,8 @@ public partial class App : Application
 
         Settings = AppSettings.Load();
         if (Settings.LegacyUi) LegacyTheme.Apply(Resources); // before any window or style is created
+        // Run by the uninstaller: undo everything Money Tweaks changed, then exit. No watchers, tray or main window.
+        if (UninstallMode.Handles(e.Args)) { UninstallMode.Run(this, e.Args); return; }
         Controls.Motion.InstallSmoothScrolling(); // smooth wheel scrolling in every scrollable area (off with reduced motion)
         Controls.Motion.InstallProgressGlide();   // determinate progress bars glide to new values
         Controls.Motion.InstallSquareWindows();   // square window corners on Windows 11, like the rest of the design
@@ -114,6 +123,13 @@ public partial class App : Application
             return false;
         }
         _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowName);
+        // The uninstaller asks the running copy to exit normally before it undoes Money Tweaks' changes.
+        _exitSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ExitName);
+        new Thread(() =>
+        {
+            if (_exitSignal.WaitOne())
+                Current?.Dispatcher.BeginInvoke(() => { Log.Info("Exit requested by the uninstaller"); ExitRequested = true; Current.Shutdown(); });
+        }) { IsBackground = true, Name = "UninstallExitSignal" }.Start();
         var t = new Thread(() =>
         {
             while (_showSignal.WaitOne())

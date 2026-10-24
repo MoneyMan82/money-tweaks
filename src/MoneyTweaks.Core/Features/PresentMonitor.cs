@@ -306,6 +306,17 @@ public static unsafe class PresentMonitor
         _session = 0;
     }
 
+    /// <summary>Stops a session with our name that this process didn't start (left behind by a copy that was killed).</summary>
+    public static void StopLeftoverSession()
+    {
+        lock (Gate)
+        {
+            if (State == CaptureState.Running) return;
+            var props = NewProps();
+            try { ControlTraceW(0, SessionName, props, EventTraceControlStop); } finally { Marshal.FreeHGlobal(props); }
+        }
+    }
+
     /// <summary>True if a session with our name exists (used by tests to check cleanup).</summary>
     public static bool SessionExists()
     {
