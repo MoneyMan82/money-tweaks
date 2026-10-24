@@ -101,7 +101,7 @@ public static class Nvml
 }
 
 /// <summary>A display adapter as DXGI reports it: name, vendor, dedicated VRAM and its LUID (which the GPU counters use).</summary>
-public sealed record DxgiAdapter(string Name, uint VendorId, ulong DedicatedVideoMemory, long Luid)
+public sealed record DxgiAdapter(string Name, uint VendorId, ulong DedicatedVideoMemory, long Luid, uint DeviceId = 0, uint SubSysId = 0)
 {
     public string Vendor => VendorId switch { 0x10DE => "NVIDIA", 0x1002 => "AMD", 0x8086 => "Intel", _ => "" };
     /// <summary>The LUID as the "GPU Engine" / "GPU Adapter Memory" counter instances spell it ("luid_0x00000000_0x0000d1c3").</summary>
@@ -137,10 +137,10 @@ public static unsafe class Dxgi
                         uint flags = *(uint*)(desc + 304);
                         if ((flags & 2) != 0) continue;   // software adapter (Microsoft Basic Render Driver)
                         var name = new string((char*)desc, 0, 128).TrimEnd('\0').Trim();
-                        uint vendor = *(uint*)(desc + 256);
+                        uint vendor = *(uint*)(desc + 256), device = *(uint*)(desc + 260), subsys = *(uint*)(desc + 264);
                         ulong vram = *(ulong*)(desc + 272);
                         long luid = ((long)*(int*)(desc + 300) << 32) | *(uint*)(desc + 296);
-                        list.Add(new DxgiAdapter(name, vendor, vram, luid));
+                        list.Add(new DxgiAdapter(name, vendor, vram, luid, device, subsys));
                     }
                     finally { Marshal.Release(a); }
                 }

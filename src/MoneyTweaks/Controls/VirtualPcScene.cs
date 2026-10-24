@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using MoneyTweaks.Core.Monitoring;
 
 namespace MoneyTweaks.Controls;
 
@@ -41,7 +42,8 @@ public sealed class VirtualPcScene : Grid
     private readonly PointLight _gpuGlow = new(Colors.Black, new Point3D(-1.3, 0.25, 3.2)) { Range = 6, ConstantAttenuation = 1, LinearAttenuation = 0.3 };
     private readonly PointLight _ramGlow = new(Colors.Black, new Point3D(1.2, 1.9, -2.5)) { Range = 4, ConstantAttenuation = 1, LinearAttenuation = 0.5 };
     private readonly AxisAngleRotation3D _cpuFan = new(new Vector3D(0, 1, 0), 0);
-    private readonly AxisAngleRotation3D[] _gpuFans = [new(new Vector3D(0, 1, 0), 0), new(new Vector3D(0, 1, 0), 40), new(new Vector3D(0, 1, 0), 80)];
+    private readonly List<AxisAngleRotation3D> _gpuFans = [];
+    private readonly GpuMatch? _gpuModel;
     private readonly List<ScaleTransform3D> _ramLevel = [];
     private readonly List<(TranslateTransform3D t, Point3D a, Point3D b, double phase, bool gpu)> _packets = [];
     private readonly TranslateTransform3D _selectAt = new();
@@ -61,8 +63,11 @@ public sealed class VirtualPcScene : Grid
     /// <param name="modules">Memory modules installed (0 = unknown: two are drawn as an illustration).</param>
     /// <param name="slots">Memory slots on the board (0 = unknown: four).</param>
     /// <param name="detailed">Full detail; false halves the geometry (software rendering).</param>
-    public VirtualPcScene(int modules = 0, int slots = 0, bool detailed = true)
+    /// <param name="gpu">This PC's graphics card from the model library: the card in the slot takes its length and fan
+    /// count; an unknown card is a glass outline and integrated graphics leave the slot empty. Null: a generic card.</param>
+    public VirtualPcScene(int modules = 0, int slots = 0, bool detailed = true, GpuMatch? gpu = null)
     {
+        _gpuModel = gpu;
         _slots = Math.Clamp(slots > 0 ? slots : 4, 1, 4);
         _modules = Math.Clamp(modules > 0 ? modules : 2, 1, _slots);
         Background = Brushes.Transparent; // whole area takes mouse input for orbiting
@@ -130,7 +135,7 @@ public sealed class VirtualPcScene : Grid
 
     // ---- procedural textures (drawn once per app run, frozen) ------------------------------------------------------
 
-    private static ImageSource Bitmap(int w, int h, Action<DrawingContext> draw)
+    internal static ImageSource Bitmap(int w, int h, Action<DrawingContext> draw)
     {
         var dv = new DrawingVisual();
         using (var dc = dv.RenderOpen()) draw(dc);
@@ -140,10 +145,10 @@ public sealed class VirtualPcScene : Grid
         return rtb;
     }
 
-    private static Brush Frozen(Brush b) { b.Freeze(); return b; }
+    internal static Brush Frozen(Brush b) { b.Freeze(); return b; }
 
     /// <summary>Brushed aluminium: fine horizontal streaks over a soft gradient.</summary>
-    private static readonly Lazy<Brush> Brushed = new(() =>
+    internal static readonly Lazy<Brush> Brushed = new(() =>
     {
         var rnd = new Random(7);
         return Frozen(new ImageBrush(Bitmap(256, 256, dc =>
@@ -160,7 +165,7 @@ public sealed class VirtualPcScene : Grid
     });
 
     /// <summary>Dark anodised metal with a faint angular accent, for RAM spreaders and the GPU shroud.</summary>
-    private static readonly Lazy<Brush> Gunmetal = new(() => Frozen(new ImageBrush(Bitmap(256, 128, dc =>
+    internal static readonly Lazy<Brush> Gunmetal = new(() => Frozen(new ImageBrush(Bitmap(256, 128, dc =>
     {
         dc.DrawRectangle(new LinearGradientBrush(Color.FromRgb(0x2A, 0x2E, 0x36), Color.FromRgb(0x15, 0x18, 0x1E), 70), null, new Rect(0, 0, 256, 128));
         var rnd = new Random(3);
@@ -237,7 +242,7 @@ public sealed class VirtualPcScene : Grid
 
     // ---- materials ------------------------------------------------------------------------------------------------
 
-    private static Material Mat(Brush diffuse, double specular = 0, double power = 30)
+    internal static Material Mat(Brush diffuse, double specular = 0, double power = 30)
     {
         var g = new MaterialGroup();
         g.Children.Add(new DiffuseMaterial(diffuse));
@@ -246,7 +251,7 @@ public sealed class VirtualPcScene : Grid
         return g;
     }
 
-    private static Material Mat(Color c, double specular = 0, double power = 30) => Mat(new SolidColorBrush(c), specular, power);
+    internal static Material Mat(Color c, double specular = 0, double power = 30) => Mat(new SolidColorBrush(c), specular, power);
 
     private static Material Glow(SolidColorBrush b, Brush baseBrush, double specular = 0)
     {
@@ -270,10 +275,10 @@ public sealed class VirtualPcScene : Grid
     }
 
     /// <summary>Box with its bottom face at y.</summary>
-    private static MeshGeometry3D Box(double x, double y, double z, double sx, double sy, double sz) => PotatoScene.Box(new Point3D(x, y + sy / 2, z), sx, sy, sz);
+    internal static MeshGeometry3D Box(double x, double y, double z, double sx, double sy, double sz) => PotatoScene.Box(new Point3D(x, y + sy / 2, z), sx, sy, sz);
 
     /// <summary>Cylinder along Y from the base centre, with caps.</summary>
-    private static MeshGeometry3D Cyl(Point3D b, double r, double h, int seg, bool caps = true)
+    internal static MeshGeometry3D Cyl(Point3D b, double r, double h, int seg, bool caps = true)
     {
         var m = new MeshGeometry3D();
         for (int i = 0; i <= seg; i++)
@@ -309,7 +314,7 @@ public sealed class VirtualPcScene : Grid
     }
 
     /// <summary>Fan rotor around the Y axis (centred at the origin): curved, pitched blades.</summary>
-    private static MeshGeometry3D Rotor(double r, int blades)
+    internal static MeshGeometry3D Rotor(double r, int blades)
     {
         var m = new MeshGeometry3D();
         const int n = 7;
@@ -337,7 +342,7 @@ public sealed class VirtualPcScene : Grid
     }
 
     /// <summary>Flat quad lying on y (contact shadows, selection plate), UV 0..1.</summary>
-    private static MeshGeometry3D Quad(double x, double y, double z, double sx, double sz)
+    internal static MeshGeometry3D Quad(double x, double y, double z, double sx, double sz)
     {
         var m = new MeshGeometry3D();
         foreach (var (dx, dz, u, v) in new[] { (-1, -1, 0, 0), (1, -1, 1, 0), (1, 1, 1, 1), (-1, 1, 0, 1) })
@@ -369,7 +374,7 @@ public sealed class VirtualPcScene : Grid
         return m;
     }
 
-    private static Transform3D Place(double x, double y, double z, double rotX = 0, double rotZ = 0, Rotation3D? spin = null)
+    internal static Transform3D Place(double x, double y, double z, double rotX = 0, double rotZ = 0, Rotation3D? spin = null)
     {
         var t = new Transform3DGroup();
         if (spin is not null) t.Children.Add(new RotateTransform3D(spin));
@@ -496,26 +501,50 @@ public sealed class VirtualPcScene : Grid
         Add(root, Box(-1.2, 0, 3.7, 6.4, 0.2, 0.26), black);
         Add(root, Box(3.2, 0, 0.9, 0.5, 0.08, 0.5), black);
 
-        // Graphics card standing in the x16 slot: PCB, backplate, shroud with three fans, fin edge, bracket, power plug.
+        // Graphics card standing in the x16 slot, shaped after this PC's card (length, fans, Founders flow-through), or a
+        // glass outline when the card isn't in the model library, or an empty slot when the graphics are in the CPU.
         Add(root, Box(-1.2, 0, 1.0, 6.4, 0.22, 0.28), black, "gpu");
-        const double gx = -1.3, z0 = 1.08, z1 = 2.45, top = 2.75;
-        Add(root, Box(gx, 0.14, 0.92, 8.2, top - 0.2, 0.06), Mat(Brushed.Value, 0.5, 40), "gpu");                // backplate
-        Add(root, Box(gx, 0.1, z0 - 0.06, 8.2, top - 0.1, 0.06), pcbGreen, "gpu");
-        Add(root, Box(gx + 0.6, 0.0, z0 - 0.06, 3.0, 0.14, 0.07), gold, "gpu");                                 // edge connector
-        int finsN = detailed ? 40 : 16;
-        for (int i = 0; i < finsN; i++) Add(root, Box(gx - 3.9 + i * (7.8 / finsN), top - 0.35, (z0 + z1) / 2, 0.025, 0.32, z1 - z0 - 0.12), brushed, "gpu");
-        Add(root, Box(gx, 0.25, (z0 + z1) / 2, 8.3, top - 0.6, z1 - z0), gun, "gpu");                           // shroud body
-        Add(root, Box(gx, top - 0.04, (z0 + z1) / 2, 8.3, 0.04, z1 - z0), gun, "gpu");                          // shroud top rail
-        Add(root, Box(gx, 0.28, z1, 8.0, 0.05, 0.03), Glow(_gpuHeat, Brushes.Black), "gpu");                 // light bar, lower edge
-        Add(root, Box(gx - 4.22, 0.0, (z0 + z1) / 2 - 0.1, 0.06, top + 0.2, z1 - z0 + 0.3), Mat(Brushed.Value, 0.8, 70), "gpu"); // bracket
-        Add(root, Box(gx + 2.6, top, (z0 + z1) / 2, 0.9, 0.25, 0.45), black, "gpu");                            // 12V power plug
-        for (int f = 0; f < 3; f++)
+        bool integrated = _gpuModel?.Design is GpuDesign.Integrated or GpuDesign.Laptop;
+        bool unknown = _gpuModel is { IsCard: false } && !integrated;
+        var shape = _gpuModel is { IsCard: true } gm ? gm.Shape : (lengthMm: 285, heightMm: 120, slots: 2.5, fans: 3);
+        bool founders = _gpuModel?.Design == GpuDesign.NvidiaFounders;
+        double len = Math.Clamp(8.2 * shape.lengthMm / 285.0, 6.2, 9.4);
+        const double z0 = 1.08;
+        double gx = -5.2 + len / 2 + 0.1, z1 = z0 + Math.Clamp(1.37 * shape.slots / 2.5, 0.9, 1.7), top = Math.Clamp(2.75 * shape.heightMm / 120.0, 2.2, 3.2);
+        if (unknown)
         {
-            double fx = gx - 2.6 + f * 2.6, fy = 1.42;
-            Add(root, Cyl(new Point3D(0, 0, 0), 1.08, 0.08, detailed ? 32 : 12, caps: false), Mat(Color.FromRgb(0x3A, 0x3E, 0x46), 0.5), "gpu", Place(fx, fy, z1, rotX: 90), plastic);
-            Add(root, Cyl(new Point3D(0, 0, 0), 1.06, 0.01, 24), hole, "gpu", Place(fx, fy, z1 + 0.005, rotX: 90));
-            Add(root, Rotor(1.0, 11), Mat(Color.FromRgb(0x26, 0x29, 0x30), 0.35), "gpu", Place(fx, fy, z1 + 0.09, rotX: 90, spin: _gpuFans[f]), Mat(Color.FromRgb(0x26, 0x29, 0x30)));
-            Add(root, Cyl(new Point3D(0, 0, 0), 0.3, 0.1, 20), Mat(Color.FromRgb(0x30, 0x33, 0x3A), 0.5), "gpu", Place(fx, fy, z1 + 0.08, rotX: 90, spin: _gpuFans[f]));
+            var glass = new MaterialGroup();
+            glass.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(0x30, 0x6C, 0xA0, 0xD0))));
+            glass.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0x50, 255, 255, 255)), 60));
+            Add(root, Box(gx, 0.1, (z0 + z1) / 2, len, top - 0.1, z1 - z0), glass, "gpu", back: glass);
+            var edge = Glow(_gpuHeat, Brushes.Black);
+            foreach (var (y, z) in new[] { (0.1, z0), (0.1, z1), (top, z0), (top, z1) }) Add(root, Box(gx, y - 0.01, z, len, 0.02, 0.02), edge, "gpu");
+        }
+        else if (!integrated)
+        {
+            Add(root, Box(gx, 0.14, 0.92, len, top - 0.2, 0.06), Mat(Brushed.Value, 0.5, 40), "gpu");                // backplate
+            Add(root, Box(gx, 0.1, z0 - 0.06, len, top - 0.1, 0.06), pcbGreen, "gpu");
+            Add(root, Box(gx - len / 2 + 2.1, 0.0, z0 - 0.06, 3.0, 0.14, 0.07), gold, "gpu");                       // edge connector
+            int finsN = detailed ? 40 : 16;
+            for (int i = 0; i < finsN; i++) Add(root, Box(gx - len / 2 + 0.2 + i * ((len - 0.4) / finsN), top - 0.35, (z0 + z1) / 2, 0.025, 0.32, z1 - z0 - 0.12), brushed, "gpu");
+            Add(root, Box(gx, 0.25, (z0 + z1) / 2, len + 0.1, top - 0.6, z1 - z0), gun, "gpu");                     // shroud body
+            Add(root, Box(gx, top - 0.04, (z0 + z1) / 2, len + 0.1, 0.04, z1 - z0), gun, "gpu");                    // shroud top rail
+            Add(root, Box(gx, 0.28, z1, len - 0.2, 0.05, 0.03), Glow(_gpuHeat, Brushes.Black), "gpu");              // light bar, lower edge
+            Add(root, Box(gx - len / 2 - 0.12, 0.0, (z0 + z1) / 2 - 0.1, 0.06, top + 0.2, z1 - z0 + 0.3), Mat(Brushed.Value, 0.8, 70), "gpu"); // bracket
+            Add(root, Box(gx + len * 0.3, top, (z0 + z1) / 2, 0.9, 0.25, 0.45), black, "gpu");                      // power plug
+            int nf = founders ? 1 : Math.Max(1, shape.fans);
+            double fr = Math.Min(1.08, (founders ? len * 0.5 : len / nf) * 0.42), fy = Math.Max(1.1, top / 2 + 0.05);
+            for (int f = 0; f < nf; f++)
+            {
+                double fx = founders ? gx - len * 0.24 : gx - len / 2 + len * (f + 0.5) / nf;
+                var spin = new AxisAngleRotation3D(new Vector3D(0, 1, 0), f * 40);
+                _gpuFans.Add(spin);
+                Add(root, Cyl(new Point3D(0, 0, 0), fr, 0.08, detailed ? 32 : 12, caps: false), Mat(Color.FromRgb(0x3A, 0x3E, 0x46), 0.5), "gpu", Place(fx, fy, z1, rotX: 90), plastic);
+                Add(root, Cyl(new Point3D(0, 0, 0), fr * 0.98, 0.01, 24), hole, "gpu", Place(fx, fy, z1 + 0.005, rotX: 90));
+                Add(root, Rotor(fr * 0.93, 11), Mat(Color.FromRgb(0x26, 0x29, 0x30), 0.35), "gpu", Place(fx, fy, z1 + 0.09, rotX: 90, spin: spin), Mat(Color.FromRgb(0x26, 0x29, 0x30)));
+                Add(root, Cyl(new Point3D(0, 0, 0), fr * 0.28, 0.1, 20), Mat(Color.FromRgb(0x30, 0x33, 0x3A), 0.5), "gpu", Place(fx, fy, z1 + 0.08, rotX: 90, spin: spin));
+            }
+            if (founders) for (int i = 0; i < (detailed ? 22 : 10); i++) Add(root, Box(gx + 0.2 + i * (len * 0.45 / (detailed ? 22 : 10)), 0.35, z1 + 0.02, 0.03, top - 0.8, 0.04), brushed, "gpu"); // flow-through fins
         }
 
         // Data pulses along the memory bus and PCIe lanes.
@@ -535,7 +564,7 @@ public sealed class VirtualPcScene : Grid
         _view.Children.Add(holder);
         AddLabel("cpu", holder, new Point3D(-2.3, 3.75, -2.4), "CPU");
         AddLabel("ram", holder, new Point3D(0.55 + (_slots - 1) * 0.2, 1.9, -2.5), "RAM");
-        AddLabel("gpu", holder, new Point3D(-1.3, 3.0, 1.75), "GPU");
+        AddLabel("gpu", holder, _gpuModel?.Design is GpuDesign.Integrated or GpuDesign.Laptop ? new Point3D(-2.3, 4.4, -2.4) : new Point3D(-1.3, 3.0, 1.75), "GPU");
     }
 
     private void AddLabel(string id, ModelVisual3D anchor, Point3D at, string name)

@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.62 – 2026-10-24
+- **Reality Lab: your graphics card in 3D.** A new panel shows this PC's GPU as a 3D model with studio lighting (key,
+  fill, rim and a heat-coloured glow), drag to rotate, scroll to zoom, double-click to reset and a slow turntable:
+  - The adapter is matched to a curated library of 49 popular cards (GeForce RTX 30/40/50 and GTX 16, Radeon RX
+    6000/7000/9000, Arc A/B) by the exact model tokens of its name, with the PCI vendor confirming the brand, so near
+    misses (RTX 4070 Ti SUPER vs 4070 SUPER, RTX 4090 D, workstation cards) never show the wrong card.
+  - The card maker comes from the PCI subsystem ID. A Founders Edition / AMD reference / Arc Limited Edition is drawn at
+    its published dimensions; a board-partner card (like this PC's ASUS RTX 4070 SUPER) as a typical card of that chip,
+    labelled as such, because the PCI IDs don't say which partner model it is.
+  - Models are built procedurally by Money Tweaks (no third-party 3D assets or logos; the product name is drawn as text).
+    A card that isn't in the library gets a clean "model not in library" placeholder; integrated and laptop GPUs are
+    shown as the chip, not as a card.
+  - Live readings from the shared sensor hub drive it: fans spin at the card's reported fan speed (and stand still at
+    zero-RPM idle), heat colour follows the temperature; load, temperature and hot spot, clock, power against the limit,
+    VRAM and fan speed are listed, "not reported" when the card doesn't provide them. Library specs (chip, memory, rated
+    board power, size) are shown alongside.
+  - The virtual PC's graphics card takes the matched card's length and fan count (one front fan for a Founders Edition),
+    a glass outline for an unknown card, and an empty slot when the graphics are integrated.
+  - Built only when the page is shown, animates at most 30 fps only while visible (still with reduced motion), and the
+    sensor hub is only held while Reality Lab is open.
+
 ## 1.61 – 2026-10-24
 - **Uninstalling undoes everything Money Tweaks applied**, before any file is removed:
   - Every tweak goes back to its backed-up value (newest first, each verified by reading it back), an active gaming

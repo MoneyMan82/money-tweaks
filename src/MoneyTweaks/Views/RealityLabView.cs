@@ -42,6 +42,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
             eyebrow: "Live 3D · Experiments · Measured results", icon: "\uE7B8");
         Content = root;
         body.Children.Add(BuildSceneCard());
+        body.Children.Add(BuildGpuCard());
         body.Children.Add(BuildExperimentCard());
         body.Children.Add(_resultCard);
         body.Children.Add(_keptCard);
@@ -93,11 +94,12 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
     private void EnsureScene()
     {
         if (_scene is not null) return;
-        // The model shows this PC's real memory modules and slots, so wait for that reading (WMI, off the UI thread).
+        // The model shows this PC's real memory modules and slots and its graphics card, so wait for those readings (off the UI thread).
         if (!_memLayout.IsCompleted) { _memLayout.ContinueWith(_ => Dispatcher.BeginInvoke(EnsureScene, DispatcherPriority.Background)); return; }
+        if (!_gpuDetect.IsCompleted) { _gpuDetect.ContinueWith(_ => Dispatcher.BeginInvoke(EnsureScene, DispatcherPriority.Background)); return; }
         using var perf = Perf.Measure("build Reality Lab scene", 20);
         var (modules, slots) = _memLayout.Result;
-        _scene = new VirtualPcScene(modules, slots, detailed: !SoftwareRendering);
+        _scene = new VirtualPcScene(modules, slots, detailed: !SoftwareRendering, gpu: _gpuDetect.IsCompletedSuccessfully ? _gpuDetect.Result.match : null);
         _scene.PartSelected += p => { _part = p; RenderReadout(); };
         _scene.Select(_part);
         _sceneHost.Child = _scene;
@@ -109,12 +111,13 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
     private void SyncRunning()
     {
         if (_scene is not null) _scene.Running = _shown && !_measuring && !SoftwareRendering;
+        if (_showcase is not null) _showcase.Running = _shown && !_measuring && !SoftwareRendering;
         _sceneNote.Text =
             (_measuring ? "The 3D animation is paused while measuring, so the lab itself doesn't affect the results. " : "") +
             (SoftwareRendering ? "Animation is off because Windows draws this app without the graphics card here; colours and levels still update. " : "") +
             (App.ReduceMotion && !SoftwareRendering ? "Reduced motion is on: the model holds still and only its colours and levels change. " : "") +
             "Heat colour follows the temperature sensor (or load when there's none), GPU fans spin with GPU load, RAM sticks fill with memory in use, and data pulses speed up with CPU load. " +
-            "The model is an illustration of your parts (your real number of memory modules and slots), not a scan of their exact layout.";
+            "The model is an illustration of your parts (your real number of memory modules and slots, and a graphics card shaped after yours), not a scan of their exact layout.";
     }
 
     public void OnShown()
@@ -123,6 +126,8 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
         _monInit ??= Task.Run(() => { _mon = new HardwareMonitor(); });
         if (_scene is null) Dispatcher.BeginInvoke(EnsureScene, DispatcherPriority.Background);
         _sampleTimer.Start();
+        HoldHub(true);
+        if (_showcase is null) Dispatcher.BeginInvoke(EnsureShowcase, DispatcherPriority.Background);
         SyncRunning();
         RenderKept();
         if (!_measuring) FillPresetRow();
@@ -132,6 +137,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
     {
         _shown = false;
         _sampleTimer.Stop();
+        HoldHub(false);
         SyncRunning();
     }
 
@@ -147,6 +153,7 @@ public sealed partial class RealityLabView : UserControl, IPageLifecycle
             _liveSnap = s;
             _live = new PcReading(s.CpuPercent, s.CpuTempC, s.GpuPercent, s.GpuTempC, s.RamUsedGb, s.RamTotalGb);
             if (_view == "live") { _scene?.Show(_live); RenderReadout(); }
+            UpdateGpuTelemetry();
         }
         catch (Exception ex) { Log.Debug("Reality Lab sample: " + ex.Message); }
         finally { _sampling = false; }
