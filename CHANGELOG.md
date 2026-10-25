@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.67 – 2026-10-25
+- **Tweak X-Ray.** Every tweak that changes Windows has an "Inspect changes" panel: each real location it touches (full
+  registry path, service Start value, power-plan setting with its GUIDs, scheduled task, Store package, or the exact
+  command), the value now versus after applying, and what Undo restores, plus purpose, risk, reversibility and the
+  backup. Current values are read through the same code that writes the backup, nothing is changed while inspecting,
+  and values already set or not present on this PC are marked. Commands are shown as the command they run and marked
+  "effect not inspectable"; Store app removal is marked partly inspectable.
+- Confirmations before applying (caution and experimental tweaks, compatibility warnings) now list what changes on this
+  PC: location, current value → new value.
+- Applying logs every captured original value next to the step that changes it, so the log shows before-values for
+  each change; Undo still restores them from the backup and reads them back.
+
 ## 1.65 – 2026-10-24
 - **CPU temperature through LibreHardwareMonitor, no other monitoring app needed.** Hardware Monitor → System → Sensor
   sources can install the PawnIO driver LibreHardwareMonitor uses (the official signed installer, pinned by SHA-256 and

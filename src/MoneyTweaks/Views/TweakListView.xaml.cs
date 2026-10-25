@@ -304,6 +304,14 @@ public partial class TweakListView : UserControl, IPageLifecycle
         catch (Exception ex) { Core.Sys.Log.Error("Evidence panel failed", ex); host.Content = null; }
     }
 
+    /// <summary>Tweak X-Ray: reads the tweak's real locations and values each time the inspection opens.</summary>
+    private void XRay_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is not ContentControl { DataContext: TweakItem item } host) return;
+        if (e.NewValue is true) XRayPanel.Fill(host, item.Tweak);
+        else host.Content = null;
+    }
+
     /// <summary>Rollback for one tweak: restores its backed-up values through the same verified path as Undo all.</summary>
     private async void Undo_Click(object sender, RoutedEventArgs e)
     {

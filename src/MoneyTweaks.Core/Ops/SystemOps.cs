@@ -110,6 +110,9 @@ public sealed class PowerCfgOp(string subgroup, string setting, int value, strin
     /// <summary>Identifies the power setting (subgroup/setting GUIDs), for conflict detection.</summary>
     public string SettingKey => $"{subgroup}/{setting}";
     public int Value => value;
+    public string Label => label;
+    public string Subgroup => subgroup;
+    public string Setting => setting;
     /// <summary>Windows default index, used by Undo when no backup exists. Null = unknown (Undo then refuses).</summary>
     public int? DefaultValue { get; init; }
     public override string Describe() => $"Power plan: {label} = {value}";

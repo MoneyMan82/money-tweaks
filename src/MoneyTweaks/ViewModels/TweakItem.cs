@@ -91,6 +91,11 @@ public sealed class TweakItem(Tweak tweak) : Observable
     // Re-read Details on open: the "on this PC" findings appear once the system profile has been detected.
     public bool Expanded { get => _expanded; set { if (Set(ref _expanded, value) && value) { Raise(nameof(Details)); _related = null; Raise(nameof(Related)); Raise(nameof(HasRelated)); } } }
 
+    /// <summary>Tweak X-Ray applies: the tweak makes system changes that can be listed (not BIOS guides).</summary>
+    public bool HasXRay => TweakXRay.Applies(Tweak);
+    private bool _xrayOpen;
+    public bool XRayOpen { get => _xrayOpen; set => Set(ref _xrayOpen, value); }
+
     private IReadOnlyList<RelatedTweakRow>? _related;
 
     /// <summary>
@@ -237,8 +242,18 @@ public static class TweakService
                 return;
             }
             bool confirm = report.Tier == TweakTier.Experimental || report.Warnings.Any() || (t.Risk == Risk.Caution && App.Settings.ConfirmCautionTweaks);
-            if (confirm && !Dialog.Confirm($"Apply “{t.Name}”?", report.ToText(), "Apply", report.Tier == TweakTier.Safe ? DialogKind.Confirm : DialogKind.Warning))
-                return;
+            if (confirm)
+            {
+                // Tweak X-Ray preview: the real locations and current → new values, read right before confirming.
+                item.Busy = true;
+                item.Message = "Reading current values…";
+                string preview;
+                try { preview = await Task.Run(() => TweakXRay.Inspect(t).Compact()); }
+                catch (Exception ex) { preview = "WHAT CHANGES ON THIS PC\nCouldn't read the current values: " + ex.Message; }
+                finally { item.Busy = false; item.Message = null; }
+                if (!Dialog.Confirm($"Apply “{t.Name}”?", report.ToText() + "\n\n" + preview, "Apply", report.Tier == TweakTier.Safe ? DialogKind.Confirm : DialogKind.Warning))
+                    return;
+            }
             if (!EnsureAdmin([t])) return;
             await MaybeRestorePointAsync();
         }

@@ -118,6 +118,9 @@ public static class TweakEngine
                 catch (Exception ex) { return new(t, false, $"Could not back up current settings: {ex.Message}", GetState(t)); }
             }
             BackupStore.Save(backup);
+            // Tweak X-Ray: the captured "before" values also go to the log, next to what each step sets.
+            for (int i = 0; i < t.Ops.Count; i++)
+                Log.Info($"{t.Id} before step {i + 1}: {t.Ops[i].Describe()} | was {TweakXRay.BackupLine(t.Ops[i], backup.Ops[i])}");
         }
 
         var done = new List<int>();
