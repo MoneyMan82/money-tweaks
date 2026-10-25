@@ -207,6 +207,8 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
     <div class="wrap">
       <div class="section-head reveal"><div class="eyebrow">Tools</div><h2>More than a list of switches</h2><p class="muted">Alongside the tweak library, Money Tweaks ships with tools that handle the jobs gamers usually need three separate apps for.</p></div>
       <div class="cards">
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L21 21"/><path d="M10 7v3l2 2"/></svg></div><h3>Crash Detective</h3><p>Blue screens, sudden restarts, GPU driver resets, hardware errors and game crashes from Windows' own logs, Reliability Monitor and crash dumps, grouped by what happened together. What Windows recorded is shown apart from suspected causes, each with its evidence, a confidence level and step-by-step fixes. Local only; exports are stripped of personal details.</p></div>
+        <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/></svg></div><h3>Conflict Radar</h3><p>Before tweaks are applied, compares what each one actually writes with the others and with what's already applied, and shows duplicates, contradictions and order problems with the evidence. You choose to skip, reorder or undo; nothing changes without your confirmation.</p></div>
         <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><rect x="4" y="3" width="16" height="18" rx="0"/><path d="M8 8h8M8 12h8M8 16h5"/><circle cx="17" cy="17" r="3"/><path d="M21 21l-1.8-1.8"/></svg></div><h3>Tweak X-Ray</h3><p>Open "Inspect changes" on any tweak to see every place it touches on your PC (full registry path, service, power-plan setting, scheduled task, Store app or the exact command), its value now and after applying, and what Undo restores. Read straight from Windows; anything that can't be inspected in advance is marked as such.</p></div>
         <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><circle cx="18" cy="7" r="2"/></svg></div><h3>Upgrade Advisor</h3><p>Pick your game, settings and FPS target. Money Tweaks measures what's really holding you back (CPU, GPU, power limits, memory, VRAM, storage, heat or a frame cap) and ranks the three smartest moves by benefit per euro: free fixes first, upgrades only when they'd actually help. Projections are labelled; prices come from you, with source and date.</p></div>
         <div class="card reveal"><span class="new">New</span><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg></div><h3>PC Cleaner</h3><p>Closes background apps you don't need while playing (Safe / Review / Protected, polite close first) and removes verifiably disposable files: old temp files, crash dumps, caches, Windows Update leftovers via DISM. Review before deleting, 7-day quarantine, measured results. Personal files, browser data and system stores are never touched.</p></div>
@@ -283,7 +285,7 @@ footer{border-top:1px solid var(--border);padding:40px 0 calc(40px + env(safe-ar
       <div class="dl-grid">
         <div class="card dl reveal"><h3>Installer</h3><p>Start-menu shortcut and uninstaller. Installs for your user account by default, without needing admin.</p><a class="btn primary" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/MoneyTweaks-Setup.exe">MoneyTweaks-Setup.exe</a></div>
         <div class="card dl reveal"><h3>Portable ZIP</h3><p>Unzip anywhere and run MoneyTweaks.exe. Nothing gets installed.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/latest">Portable ZIP</a></div>
-        <div class="card dl reveal"><h3>Linux (preview)</h3><p>A separate, untested preview for x86-64 Linux: live monitor and four reversible kernel tweaks. Found a problem? Report it from inside the app.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/latest">MoneyTweaks-Linux …tar.gz</a></div>
+        <div class="card dl reveal"><h3>Linux (preview)</h3><p>A separate, untested preview for x86-64 Linux: live monitor and four reversible kernel tweaks. Found a problem? Report it from inside the app.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/MoneyTweaks-Linux-x64.tar.gz">Download for Linux</a><p class="muted" style="font-size:13px;margin-top:8px"><a href="#linux">How to install</a></p></div>
         <div class="card dl reveal"><h3>Checksums</h3><p>SHA-256 hashes for every file, so you can verify your download.</p><a class="btn" href="https://github.com/MoneyMan82/money-tweaks/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a></div>
       </div>
       <p class="muted" style="margin-top:18px;font-size:14px">Release builds aren't code-signed (certificates cost money), so Windows SmartScreen may warn the first time. Click <b>More info → Run anyway</b>, or <a href="#build">build it yourself</a>.</p>
@@ -318,6 +320,16 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
         <p class="muted" style="font-size:14px">Needs the .NET 10 SDK. <code>scripts\build-release.ps1</code> produces the installer, ZIP and checksums.</p>
       </div>
     </div>
+    <div class="wrap reveal" id="linux" style="margin-top:36px">
+      <div class="eyebrow">Linux (preview)</div>
+      <h3 style="margin-top:6px">Install on Linux</h3>
+      <p class="muted">A separate, untested preview for x86-64 Linux with an X11 desktop or Wayland with XWayland. It runs from its folder; nothing is installed system-wide. In a terminal:</p>
+      <pre>cd ~/Downloads
+tar -xzf MoneyTweaks-Linux-x64.tar.gz
+cd money-tweaks-*
+./money-tweaks</pre>
+      <p class="muted" style="font-size:14px">Verify (optional): <code>sha256sum MoneyTweaks-Linux-x64.tar.gz</code> and compare with SHA256SUMS.txt. Applying a tweak asks for your password through polkit (pkexec). If the window doesn't open on a minimal system, install fontconfig, libICE and libSM with your package manager. To remove it, delete the folder (and <code>~/.local/state/money-tweaks</code>). Something wrong? Use <b>About &amp; feedback → Report a problem</b> in the app.</p>
+    </div>
   </section>
 
   <section id="changelog">
@@ -326,6 +338,8 @@ dotnet run --project src\MoneyTweaks -c Release</pre>
       <div class="card reveal" style="margin-bottom:16px">
         <h3>Recent releases <span class="muted" style="font-size:14px;font-weight:400">· October 2026</span></h3>
         <ul class="list">
+          <li><b>1.70:</b> Crash Detective in the Health Center: blue screens, unexpected restarts, GPU driver resets, WHEA hardware errors and game crashes grouped into incidents, with confirmed facts kept apart from suspected causes, evidence, confidence levels and step-by-step fixes. The Linux download now has a fixed name, so the button below downloads it directly.</li>
+          <li><b>1.69:</b> Tweak Conflict Radar: before applying, duplicates, contradictions and order problems between tweaks are shown with the settings involved, and you pick how to resolve them.</li>
           <li><b>1.68:</b> Money Tweaks for Linux (preview): a separate download for x86-64 Linux with a live monitor (CPU per core, CPU temperature without any driver, clocks, memory, GPU, network) and four reversible kernel tweaks. Not tested on Linux hardware yet, so it has a built-in Report a problem button.</li>
           <li><b>1.67:</b> Tweak X-Ray: Inspect changes on every tweak shows each real location, its value now and after applying, and what Undo restores; apply confirmations preview the changes; the log records every original value.</li>
           <li><b>1.65:</b> CPU temperature without MSI Afterburner or HWiNFO: Hardware Monitor can install the official PawnIO driver (checksum and signature verified, only after you confirm), and a small helper reads CPU sensors while the rest of Money Tweaks runs without admin rights. Shown in the monitor, dashboard and overlay.</li>
