@@ -10,8 +10,50 @@ using MoneyTweaks.ViewModels;
 
 namespace MoneyTweaks.Views;
 
-public partial class TweakListView : UserControl, IPageLifecycle
+public partial class TweakListView : UserControl, IPageLifecycle, IAnchorTarget
 {
+    private bool _radarChecking;
+
+    /// <summary>
+    /// "tweaks#radar" runs the conflict check; "tweaks#xray" opens the first tweak's Inspect changes. Navigation can call this
+    /// twice for one jump (now and once the page has loaded), so both are guarded.
+    /// </summary>
+    public void ShowSection(string anchor)
+    {
+        if (anchor == "radar") _ = CheckConflictsAsync();
+        else if (anchor == "xray" && _view.Cast<TweakItem>().FirstOrDefault(i => i.HasXRay) is { XRayOpen: false } first)
+        {
+            first.XRayOpen = true;
+            MainWindow.Current?.ShowToast("Tweak X-Ray: every tweak card has “Inspect changes ›”. The first one is open below.", "Accent");
+        }
+    }
+
+    private async void CheckConflicts_Click(object sender, RoutedEventArgs e) => await CheckConflictsAsync();
+
+    /// <summary>Conflict Radar over what's applied now, in the order it was applied. Read-only: fixes are offered when applying.</summary>
+    private async Task CheckConflictsAsync()
+    {
+        if (_radarChecking) return;
+        _radarChecking = true;
+        try { await CheckConflictsCoreAsync(); }
+        finally { _radarChecking = false; }
+    }
+
+    private async Task CheckConflictsCoreAsync()
+    {
+        var applied = await Task.Run(() => Core.Catalog.TweakCatalog.All
+            .Where(t => t.Kind == Core.Model.TweakKind.Toggle && Core.Engine.BackupStore.Load(t.Id) is not null)
+            .OrderBy(t => Core.Engine.BackupStore.Load(t.Id)!.AppliedAt).ToList());
+        var conflicts = await Task.Run(() => Core.Engine.ConflictRadar.Scan(applied, []));
+        Core.Sys.Log.Info($"Conflict Radar check: {conflicts.Count} finding(s) among {applied.Count} applied tweak(s)");
+        if (conflicts.Count == 0)
+        {
+            Dialog.Show("No conflicts found", $"Conflict Radar compared what your {applied.Count} applied tweak(s) write and found no duplicates, contradictions or order problems.\n\nIt also checks automatically every time you apply tweaks, before anything changes.");
+            return;
+        }
+        ConflictRadarDialog.Show(conflicts, "", readOnly: true);
+    }
+
     /// <summary>null = the all-tweaks library (every category in one list).</summary>
     private readonly TweakCategory? _category;
     private TweakCategory? _categoryFilter;

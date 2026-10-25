@@ -13,7 +13,8 @@ namespace MoneyTweaks;
 public static class ConflictRadarDialog
 {
     /// <summary>The chosen fix per conflict, or null when cancelled.</summary>
-    public static Dictionary<RadarConflict, RadarFix>? Show(IReadOnlyList<RadarConflict> conflicts, string continueText)
+    /// <param name="readOnly">A check of what's applied: options are listed, not chosen (they're offered when applying).</param>
+    public static Dictionary<RadarConflict, RadarFix>? Show(IReadOnlyList<RadarConflict> conflicts, string continueText, bool readOnly = false)
     {
         var choice = conflicts.ToDictionary(c => c, c => c.Fixes[0]);
         var win = new Window
@@ -24,7 +25,7 @@ public static class ConflictRadarDialog
             Owner = Application.Current.MainWindow?.IsVisible == true ? Application.Current.MainWindow : null,
         };
         bool ok = false;
-        win.Content = Build(conflicts, continueText, choice, () => { ok = true; win.Close(); }, win.Close);
+        win.Content = Build(conflicts, continueText, choice, () => { ok = true; win.Close(); }, win.Close, readOnly);
         win.Loaded += (_, _) => Motion.PopIn((FrameworkElement)win.Content);
         win.MouseLeftButtonDown += (_, e) => { if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) win.DragMove(); };
         win.ShowDialog();
@@ -32,7 +33,7 @@ public static class ConflictRadarDialog
     }
 
     /// <summary>The dialog's content; <paramref name="choice"/> is updated as options are picked.</summary>
-    public static Border Build(IReadOnlyList<RadarConflict> conflicts, string continueText, Dictionary<RadarConflict, RadarFix> choice, Action onContinue, Action onCancel)
+    public static Border Build(IReadOnlyList<RadarConflict> conflicts, string continueText, Dictionary<RadarConflict, RadarFix> choice, Action onContinue, Action onCancel, bool readOnly = false)
     {
         Brush Res(string k) => (Brush)Application.Current.Resources[k];
         var body = new StackPanel();
@@ -40,10 +41,13 @@ public static class ConflictRadarDialog
         int contra = conflicts.Count(c => c.Kind == RadarKind.Contradiction);
         body.Children.Add(new TextBlock
         {
-            Text = conflicts.Count == 1 ? "1 conflict found before applying" : $"{conflicts.Count} conflicts found before applying",
+            Text = readOnly ? (conflicts.Count == 1 ? "1 finding among your applied tweaks" : $"{conflicts.Count} findings among your applied tweaks")
+                : conflicts.Count == 1 ? "1 conflict found before applying" : $"{conflicts.Count} conflicts found before applying",
             Style = Ui.Res<Style>("H2"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 4),
         });
-        body.Children.Add(Ui.Muted("Found by comparing the settings each tweak actually writes. Nothing has been changed. Pick how to handle each one; the first option never changes your system."
+        body.Children.Add(Ui.Muted(readOnly
+            ? "Found by comparing the settings each applied tweak writes. This check only reads; to act on one, undo or re-apply the tweaks involved, and Conflict Radar will offer these options before anything changes."
+            : "Found by comparing the settings each tweak actually writes. Nothing has been changed. Pick how to handle each one; the first option never changes your system."
             + (contra > 0 ? $" {contra} contradiction(s) can't be applied together as they are." : ""), 12.5));
 
         var list = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
@@ -63,6 +67,12 @@ public static class ConflictRadarDialog
             var fixes = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
             foreach (var f in c.Fixes)
             {
+                if (readOnly)
+                {
+                    fixes.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 560, FontSize = 12, Foreground = Res("Muted"), Margin = new Thickness(0, 1, 0, 1),
+                        Inlines = { new System.Windows.Documents.Run("Option: " + f.Label) { FontWeight = FontWeights.SemiBold, Foreground = Res("Text") }, new System.Windows.Documents.Run(" · " + f.Detail) } });
+                    continue;
+                }
                 var rb = new RadioButton
                 {
                     GroupName = group, IsChecked = f == c.Fixes[0], Margin = new Thickness(0, 2, 0, 2), Foreground = Res("Text"),
@@ -82,7 +92,8 @@ public static class ConflictRadarDialog
         cancel.Click += (_, _) => onCancel();
         var go = new Button { Content = continueText, MinWidth = 96, Margin = new Thickness(8, 0, 0, 0), IsDefault = true, Style = Ui.Res<Style>("PrimaryButton") };
         go.Click += (_, _) => onContinue();
-        buttons.Children.Add(cancel); buttons.Children.Add(go);
+        if (readOnly) { cancel.Content = "Close"; buttons.Children.Add(cancel); }
+        else { buttons.Children.Add(cancel); buttons.Children.Add(go); }
         body.Children.Add(buttons);
 
         return new Border

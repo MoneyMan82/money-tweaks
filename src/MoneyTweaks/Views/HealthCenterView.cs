@@ -19,12 +19,31 @@ namespace MoneyTweaks.Views;
 /// </summary>
 public sealed partial class MonitorView : IAnchorTarget
 {
-    private FrameworkElement? _healthAnchor;
+    private FrameworkElement? _healthAnchor, _crashAnchor;
 
     /// <summary>"monitor#health" opens this page at the Health Center.</summary>
     public void ShowSection(string anchor)
     {
-        if (anchor == "health" && _healthAnchor is not null) Ui.ScrollTo(_healthAnchor);
+        if (anchor == "health" && _healthAnchor is not null) ScrollSettled(_healthAnchor);
+        // "monitor#crash": straight to Crash Detective, investigating right away (it only reads).
+        if (anchor == "crash" && _crashAnchor is not null)
+        {
+            ScrollSettled(_crashAnchor);
+            if (_crashReport is null && !_crashBusy) _ = InvestigateAsync().ContinueWith(_ => Dispatcher.BeginInvoke(() => Ui.ScrollTo(_crashAnchor)), TaskScheduler.FromCurrentSynchronizationContext());
+        }
+    }
+
+    /// <summary>
+    /// Scrolls to a section now and again while the page above it is still filling in (sensor cards appear after the first
+    /// sample and push everything down), so the jump lands on the section instead of where it was a moment ago.
+    /// </summary>
+    private void ScrollSettled(FrameworkElement target)
+    {
+        Ui.ScrollTo(target);
+        int left = 3;
+        var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+        t.Tick += (_, _) => { Ui.ScrollTo(target); if (--left == 0) t.Stop(); };
+        t.Start();
     }
 
     private readonly HealthState _health = HealthState.Load();
@@ -60,7 +79,7 @@ public sealed partial class MonitorView : IAnchorTarget
         body.Children.Add(_hWindows);
         body.Children.Add(AreaHeader("Gaming stability", "\uE7FC", $"Blue screens, unexpected restarts, GPU driver resets, app crashes, hardware errors, throttling, memory and disks (last {HealthChecks.EventDays} days)."));
         body.Children.Add(_hStability);
-        body.Children.Add(Ui.Card(_crash, new Thickness(0, 0, 0, 10)));
+        body.Children.Add(_crashAnchor = Ui.Card(_crash, new Thickness(0, 0, 0, 10)));
         body.Children.Add(Ui.Card(_fileChecks));
         body.Children.Add(Ui.Card(_repairs));
         body.Children.Add(Ui.Muted("Money Tweaks never installs or removes drivers, never changes BIOS, security settings or services on its own, and never downloads anything except through Windows' own tools when you start a repair. Driver links open the makers' official pages.", 11.5));

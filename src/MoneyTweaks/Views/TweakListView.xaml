@@ -208,6 +208,8 @@
             </Grid>
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Check conflicts" Style="{StaticResource GhostButton}" Click="CheckConflicts_Click" Margin="0,0,8,0"
+                            ToolTip="Conflict Radar: compares what your applied tweaks write and shows duplicates, contradictions and order problems. It also runs automatically before every apply."/>
                     <Button x:Name="RecommendedButton" Content="★  Apply recommended" Style="{StaticResource PrimaryButton}" Click="ApplyRecommended_Click" Margin="0,0,8,0"/>
                     <Button Content="Undo all" Click="UndoAll_Click"/>
                 </StackPanel>

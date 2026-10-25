@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.70.1 – 2026-10-25
+- The new features are easier to find:
+  - **Crash Detective** has its own sidebar entry under Monitoring & Benchmarks. It opens the Hardware Monitor at the
+    Crash Detective card and starts the (read-only) investigation.
+  - **Conflict Radar**: a "Check conflicts" button on All Tweaks checks the tweaks you have applied; it still runs
+    automatically before every apply. Also in search (Ctrl+K).
+  - **Tweak X-Ray**: in search (Ctrl+K); opens All Tweaks with the first tweak's "Inspect changes" open.
+- Jumping to a Hardware Monitor section (Crash Detective, Driver & Windows Health) lands on it even while the sensor
+  cards above are still appearing.
+
 ## 1.70 – 2026-10-25
 - **Crash Detective** in the Health Center (Hardware Monitor › Gaming stability): investigates blue screens, unexpected
   restarts, GPU driver resets, live kernel events, hardware (WHEA) errors and game/app crashes and hangs from the last 30
