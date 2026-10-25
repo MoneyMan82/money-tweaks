@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.69 – 2026-10-25
+- **Tweak Conflict Radar.** Before tweaks are applied (one switch, Apply recommended, presets, the scanner, Reality Lab and
+  benchmarks), Money Tweaks compares what each selected tweak actually writes with the others in the selection and with
+  what's applied: registry values and "key=value" entries, service start types (also when a tweak writes a service's
+  Start value directly), power-plan settings, scheduled tasks, Store apps and command steps that check the same setting.
+  - Reports duplicates, contradictions, order-dependent combinations (power-plan settings written before the plan is
+    switched) and interactions documented in the tweak catalog, each with the evidence: the setting and both values.
+  - Fixes to choose from: skip one, keep the other, reorder the run, or undo the applied tweak first. The first choice
+    never changes the system; undoing needs a second confirmation and goes through that tweak's normal backup-based Undo.
+    Choices and findings are logged. Nothing is changed by the radar itself.
+  - The engine's safety block uses the same comparison, so it also catches these cases.
+
 ## 1.68.1 – 2026-10-25
 - The Linux preview's download has a fixed name, MoneyTweaks-Linux-x64.tar.gz (the version is in the folder inside), so
   the website can link straight to the latest file instead of the releases page.

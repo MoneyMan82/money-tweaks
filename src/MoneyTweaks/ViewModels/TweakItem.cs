@@ -220,6 +220,70 @@ public static class TweakService
         if (!ok) Log.Warn("Continuing without a new restore point: " + msg);
     }
 
+    /// <summary>
+    /// Tweak Conflict Radar before applying: compares what the selected tweaks write with each other and with what's applied,
+    /// shows each conflict with evidence, and applies the chosen fixes. Skipping and reordering only change this run; undoing an
+    /// applied tweak needs a second confirmation and goes through its backup. Returns the items to apply, or null to stop.
+    /// </summary>
+    internal static async Task<List<TweakItem>?> RadarAsync(List<TweakItem> targets, IProgress<string>? progress = null)
+    {
+        progress?.Report("Checking for conflicts…");
+        List<RadarConflict> conflicts;
+        try { conflicts = await Task.Run(() => ConflictRadar.ScanForApply(targets.Select(i => i.Tweak).ToList())); }
+        catch (Exception ex) { Log.Error("Conflict Radar failed", ex); return targets; }   // the engine still blocks applied conflicts
+        if (conflicts.Count == 0) return targets;
+        Log.Info($"Conflict Radar: {conflicts.Count} finding(s): " + string.Join(" | ", conflicts.Select(c => $"{c.KindLabel} {c.Selected.Id} ↔ {c.Other.Id}{(c.OtherApplied ? " (applied)" : "")}: {string.Join("; ", c.Evidence)}")));
+        var choices = ConflictRadarDialog.Show(conflicts, targets.Count == 1 ? "Continue" : "Continue with these choices");
+        if (choices is null) { Log.Info("Conflict Radar: cancelled, nothing applied"); return null; }
+
+        var result = targets.ToList();
+        var undo = choices.Where(kv => kv.Value.Kind == RadarFixKind.UndoAppliedFirst).ToList();
+        if (undo.Count > 0)
+        {
+            if (!Dialog.Confirm("Undo applied tweaks first?",
+                    string.Join("\n", undo.Select(kv => $"• Undo “{kv.Key.Other.Name}”, then apply “{kv.Key.Selected.Name}”")) +
+                    "\n\nUndo restores each one's backed-up values, or runs its reverse command for command steps, and checks the result. You can apply them again later.",
+                    "Undo and continue", DialogKind.Warning)) { Log.Info("Conflict Radar: undo declined, nothing applied"); return null; }
+            if (!EnsureAdmin(undo.Select(kv => kv.Key.Other))) return null;
+            foreach (var (c, _) in undo.DistinctBy(kv => kv.Key.Other.Id))
+            {
+                progress?.Report($"Undoing {c.Other.Name}…");
+                var r = await Task.Run(() => TweakEngine.Undo(c.Other));
+                Log.Info($"Conflict Radar: undo {c.Other.Id} before {c.Selected.Id}: {(r.Success ? "ok" : r.Message)}");
+                if (!r.Success)
+                    foreach (var it in result.Where(i => i.Tweak.Id == c.Selected.Id).ToList())
+                    {
+                        it.Message = $"⚠ Not applied: undoing “{c.Other.Name}” failed ({r.Message})";
+                        result.Remove(it);
+                    }
+            }
+            Changed?.Invoke();
+        }
+        foreach (var (c, fix) in choices)
+            switch (fix.Kind)
+            {
+                case RadarFixKind.SkipSelected:
+                    foreach (var it in result.Where(i => i.Tweak.Id == fix.TweakId).ToList())
+                    {
+                        it.Message = $"Skipped (Conflict Radar: {c.KindLabel.ToLowerInvariant()} with “{(c.Selected.Id == fix.TweakId ? c.Other.Name : c.Selected.Name)}”).";
+                        result.Remove(it);
+                    }
+                    break;
+                case RadarFixKind.MoveFirst when result.FirstOrDefault(i => i.Tweak.Id == fix.TweakId) is { } first:
+                    result.Remove(first);
+                    result.Insert(0, first);
+                    break;
+            }
+        Log.Info($"Conflict Radar: applying {result.Count} of {targets.Count} after the chosen fixes");
+        return result;
+    }
+
+    private static void ShowBlocked(TweakItem item, CompatibilityReport report)
+    {
+        item.Message = "⛔ " + string.Join(" ", report.Blockers.Select(b => b.Text));
+        Dialog.Show($"“{item.Tweak.Name}” can't be applied here", string.Join("\n\n", report.Blockers.Select(b => "⛔ " + b.Text)) + "\n\nNothing was changed.", DialogKind.Warning);
+    }
+
     public static async Task ToggleAsync(TweakItem item)
     {
         if (!item.CanToggle) return;
@@ -235,11 +299,20 @@ public static class TweakService
             finally { item.Busy = false; item.Message = null; }
             item.State = report.State;
             if (report.AlreadyApplied) { item.Message = "Already applied on this PC; nothing to change."; return; }
+            // Blocked by this PC (hardware, Windows build, disabled tweak): Conflict Radar can't help, explain and stop.
+            if (report.Blockers.Any(b => b.OtherTweakId is null))
+            {
+                ShowBlocked(item, report);
+                return;
+            }
+            // Conflict Radar: duplicates, contradictions and documented interactions with what's applied, with fixes to choose from.
+            var cleared = await RadarAsync([item]);
+            if (cleared is null || cleared.Count == 0) { item.State = await Task.Run(() => TweakEngine.GetState(t)); return; }
             if (report.Blocked)
             {
-                item.Message = "⛔ " + string.Join(" ", report.Blockers.Select(b => b.Text));
-                Dialog.Show($"“{t.Name}” can't be applied here", string.Join("\n\n", report.Blockers.Select(b => "⛔ " + b.Text)) + "\n\nNothing was changed.", DialogKind.Warning);
-                return;
+                report = await Task.Run(() => Compatibility.Analyze(t));   // the radar may have undone the conflicting tweak
+                item.State = report.State;
+                if (report.Blocked) { ShowBlocked(item, report); return; }
             }
             bool confirm = report.Tier == TweakTier.Experimental || report.Warnings.Any() || (t.Risk == Risk.Caution && App.Settings.ConfirmCautionTweaks);
             if (confirm)
@@ -285,6 +358,20 @@ public static class TweakService
     {
         var targets = items.Where(i => i.CanToggle && !i.IsGuide && (apply ? i.State != TweakState.Applied : i.State is TweakState.Applied or TweakState.Partial)).ToList();
         if (targets.Count == 0) return (0, 0, false);
+        int skipped = 0;
+        if (apply)
+        {
+            // Conflict Radar over the whole selection before anything is changed (duplicates, contradictions, order).
+            var cleared = await RadarAsync(targets, progress);
+            if (cleared is null)
+            {
+                foreach (var it in targets) it.Message = "Not applied: cancelled in Conflict Radar.";
+                return (0, targets.Count, false);   // not "0 failed": callers would treat that as success
+            }
+            skipped = targets.Count - cleared.Count;   // skipped by choice: reported as not applied
+            targets = cleared;
+            if (targets.Count == 0) return (0, skipped, false);
+        }
         if (!EnsureAdmin(targets.Select(t => t.Tweak)))
         {
             // Not "0 failed": callers treat that as success (Presets dropped the run from its undo history).
@@ -320,7 +407,7 @@ public static class TweakService
             if (r.Success) { ok++; reboot |= it.NeedsReboot; } else failed++;
         }
         Changed?.Invoke();
-        return (ok, failed, reboot);
+        return (ok, failed + skipped, reboot);
     }
 }
 

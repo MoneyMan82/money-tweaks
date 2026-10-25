@@ -96,39 +96,18 @@ public static class Compatibility
 
     public enum Overlap { None, Duplicate, Conflict }
 
-    /// <summary>How two tweaks overlap: same setting with the same value (Duplicate) or a different value (Conflict).</summary>
+    /// <summary>
+    /// How two tweaks overlap: same setting with the same value (Duplicate) or a different value (Conflict). Uses the same
+    /// normalised effects as <see cref="ConflictRadar"/> (registry values and string entries, service start types, including a
+    /// raw registry Start value, power settings, scheduled tasks, Store apps and command steps checking the same setting).
+    /// Runtime-discovered targets aren't resolved here (this runs across the whole catalog); the radar resolves them.
+    /// </summary>
     public static Overlap Between(Tweak a, Tweak b)
     {
         if (a.Id == b.Id) return Overlap.None;
-        var result = Overlap.None;
-        void See(bool sameTarget, bool sameValue) { if (!sameTarget) return; if (!sameValue) result = Overlap.Conflict; else if (result == Overlap.None) result = Overlap.Duplicate; }
-        foreach (var x in a.Ops)
-            foreach (var y in b.Ops)
-                switch (x, y)
-                {
-                    case (RegValueOp r1, RegValueOp r2):
-                        See(r1.Hive == r2.Hive && string.Equals(r1.Path, r2.Path, StringComparison.OrdinalIgnoreCase) && string.Equals(r1.Name, r2.Name, StringComparison.OrdinalIgnoreCase),
-                            SameRegValue(r1, r2));
-                        break;
-                    case (ServiceStartOp s1, ServiceStartOp s2):
-                        See(string.Equals(s1.Service, s2.Service, StringComparison.OrdinalIgnoreCase), s1.Start == s2.Start);
-                        break;
-                    case (PowerCfgOp p1, PowerCfgOp p2):
-                        See(string.Equals(p1.SettingKey, p2.SettingKey, StringComparison.OrdinalIgnoreCase), p1.Value == p2.Value);
-                        break;
-                    case (CommandOp c1, CommandOp c2) when c1.CheckCommand is not null:
-                        See(c1.CheckCommand == c2.CheckCommand && c1.UndoCommand == c2.UndoCommand, c1.ApplyCommand == c2.ApplyCommand);
-                        break;
-                }
-        return result;
-    }
-
-    /// <summary>Same data of the same type. A DWORD and a string under one name are different values, never an exception.</summary>
-    private static bool SameRegValue(RegValueOp a, RegValueOp b)
-    {
-        if (a.ValueKind != b.ValueKind) return false;
-        try { return RegValueOp.ValuesEqual(RegValueOp.ConvertValue(a.Value, a.ValueKind), RegValueOp.ConvertValue(b.Value, b.ValueKind)); }
-        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException) { return false; }
+        var shared = ConflictRadar.Shared(ConflictRadar.Effects(a, resolveDynamic: false), ConflictRadar.Effects(b, resolveDynamic: false));
+        if (shared.Count == 0) return Overlap.None;
+        return shared.Any(x => !string.Equals(x.a, x.b, StringComparison.OrdinalIgnoreCase)) ? Overlap.Conflict : Overlap.Duplicate;
     }
 
     /// <summary>Other tweaks that set the same thing differently and are currently applied by Money Tweaks.</summary>
