@@ -10,8 +10,9 @@ used unmodified, as published on NuGet. Their licenses apply to those components
 - Source code: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor
   (this release is built from commit 3d331e3370efb858411f19511373eff65a218701).
 - Package: https://www.nuget.org/packages/LibreHardwareMonitorLib/0.9.6
-- Use in Money Tweaks: read-only sensor readings (temperatures, clocks, power, voltages, fan speeds). Money Tweaks does
-  not install drivers; CPU and motherboard sensors are read only when the PawnIO driver is already installed.
+- Use in Money Tweaks: read-only sensor readings (temperatures, clocks, power, voltages, fan speeds). CPU and
+  motherboard sensors need the PawnIO driver; Money Tweaks installs it only when you choose to, using the official
+  PawnIO installer.
 
 The MPL-2.0 covered files are distributed in Executable Form inside the Money Tweaks executable. Their Source Code Form
 is available at the address above, under the terms of the MPL-2.0.
@@ -73,6 +74,12 @@ bundled are in src/MoneyTweaks/Assets/Gpu/manifest.json.
   - Source: https://sketchfab.com/3d-models/nvidia-rtx5070ti-1035d0d5985d4c3b8c91e3da9eb1fade
   - Attribution: "NVIDIA RTX5070ti" by hakai315 (https://sketchfab.com/3d-models/nvidia-rtx5070ti-1035d0d5985d4c3b8c91e3da9eb1fade), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Unmodified.
   - File: rtx5070ti-hakai315.glb (SHA-256 457420ed38f4c19ee9adeec91b51cd5e2f9fed71dd2d4a592be55e621e7f1b31), shown for: a typical triple-fan GeForce RTX 5070 Ti (no maker branding; there is no Founders Edition 5070 Ti).
+
+## Money Tweaks for Linux (preview)
+
+The Linux download (MoneyTweaks-Linux-*-preview-x64.tar.gz) is a separate program built with Avalonia, SkiaSharp and
+HarfBuzzSharp (MIT). Its notices are in THIRD-PARTY-NOTICES-LINUX.txt and the licenses folder inside that archive
+(source: src/MoneyTweaks.Linux/THIRD-PARTY-NOTICES-LINUX.txt).
 
 ---
 

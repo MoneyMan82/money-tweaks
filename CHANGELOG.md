@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.68 – 2026-10-25
+- **Money Tweaks for Linux (preview).** A separate download for x86-64 Linux (MoneyTweaks-Linux-…-preview-x64.tar.gz),
+  built with Avalonia. It hasn't been run on Linux hardware yet, says so in the app, and has a "Report a problem" button
+  that opens a prefilled GitHub issue (nothing is sent until you submit it).
+  - Monitor: CPU usage per core (/proc/stat), CPU temperature (k10temp, zenpower, coretemp or the x86 package thermal
+    zone, no driver needed), clocks, memory, GPU (amdgpu sysfs or nvidia-smi), network and uptime. Missing readings
+    say "not available" with the reason.
+  - Tweaks: CPU governor, CPU energy preference, swappiness and the memory map limit. Root rights through polkit
+    (pkexec tee, whitelisted files and values only); original values backed up, read back after writing, rolled back
+    if the kernel doesn't keep them, undo verified; changes last until the next restart. "Inspect changes" shows each
+    file with its value now, after applying and after undo.
+  - Its parsers are tested on every CI run against a real Linux kernel (GitHub's Ubuntu runner).
+- Third-party notices: Linux components listed; the LibreHardwareMonitor entry now says PawnIO is installed only when
+  you choose to.
+
 ## 1.67 – 2026-10-25
 - **Tweak X-Ray.** Every tweak that changes Windows has an "Inspect changes" panel: each real location it touches (full
   registry path, service Start value, power-plan setting with its GUIDs, scheduled task, Store package, or the exact

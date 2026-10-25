@@ -10,7 +10,8 @@ param(
     # Release version, e.g. 1.24 or v1.24 (older releases: 1.2.1). CI passes the git tag so binaries always match the tag.
     [string]$ReleaseVersion = '',
     [switch]$SkipTests,
-    [switch]$SkipInstaller
+    [switch]$SkipInstaller,
+    [switch]$SkipLinux
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -70,6 +71,20 @@ if (-not $SkipInstaller) {
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
     $setupVersion = (Get-Item (Join-Path $dist 'MoneyTweaks-Setup.exe')).VersionInfo.FileVersion
     if (-not $setupVersion.StartsWith($version)) { throw "MoneyTweaks-Setup.exe reports $setupVersion but the release is $version" }
+}
+
+# Money Tweaks for Linux (preview): self-contained linux-x64 build, packed with Unix file modes by scripts/pack-linux.cs.
+if (-not $SkipLinux) {
+    if (-not $SkipTests) {
+        dotnet test (Join-Path $root 'tests\MoneyTweaks.Linux.Tests') -c $Configuration
+        if ($LASTEXITCODE -ne 0) { throw 'Linux tests failed' }
+    }
+    $linuxPublish = Join-Path $root 'artifacts\publish-linux'
+    Remove-Item $linuxPublish -Recurse -Force -ErrorAction SilentlyContinue
+    dotnet publish (Join-Path $root 'src\MoneyTweaks.Linux\MoneyTweaks.Linux.csproj') -c $Configuration -r linux-x64 --self-contained true -p:Version=$version -p:DebugType=none -o $linuxPublish
+    if ($LASTEXITCODE -ne 0) { throw 'Linux publish failed' }
+    dotnet run --file (Join-Path $PSScriptRoot 'pack-linux.cs') -- $linuxPublish (Join-Path $dist "MoneyTweaks-Linux-$version-preview-x64.tar.gz") $version
+    if ($LASTEXITCODE -ne 0) { throw 'Linux packaging failed' }
 }
 
 # Checksums (sha256sum-compatible format)

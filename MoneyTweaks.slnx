@@ -4,9 +4,12 @@
     <Project Path="src/MoneyTweaks/MoneyTweaks.csproj" />
     <Project Path="src/MoneyTweaks.Community.Shared/MoneyTweaks.Community.Shared.csproj" />
     <Project Path="src/MoneyTweaks.Community.Server/MoneyTweaks.Community.Server.csproj" />
+    <Project Path="src/MoneyTweaks.Linux.Core/MoneyTweaks.Linux.Core.csproj" />
+    <Project Path="src/MoneyTweaks.Linux/MoneyTweaks.Linux.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MoneyTweaks.Tests/MoneyTweaks.Tests.csproj" />
     <Project Path="tests/MoneyTweaks.Community.Tests/MoneyTweaks.Community.Tests.csproj" />
+    <Project Path="tests/MoneyTweaks.Linux.Tests/MoneyTweaks.Linux.Tests.csproj" />
   </Folder>
 </Solution>

@@ -14,6 +14,7 @@ jobs:
       - run: dotnet build MoneyTweaks.slnx -c Release
       - run: dotnet test tests/MoneyTweaks.Tests -c Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults
       - run: dotnet test tests/MoneyTweaks.Community.Tests -c Release --no-build --logger "trx;LogFileName=community.trx" --results-directory TestResults
+      - run: dotnet test tests/MoneyTweaks.Linux.Tests -c Release --no-build --logger "trx;LogFileName=linux.trx" --results-directory TestResults
       - name: Report failed tests as annotations
         if: failure()
         shell: pwsh
@@ -26,6 +27,17 @@ jobs:
               Write-Output "::error title=$($r.testName)::$msg"
             }
           }
+  linux:
+    # Money Tweaks for Linux on a real Linux kernel: parsers against the runner's /proc and /sys, then the linux-x64 publish.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test tests/MoneyTweaks.Linux.Tests -c Release --logger "console;verbosity=normal"
+      - run: dotnet publish src/MoneyTweaks.Linux -c Release -r linux-x64 --self-contained true -o out
+      - run: test -x out/money-tweaks && file out/money-tweaks
   worker:
     # Website Worker with the Community Hub API (worker/): typecheck and tests in the Workers runtime (no Cloudflare account used).
     runs-on: ubuntu-latest

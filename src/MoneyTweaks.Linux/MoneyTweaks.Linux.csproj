@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Money Tweaks for Linux (preview): Avalonia desktop app over MoneyTweaks.Linux.Core. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <SupportedOSPlatformVersion></SupportedOSPlatformVersion>
+    <RootNamespace>MoneyTweaks.Linux.App</RootNamespace>
+    <AssemblyName>money-tweaks</AssemblyName>
+    <ApplicationIcon></ApplicationIcon>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README-LINUX.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="THIRD-PARTY-NOTICES-LINUX.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The native graphics libraries' own license and notice files, as published in their NuGet packages. -->
+    <None Include="$(NuGetPackageRoot)skiasharp.nativeassets.linux/2.88.9/LICENSE.txt" Link="licenses/SkiaSharp-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)skiasharp.nativeassets.linux/2.88.9/THIRD-PARTY-NOTICES.txt" Link="licenses/SkiaSharp-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)harfbuzzsharp.nativeassets.linux/8.3.1.1/LICENSE.txt" Link="licenses/HarfBuzzSharp-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)harfbuzzsharp.nativeassets.linux/8.3.1.1/THIRD-PARTY-NOTICES.txt" Link="licenses/HarfBuzzSharp-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyTweaks.Linux.Core\MoneyTweaks.Linux.Core.csproj" />
+  </ItemGroup>
+</Project>
