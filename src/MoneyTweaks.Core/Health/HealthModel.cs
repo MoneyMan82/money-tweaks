@@ -12,7 +12,7 @@ public enum HealthArea { Drivers, Windows, Stability }
 public sealed record HealthLink(string Label, string Target)
 {
     /// <summary>Windows tools the checks link to. Anything else (a planted health.json entry) is never started.</summary>
-    private static readonly HashSet<string> Tools = new(StringComparer.OrdinalIgnoreCase) { "devmgmt.msc", "perfmon.exe /rel" };
+    private static readonly HashSet<string> Tools = new(StringComparer.OrdinalIgnoreCase) { "devmgmt.msc", "perfmon.exe /rel", "mdsched.exe", "SystemPropertiesAdvanced.exe" };
 
     /// <summary>HTTPS pages, ms-settings: pages and the known Windows tools only.</summary>
     public static bool IsAllowedTarget(string? target) =>

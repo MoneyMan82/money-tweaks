@@ -60,6 +60,7 @@ public sealed partial class MonitorView : IAnchorTarget
         body.Children.Add(_hWindows);
         body.Children.Add(AreaHeader("Gaming stability", "\uE7FC", $"Blue screens, unexpected restarts, GPU driver resets, app crashes, hardware errors, throttling, memory and disks (last {HealthChecks.EventDays} days)."));
         body.Children.Add(_hStability);
+        body.Children.Add(Ui.Card(_crash, new Thickness(0, 0, 0, 10)));
         body.Children.Add(Ui.Card(_fileChecks));
         body.Children.Add(Ui.Card(_repairs));
         body.Children.Add(Ui.Muted("Money Tweaks never installs or removes drivers, never changes BIOS, security settings or services on its own, and never downloads anything except through Windows' own tools when you start a repair. Driver links open the makers' official pages.", 11.5));
@@ -69,6 +70,7 @@ public sealed partial class MonitorView : IAnchorTarget
         RenderHealth();
         RenderFileChecks();
         RenderRepairs();
+        RenderCrashDetective();
     }
 
     private static UIElement AreaHeader(string title, string icon, string sub)

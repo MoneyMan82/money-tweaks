@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.70 – 2026-10-25
+- **Crash Detective** in the Health Center (Hardware Monitor › Gaming stability): investigates blue screens, unexpected
+  restarts, GPU driver resets, live kernel events, hardware (WHEA) errors and game/app crashes and hangs from the last 30
+  days, using the System and Application event logs, Reliability Monitor and the crash dump folders. Everything is read
+  locally and nothing is changed.
+  - Events that belong together are grouped into incidents (e.g. a stop error with Kernel-Power 41, EventLog 6008, the
+    dump file and the driver Windows names as possibly related; a game crash with a GPU driver reset seconds earlier and
+    its crash dump). Kernel-Power's named fields tell a power-button press or sleep transition apart from a silent restart.
+  - What Windows recorded is shown as confirmed facts with their source; suspected causes are labelled hypotheses with a
+    strong, moderate or weak lead, the evidence behind it and a caveat. Repeating problems are shown as patterns. When
+    nothing points anywhere it says so, and it explains when a source can't be read (e.g. minidumps need admin rights).
+  - Changes shortly before a repeating problem started (drivers, Windows updates, programs, Money Tweaks tweaks that touch
+    the kernel, drivers, network or power) are listed as weak leads that are easy to test.
+  - Targeted fixes with numbered steps and what undoes them: network or graphics driver, stock clocks, memory test, power
+    and heat, system files (the existing SFC repair), crash dump settings, overlays, program repair, and undoing a
+    suspected Money Tweaks tweak through its backup. Anything that changes the PC asks first.
+  - Export a report as a text file with the user and computer name, profile path, account SIDs, e-mail, IP and MAC
+    addresses, report IDs and device serials removed (version numbers and stop codes are kept).
+
 ## 1.69 – 2026-10-25
 - **Tweak Conflict Radar.** Before tweaks are applied (one switch, Apply recommended, presets, the scanner, Reality Lab and
   benchmarks), Money Tweaks compares what each selected tweak actually writes with the others in the selection and with
