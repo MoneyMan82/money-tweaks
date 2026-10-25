@@ -77,7 +77,7 @@ bundled are in src/MoneyTweaks/Assets/Gpu/manifest.json.
 
 ## Money Tweaks for Linux (preview)
 
-The Linux download (MoneyTweaks-Linux-*-preview-x64.tar.gz) is a separate program built with Avalonia, SkiaSharp and
+The Linux download (MoneyTweaks-Linux-x64.tar.gz) is a separate program built with Avalonia, SkiaSharp and
 HarfBuzzSharp (MIT). Its notices are in THIRD-PARTY-NOTICES-LINUX.txt and the licenses folder inside that archive
 (source: src/MoneyTweaks.Linux/THIRD-PARTY-NOTICES-LINUX.txt).
 

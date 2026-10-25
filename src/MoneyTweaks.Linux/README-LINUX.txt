@@ -5,7 +5,7 @@ A preview: it was built without being run on Linux hardware. Please report anyth
 About & feedback -> Report a problem in the app, or at https://github.com/MoneyMan82/money-tweaks/issues.
 
 Run
-  tar -xzf MoneyTweaks-Linux-*-preview-x64.tar.gz
+  tar -xzf MoneyTweaks-Linux-x64.tar.gz
   cd money-tweaks-*
   ./money-tweaks
 

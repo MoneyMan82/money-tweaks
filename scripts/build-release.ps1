@@ -74,6 +74,7 @@ if (-not $SkipInstaller) {
 }
 
 # Money Tweaks for Linux (preview): self-contained linux-x64 build, packed with Unix file modes by scripts/pack-linux.cs.
+# Fixed file name (the version is in the folder inside) so releases/latest/download/MoneyTweaks-Linux-x64.tar.gz always works.
 if (-not $SkipLinux) {
     if (-not $SkipTests) {
         dotnet test (Join-Path $root 'tests\MoneyTweaks.Linux.Tests') -c $Configuration
@@ -83,7 +84,7 @@ if (-not $SkipLinux) {
     Remove-Item $linuxPublish -Recurse -Force -ErrorAction SilentlyContinue
     dotnet publish (Join-Path $root 'src\MoneyTweaks.Linux\MoneyTweaks.Linux.csproj') -c $Configuration -r linux-x64 --self-contained true -p:Version=$version -p:DebugType=none -o $linuxPublish
     if ($LASTEXITCODE -ne 0) { throw 'Linux publish failed' }
-    dotnet run --file (Join-Path $PSScriptRoot 'pack-linux.cs') -- $linuxPublish (Join-Path $dist "MoneyTweaks-Linux-$version-preview-x64.tar.gz") $version
+    dotnet run --file (Join-Path $PSScriptRoot 'pack-linux.cs') -- $linuxPublish (Join-Path $dist "MoneyTweaks-Linux-x64.tar.gz") $version
     if ($LASTEXITCODE -ne 0) { throw 'Linux packaging failed' }
 }
 

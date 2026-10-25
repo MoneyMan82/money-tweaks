@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.68.1 – 2026-10-25
+- The Linux preview's download has a fixed name, MoneyTweaks-Linux-x64.tar.gz (the version is in the folder inside), so
+  the website can link straight to the latest file instead of the releases page.
+
 ## 1.68 – 2026-10-25
 - **Money Tweaks for Linux (preview).** A separate download for x86-64 Linux (MoneyTweaks-Linux-…-preview-x64.tar.gz),
   built with Avalonia. It hasn't been run on Linux hardware yet, says so in the app, and has a "Report a problem" button
