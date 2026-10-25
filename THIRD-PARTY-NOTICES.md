@@ -44,6 +44,24 @@ is available at the address above, under the terms of the MPL-2.0.
 - License: MIT, Copyright (c) .NET Foundation and Contributors / Xamarin Inc. and Microsoft.
 - Source: https://github.com/dotnet/runtime and https://github.com/mono/mono
 
+## QRCoder 1.6.0
+
+- License: MIT, text below. Copyright (c) Raffael Herrmann and the QRCoder contributors.
+- Source code: https://github.com/codebude/QRCoder (package: https://www.nuget.org/packages/QRCoder/1.6.0)
+- Use in Money Tweaks: draws the Pocket Panel pairing QR code on this PC. Nothing is sent anywhere.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 ## 3D graphics card models (Reality Lab)
 
 Bundled unmodified in src/MoneyTweaks/Assets/Gpu; full details, checksums and the models that were evaluated but not

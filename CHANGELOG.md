@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.71 – 2026-10-25
+- **Pocket Panel** (Tools › Pocket Panel): turn a phone or tablet browser on your home network into a live second screen.
+  No app, account or cloud: Money Tweaks serves a small dashboard itself, only while you have it turned on.
+  - Live readings from the existing sensor hub and overlay: CPU and GPU usage and temperatures, FPS / 1% low / frame time
+    while the overlay measures a game, RAM and VRAM, and Money Tweaks' warnings (critical ones can vibrate the phone).
+    Readings this PC doesn't provide say why, as in the Hardware Monitor.
+  - Customisable vertical layout (show/hide, reorder, three sizes, compact tiles) remembered on the device, animated
+    graphs and numbers, and controls for the overlay: on/off and the existing style and theme presets.
+  - Pairing with a QR code: a random single-use code that expires after 5 minutes. The phone gets its own session key;
+    the PC keeps only its hash; access ends after 30 days or when you unpair (per device or all).
+  - Local only: listens on this PC's home-network addresses (never public ones), refuses connections from outside the
+    local network, checks the Host header (no DNS rebinding) and Origin, requires the session key on every API call, and
+    only runs the actions on its fixed allowlist; nothing can run commands, read files or change other settings. No ports
+    are opened on the router; Windows asks once whether to allow it on private networks. Off by default; the sensor hub
+    only works for it while a device is connected.
+- QR codes are drawn with QRCoder (MIT), listed in THIRD-PARTY-NOTICES.md.
+
 ## 1.70.1 – 2026-10-25
 - The new features are easier to find:
   - **Crash Detective** has its own sidebar entry under Monitoring & Benchmarks. It opens the Hardware Monitor at the

@@ -489,6 +489,7 @@ public partial class MainWindow : Window
         "crosshair" => new CrosshairView(),
         "community" => new CommunityHubView(),
         "startup" => new StartupView(),
+        "pocket" => new PocketPanelView(),
         "monitor" => new MonitorView(),
         "overlay" => new OverlayView(),
         "restore" => new RestoreView(),

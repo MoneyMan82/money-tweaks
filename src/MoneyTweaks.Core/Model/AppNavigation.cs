@@ -80,6 +80,7 @@ public static class AppNavigation
         new("lab", "\uE7B8", "Reality Lab", "monitor", "A 3D virtual PC driven by live CPU, GPU and RAM readings. Preview safe tweak experiments, compare the estimate with a real A/B measurement, inspect before/after resource use, then keep or roll back.", "lab reality 3d virtual pc experiment predict estimate preview simulate compare before after resource usage rollback"),
 
         new("startup", "\uE7E8", "Startup Apps", "tools", "Turn apps that launch at sign-in on or off.", "autostart sign in boot"),
+        new("pocket", "\uE8EA", "Pocket Panel", "tools", "Use a phone or tablet browser as a live second screen: temperatures, usage, FPS, RAM and VRAM with graphs and alerts, plus overlay controls. Home network only, paired with a QR code.", "phone tablet mobile second screen remote dashboard qr pair companion browser wifi"),
         Cat(TweakCategory.AppOptimizer, "tools", keywords: "apps background launchers"),
         Cat(TweakCategory.AppRemoval, "tools", keywords: "uninstall remove apps bloatware"),
         new("macros", "\uE765", "Gaming Macros", "tools", "Keyboard/mouse macros with an emergency stop.", "macro keys automation"),

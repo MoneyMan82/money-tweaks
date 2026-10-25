@@ -44,6 +44,7 @@ public sealed class AppSettings
     public string? PotatoAfterShot { get; set; }
     /// <summary>Live performance overlay: layout, hotkey and per-game profiles.</summary>
     public OverlaySettings Overlay { get; set; } = OverlaySettings.WithDefaults();
+    public Pocket.PocketSettings Pocket { get; set; } = new();
     /// <summary>Sidebar shows icons only.</summary>
     public bool SidebarCompact { get; set; }
     /// <summary>Sidebar groups the user collapsed.</summary>

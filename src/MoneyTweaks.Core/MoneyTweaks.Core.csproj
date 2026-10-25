@@ -16,4 +16,10 @@
   <ItemGroup>
     <InternalsVisibleTo Include="MoneyTweaks.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Pocket Panel's phone dashboard, served from memory (never from disk). -->
+    <EmbeddedResource Include="Pocket/web/index.html" LogicalName="MoneyTweaks.Pocket.index.html" />
+    <EmbeddedResource Include="Pocket/web/app.js" LogicalName="MoneyTweaks.Pocket.app.js" />
+    <EmbeddedResource Include="Pocket/web/app.css" LogicalName="MoneyTweaks.Pocket.app.css" />
+  </ItemGroup>
 </Project>

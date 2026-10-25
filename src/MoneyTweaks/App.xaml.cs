@@ -75,6 +75,7 @@ public partial class App : Application
         Controls.Motion.InstallProgressGlide();   // determinate progress bars glide to new values
         Controls.Motion.InstallSquareWindows();   // square window corners on Windows 11, like the rest of the design
         MonitorService.Init();                    // sensor hub settings, CSV logging, warning toasts, compact window
+        PocketService.Init();                     // Pocket Panel's local server, only if the user turned it on
         Log.Info($"Money Tweaks {Version} ({Environment.ProcessPath}) started on {OsInfo.ProductName} (admin: {Admin.IsElevated})");
 
         UpdateService.CleanupAfterUpdate();
@@ -158,6 +159,7 @@ public partial class App : Application
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile
         DisplayService.Shutdown(); // drops an unconfirmed test resolution
         if (FanCurveService.Running) FanCurveService.Stop(); // the curve only runs while Money Tweaks does: fan back to automatic
+        PocketService.Shutdown();  // stops Pocket Panel's local server
         MonitorService.Shutdown(); // closes the compact window and flushes the sensor log
         Core.Monitoring.ElevatedSensors.Stop(); // the CPU sensor helper (it also exits on its own when Money Tweaks does)
         TrayIcon.Dispose();
