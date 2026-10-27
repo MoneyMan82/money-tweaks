@@ -52,3 +52,32 @@ button:active { transform: scale(.98); }
 .foot { color: var(--subtle); font-size: 11.5px; text-align: center; margin: 20px 0 6px; }
 .toast { position: fixed; left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 14px); background: var(--surface); border: 1px solid var(--border); padding: 12px; font-size: 14px; animation: rise .25s ease both; z-index: 5; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---- controls: tab bar, switches, segmented choices ---- */
+body { padding-bottom: calc(env(safe-area-inset-bottom) + 84px); }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: rgba(11, 13, 18, .96); border-top: 1px solid var(--border);
+  padding: 6px 10px calc(env(safe-area-inset-bottom) + 6px); gap: 8px; z-index: 4; backdrop-filter: blur(8px); }
+.tabbar button { flex: 1; background: transparent; border: 0; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 12px; font-weight: 600; min-height: 54px; }
+.tabbar button.on { color: var(--text); }
+.tabbar button.on .ic { background: var(--accent); }
+.ic { width: 22px; height: 4px; background: var(--subtle); display: block; transition: background .2s; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.group { background: var(--card); border: 1px solid var(--border); }
+.group h3 { margin: 0; padding: 12px 14px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); }
+.sw { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: transparent; border: 0; border-top: 1px solid var(--border);
+  text-align: left; min-height: 60px; }
+.group h3 + .sw { border-top: 0; }
+.sw .txt { flex: 1; } .sw .txt b { display: block; font-weight: 600; font-size: 15px; } .sw .txt small { color: var(--muted); font-size: 12.5px; }
+.knob { width: 50px; height: 28px; background: var(--border); position: relative; flex: none; transition: background .2s; }
+.knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: var(--muted); transition: transform .2s, background .2s; }
+.sw.on .knob { background: var(--accent); } .sw.on .knob::after { transform: translateX(22px); background: #fff; }
+.sw.busy { opacity: .6; } .sw.busy .knob::after { animation: pulse 1s infinite; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 14px 14px; }
+.seg button { flex: 1 1 30%; min-height: 46px; padding: 8px 6px; }
+.seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.seg button.busy { opacity: .6; }
+.tile .quick { margin-top: 8px; border: 1px solid var(--border); }
+/* A switch row stays a plain row when on; only its knob lights up (the generic "button.on" fill is for presets). */
+.sw, .sw.on { background: transparent; border-color: var(--border); color: var(--text); }
+.sw:active { background: var(--surface); }

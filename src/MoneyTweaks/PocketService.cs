@@ -100,9 +100,10 @@ public static class PocketService
             for (int i = 0; i < 8; i++) if (V($"gpu{i}.load") is { } l && l > best) { best = l; gpu = i; }
             var (gload, gtemp, vram, vramTotal) = OverlayService.BusiestGpu(f);
 
-            var lf = OverlayService.Visible ? OverlayService.LastFrame : null;
+            bool shown = OverlayService.Shown;
+            var lf = shown ? OverlayService.LastFrame : null;
             var fr = lf?.Frames;
-            string? fpsNote = !OverlayService.Visible ? "Turn the overlay on (below) to measure FPS in your game."
+            string? fpsNote = !shown ? "Turn on \"Overlay on screen\" in Controls to measure FPS in your game."
                 : fr is null ? lf?.CaptureNote ?? "Waiting for a game to draw frames." : null;
 
             var o = App.Settings.Overlay.Layout;
@@ -127,23 +128,36 @@ public static class PocketService
                 ram = new { usedGb = f?.Snapshot.RamUsedGb, totalGb = f?.Snapshot.RamTotalGb },
                 fps = new { fps = fr?.Fps, low1 = fr?.Low1PercentFps, frameMs = fr?.AvgMs, target = fr is null ? null : lf?.Target, note = fpsNote },
                 alerts = (f?.Alerts ?? []).Select(a => new { key = a.Key, level = a.Level.ToString(), title = a.Title, detail = a.Detail }),
-                overlay = new { visible = OverlayService.Visible, style = o.Style.ToString(), theme = o.EffectiveTheme, measuring = OverlayService.Visible ? lf?.Target : null },
+                overlay = new { visible = shown, style = o.Style.ToString(), theme = o.EffectiveTheme, measuring = shown ? lf?.Target : null },
+                // Current state of every control, so switches on the phone follow changes made on the PC.
+                controls = Actions(),
             };
             return JsonSerializer.Serialize(frame, Json);
         }
 
         private static readonly string[] Styles = Enum.GetNames<OverlayStyle>();
 
-        /// <summary>The whole allowlist: overlay on/off, and the overlay's existing style and theme presets.</summary>
+        /// <summary>
+        /// The whole allowlist, all existing overlay and monitor settings that are easy to change back: the overlay on or off,
+        /// auto-show for games, click-through, which readings it shows, its style and theme presets, and the compact monitor
+        /// window. Called from the server thread, so it only reads settings and thread-safe flags.
+        /// </summary>
         public IReadOnlyList<PocketAction> Actions()
         {
-            var o = App.Settings.Overlay.Layout;
+            var ov = App.Settings.Overlay;
+            var o = ov.Layout;
+            string[] items;
+            try { items = [.. o.EffectiveItems()]; } catch (InvalidOperationException) { items = []; }   // changed mid-read: next frame has it
             var list = new List<PocketAction>
             {
-                OverlayService.Visible ? new("overlay.hide", "Turn overlay off", "Overlay", false) : new("overlay.show", "Turn overlay on", "Overlay", false),
+                new("overlay.visible", "Overlay on screen", "Overlay", OverlayService.Shown, "switch", "FPS and readings over your game (measures FPS while on)"),
+                new("overlay.auto", "Show automatically for games", "Overlay", ov.AutoMonitor, "switch", "Turns the overlay on when a game from your overlay list starts"),
+                new("overlay.clickthrough", "Click-through", "Overlay", ov.ClickThrough, "switch", "Clicks pass through the overlay to the game"),
             };
-            list.AddRange(Styles.Select(s => new PocketAction("overlay.style." + s, s, "Style", o.Style.ToString() == s)));
-            list.AddRange(OverlayTheme.All.Select(t => new PocketAction("overlay.theme." + t.Name, t.Name, "Theme", o.EffectiveTheme == t.Name)));
+            list.AddRange(Styles.Select(st => new PocketAction("overlay.style." + st, st, "Overlay style", o.Style.ToString() == st, "choice")));
+            list.AddRange(OverlayTheme.All.Select(t => new PocketAction("overlay.theme." + t.Name, t.Name, "Overlay theme", o.EffectiveTheme == t.Name, "choice")));
+            list.AddRange(OverlayMetric.All.Select(m => new PocketAction("overlay.item." + m.Id, m.Label, "Readings on the overlay", items.Contains(m.Id), "switch", m.Hint)));
+            list.Add(new("monitor.compact", "Compact monitor window", "On the PC", CompactMonitorWindow.IsOpen, "switch", "Small always-on-top readings window on the PC's screen"));
             return list;
         }
 
@@ -156,12 +170,30 @@ public static class PocketService
 
         private static (bool ok, string message) RunOnUi(string id)
         {
-            var o = App.Settings.Overlay.Layout;
+            var ov = App.Settings.Overlay;
+            var o = ov.Layout;
             switch (id)
             {
-                case "overlay.show": OverlayService.Show(); return (true, "Overlay on.");
-                case "overlay.hide": OverlayService.Hide(); return (true, "Overlay off.");
-                case var s when s.StartsWith("overlay.style.", StringComparison.Ordinal) && Enum.TryParse<OverlayStyle>(s[14..], out var style):
+                case "overlay.visible":
+                    if (OverlayService.Visible) OverlayService.Hide(); else OverlayService.Show();
+                    Changed?.Invoke();
+                    return (true, OverlayService.Visible ? "Overlay on." : "Overlay off.");
+                case "overlay.auto":
+                    ov.AutoMonitor = !ov.AutoMonitor;
+                    if (ov.AutoMonitor) OverlayService.StartWatcher(); else OverlayService.StopWatcher();
+                    App.SaveSettingsSoon();
+                    Changed?.Invoke();
+                    return (true, ov.AutoMonitor ? "The overlay now turns on when a listed game starts." : "Auto-show is off.");
+                case "overlay.clickthrough":
+                    OverlayService.SetClickThrough(!ov.ClickThrough);
+                    return (true, ov.ClickThrough ? "Clicks pass through the overlay." : "The overlay can be dragged; it still never takes focus.");
+                case "monitor.compact":
+                    CompactMonitorWindow.Toggle();
+                    return (true, CompactMonitorWindow.IsOpen ? "Compact monitor window open on the PC." : "Compact monitor window closed.");
+                case var m when m.StartsWith("overlay.item.", StringComparison.Ordinal) && OverlayMetric.All.Any(x => x.Id == m[13..]):
+                    o.SetItem(m[13..], !o.EffectiveItems().Contains(m[13..]));
+                    break;
+                case var st when st.StartsWith("overlay.style.", StringComparison.Ordinal) && Enum.TryParse<OverlayStyle>(st[14..], out var style):
                     o.Style = style;
                     break;
                 case var t when t.StartsWith("overlay.theme.", StringComparison.Ordinal) && OverlayTheme.All.Any(p => p.Name == t[14..]):

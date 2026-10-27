@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.72 – 2026-10-27
+- **Pocket Panel controls on the phone are much easier to use.** A tab bar switches between Live (readings) and Controls.
+  Controls are large switch rows with a one-line explanation, presets are segmented buttons, and the Overlay tile on Live
+  has its own on/off switch. Taps flip the switch at once (with a short vibration where supported); if the PC refuses or
+  doesn't answer, it flips back and says why. Switches follow changes made on the PC within a second.
+- More things to switch from the phone, all existing overlay and monitor settings that are easy to change back: show the
+  overlay automatically for games, click-through, each reading on the overlay (FPS, frame time, 1% low, graph, CPU/GPU
+  usage and temperatures, RAM, VRAM, ping, game name) and the compact monitor window. Still a fixed allowlist: nothing
+  runs commands or applies tweaks.
+- The pairing QR code has the Money Tweaks logo in the middle, with the highest error correction so it still scans.
+- Fixed: Pocket Panel read the overlay's state from a background thread, which would have failed while the overlay was
+  showing.
+
 ## 1.71 – 2026-10-25
 - **Pocket Panel** (Tools › Pocket Panel): turn a phone or tablet browser on your home network into a live second screen.
   No app, account or cloud: Money Tweaks serves a small dashboard itself, only while you have it turned on.

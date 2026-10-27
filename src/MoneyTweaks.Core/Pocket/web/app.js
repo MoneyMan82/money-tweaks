@@ -28,7 +28,8 @@
   const shown = {};         // id -> number currently displayed (animated towards the target)
   const target = {};        // id -> latest value
   const els = {};
-  let actions = [];
+  let controls = [];      // the PC's allowlisted controls with their current state
+  const pending = {};     // id -> { active, until }: a tap the PC hasn't confirmed yet
   let session = store.get("mt.session", null);
   let unpairing = false;   // this device asked to unpair: the stream's "revoked" notice is expected
 
@@ -47,7 +48,7 @@
       tile.append(lbl, val, sub);
       let canvas = null, ctl = null;
       if (def.graph) { canvas = document.createElement("canvas"); tile.append(canvas); }
-      if (def.id === "overlay") { ctl = document.createElement("div"); ctl.className = "ctl"; tile.append(ctl); }
+      if (def.id === "overlay") { ctl = document.createElement("div"); tile.append(ctl); }
       host.append(tile);
       els[def.id] = { tile, val, sub, canvas, ctl, def };
     }
@@ -68,9 +69,10 @@
     if (els.overlay) {
       const o = f.overlay || {};
       els.overlay.val.textContent = o.visible ? "On" : "Off";
-      els.overlay.sub.textContent = o.visible ? `${o.style} · ${o.theme}${o.measuring ? " · measuring " + o.measuring : ""}` : "Turn it on to measure FPS in your game.";
+      els.overlay.sub.textContent = o.visible ? `${o.style} · ${o.theme}${o.measuring ? " · measuring " + o.measuring : ""}` : "Turn it on to measure FPS in your game. More in Controls.";
     }
     alertsUi(f.alerts || []);
+    if (f.controls) { syncControls(f.controls); }
   }
 
   function set(id, v, digits, sub, state) {
@@ -154,34 +156,113 @@
     for (const k of [...seenAlerts]) if (!list.some((a) => a.key === k)) seenAlerts.delete(k);
   }
 
-  // ---- overlay controls (only the actions the PC allows) ------------------------------------------------------------
+  // ---- controls (only the actions the PC allows) -----------------------------------------------------------------------
+  const isOn = (c) => (pending[c.id] ? pending[c.id].active : c.active);
+
+  // The PC's state wins, except for a tap it hasn't confirmed yet (then the switch keeps showing what you chose).
+  function syncControls(list) {
+    const now = Date.now();
+    for (const c of list) {
+      const p = pending[c.id];
+      if (p && (p.active === c.active || now > p.until)) delete pending[c.id];
+    }
+    controls = list;
+    // Only redraw when something changed (frames arrive every second; a redraw mid-tap would lose the tap).
+    const key = JSON.stringify(list.map((c) => [c.id, c.active])) + JSON.stringify(pending);
+    if (key === lastControlsKey) return;
+    lastControlsKey = key;
+    renderControls();
+  }
+  let lastControlsKey = "";
+
+  function switchRow(c, extraClass) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "sw" + (isOn(c) ? " on" : "") + (pending[c.id] ? " busy" : "") + (extraClass ? " " + extraClass : "");
+    b.setAttribute("role", "switch");
+    b.setAttribute("aria-checked", String(isOn(c)));
+    const txt = document.createElement("span"); txt.className = "txt";
+    const name = document.createElement("b"); name.textContent = c.label;
+    txt.append(name);
+    if (c.hint) { const h = document.createElement("small"); h.textContent = c.hint; txt.append(h); }
+    const knob = document.createElement("span"); knob.className = "knob";
+    b.append(txt, knob);
+    b.addEventListener("click", () => run(c, !isOn(c)));
+    return b;
+  }
+
   function renderControls() {
+    // Quick switch on the Live tab's overlay tile.
     const e = els.overlay;
-    if (!e) return;
-    e.ctl.textContent = "";
-    let group = null;
-    for (const a of actions) {
-      if (a.group !== group) {
-        group = a.group;
-        const g = document.createElement("div"); g.className = "grp"; g.textContent = group; e.ctl.append(g);
+    if (e) {
+      e.ctl.textContent = "";
+      const vis = controls.find((c) => c.id === "overlay.visible");
+      if (vis) e.ctl.append(switchRow(vis, "quick"));
+    }
+    const host = $("controls");
+    host.textContent = "";
+    const groups = [];
+    for (const c of controls) {
+      let g = groups.find((x) => x.name === c.group);
+      if (!g) groups.push(g = { name: c.group, items: [] });
+      g.items.push(c);
+    }
+    for (const g of groups) {
+      const box = document.createElement("div"); box.className = "group";
+      const h = document.createElement("h3"); h.textContent = g.name; box.append(h);
+      const choices = g.items.filter((c) => c.kind === "choice");
+      for (const c of g.items.filter((c) => c.kind !== "choice")) box.append(switchRow(c));
+      if (choices.length) {
+        const seg = document.createElement("div"); seg.className = "seg";
+        for (const c of choices) {
+          const b = document.createElement("button");
+          b.type = "button"; b.textContent = c.label;
+          b.className = (isOn(c) ? "on" : "") + (pending[c.id] ? " busy" : "");
+          b.setAttribute("aria-pressed", String(isOn(c)));
+          b.addEventListener("click", () => { if (!isOn(c)) run(c, true, choices); });
+          seg.append(b);
+        }
+        box.append(seg);
       }
-      const b = document.createElement("button");
-      b.type = "button"; b.textContent = a.label; b.className = a.active ? "on" : "";
-      b.addEventListener("click", () => run(a.id, b));
-      e.ctl.append(b);
+      host.append(box);
     }
   }
 
-  async function run(id, btn) {
-    btn.disabled = true;
+  async function run(c, want, siblings) {
+    if (pending[c.id]) return;
+    if (opts.vibrate && navigator.vibrate) navigator.vibrate(10);
+    pending[c.id] = { active: want, until: Date.now() + 5000 };
+    if (siblings) for (const s of siblings) if (s.id !== c.id && isOn(s)) pending[s.id] = { active: false, until: Date.now() + 5000 };
+    renderControls();
     try {
-      const r = await api("POST", "/api/action", { id });
+      const r = await api("POST", "/api/action", { id: c.id });
       const j = await r.json();
-      if (j.actions) { actions = j.actions; renderControls(); }
-      if (!j.ok) toast(j.message || "That didn't work.");
-    } catch { toast("The PC didn't respond."); }
-    finally { btn.disabled = false; }
+      if (!j.ok) {
+        delete pending[c.id];
+        if (siblings) for (const s of siblings) delete pending[s.id];
+        toast(j.message || "That didn't work.");
+      }
+      if (j.actions) syncControls(j.actions); else renderControls();
+    } catch {
+      delete pending[c.id];
+      if (siblings) for (const s of siblings) delete pending[s.id];
+      renderControls();
+      toast("The PC didn't respond.");
+    }
   }
+
+  // ---- tabs -------------------------------------------------------------------------------------------------------------
+  function tab(name) {
+    const live = name !== "controls";
+    $("viewLive").hidden = !live; $("viewControls").hidden = live;
+    $("tabLive").className = live ? "on" : ""; $("tabControls").className = live ? "" : "on";
+    $("tabLive").setAttribute("aria-pressed", String(live)); $("tabControls").setAttribute("aria-pressed", String(!live));
+    if (!live) $("editor").hidden = true;
+    store.set("mt.tab", live ? "live" : "controls");
+    window.scrollTo({ top: 0 });
+  }
+  $("tabLive").addEventListener("click", () => tab("live"));
+  $("tabControls").addEventListener("click", () => tab("controls"));
 
   // ---- connection -------------------------------------------------------------------------------------------------------
   function api(method, path, body) {
@@ -197,7 +278,7 @@
   function needPairing(text) {
     session = null;
     store.set("mt.session", null);
-    $("dash").hidden = true; $("editor").hidden = true; $("pair").hidden = false;
+    $("dash").hidden = true; $("editor").hidden = true; $("tabbar").hidden = true; $("pair").hidden = false;
     if (text) $("pairText").textContent = text;
     status("Not paired", "down");
   }
@@ -291,10 +372,11 @@
     try {
       const r = await api("GET", "/api/hello");
       if (r.status === 401) { needPairing("This device isn't paired anymore. Scan a new QR code in Money Tweaks › Pocket Panel."); return; }
-      actions = (await r.json()).actions || [];
+      controls = (await r.json()).actions || [];
     } catch { /* stream() keeps retrying */ }
-    $("pair").hidden = true; $("dash").hidden = false;
+    $("pair").hidden = true; $("dash").hidden = false; $("tabbar").hidden = false;
     buildTiles();
+    tab(store.get("mt.tab", "live"));
     requestAnimationFrame(frame);
     stream();
   })();

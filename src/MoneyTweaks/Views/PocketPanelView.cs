@@ -116,18 +116,36 @@ public sealed class PocketPanelView : UserControl, IPageLifecycle
             tb.Text = $"Code expires in {(int)left.TotalMinutes}:{left.Seconds:00}";
     }
 
-    private static BitmapImage Qr(string text)
+    /// <summary>
+    /// The pairing QR code: black square modules on white with the Money Tweaks logo in the middle. Error correction is at
+    /// the highest level (H, about 30% of the code can be missing) so the logo, about 6% of the area, never stops a scan.
+    /// </summary>
+    private static BitmapSource Qr(string text)
     {
         using var gen = new QRCodeGenerator();
-        using var data = gen.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
+        using var data = gen.CreateQrCode(text, QRCodeGenerator.ECCLevel.H);
         var png = new PngByteQRCode(data).GetGraphic(10);
-        var img = new BitmapImage();
-        img.BeginInit();
-        img.StreamSource = new MemoryStream(png);
-        img.CacheOption = BitmapCacheOption.OnLoad;
-        img.EndInit();
-        img.Freeze();
-        return img;
+        var code = new BitmapImage();
+        code.BeginInit();
+        code.StreamSource = new MemoryStream(png);
+        code.CacheOption = BitmapCacheOption.OnLoad;
+        code.EndInit();
+        code.Freeze();
+
+        var logo = new BitmapImage(new Uri("pack://application:,,,/MoneyTweaks;component/Assets/logo.png"));
+        int w = code.PixelWidth, h = code.PixelHeight;
+        double size = Math.Round(w * 0.25);
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawImage(code, new Rect(0, 0, w, h));
+            dc.DrawImage(logo, new Rect((w - size) / 2, (h - size) / 2, size, size));
+        }
+        var rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+        RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
+        rtb.Render(visual);
+        rtb.Freeze();
+        return rtb;
     }
 
     private void RenderDevices()

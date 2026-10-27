@@ -22,10 +22,18 @@
 
 <main id="dash" hidden>
   <div id="alerts" class="alerts"></div>
-  <div id="tiles" class="tiles"></div>
-  <div class="bar">
-    <button id="editBtn" type="button">Customize layout</button>
-    <button id="unpairBtn" type="button" class="ghost">Unpair this device</button>
+
+  <div id="viewLive">
+    <div id="tiles" class="tiles"></div>
+    <div class="bar">
+      <button id="editBtn" type="button">Customize layout</button>
+    </div>
+  </div>
+
+  <div id="viewControls" hidden>
+    <div id="controls" class="controls"></div>
+    <p class="small">Changes apply on the PC right away and are saved there. Style, theme and readings apply to the default overlay layout; games with their own layout keep theirs.</p>
+    <div class="bar"><button id="unpairBtn" type="button" class="ghost">Unpair this device</button></div>
   </div>
 </main>
 
@@ -33,10 +41,15 @@
   <h2>Layout</h2>
   <p class="small">Show, hide, reorder and resize the tiles. Saved on this device.</p>
   <ul id="editList"></ul>
-  <label class="row"><input type="checkbox" id="optVibrate"> Vibrate on critical alerts (where the browser supports it)</label>
+  <label class="row"><input type="checkbox" id="optVibrate"> Vibrate on critical alerts and taps (where the browser supports it)</label>
   <label class="row"><input type="checkbox" id="optDense"> Compact tiles</label>
   <div class="bar"><button id="doneBtn" type="button">Done</button><button id="resetBtn" type="button" class="ghost">Reset layout</button></div>
 </section>
+
+<nav class="tabbar" id="tabbar" hidden>
+  <button type="button" id="tabLive" class="on" aria-pressed="true"><span class="ic ic-live"></span>Live</button>
+  <button type="button" id="tabControls" aria-pressed="false"><span class="ic ic-ctl"></span>Controls</button>
+</nav>
 
 <footer class="foot">Readings come from Money Tweaks on your PC. Nothing leaves your network.</footer>
 <script src="/app.js"></script>

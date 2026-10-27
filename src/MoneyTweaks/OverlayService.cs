@@ -57,6 +57,8 @@ public static class OverlayService
     private static int _missing;
 
     public static bool Visible => _win?.IsVisible == true;
+    /// <summary>Same as <see cref="Visible"/>, readable from any thread (set by Show/Hide on the UI thread).</summary>
+    public static bool Shown { get; private set; }
     public static bool Editing => _win?.EditMode == true;
     public static string HotkeyStatus { get; private set; } = "Not registered yet.";
     public static string EditHotkeyStatus { get; private set; } = "Not registered yet.";
@@ -131,7 +133,7 @@ public static class OverlayService
         if (_win is null)
         {
             _win = new PerformanceOverlayWindow();
-            _win.Closed += (_, _) => _win = null;
+            _win.Closed += (_, _) => { _win = null; Shown = false; };
             _win.Moved += OnMoved;
             _win.Scaled += OnScaled;
             _win.EditFinished += reset =>
@@ -147,6 +149,7 @@ public static class OverlayService
         var state = PresentMonitor.Start();
         if (!_hubHeld) { SensorHub.Shared.Acquire(HubToken, record: false); _hubHeld = true; }
         _win.Show();
+        Shown = true;
         Refresh.Interval = TimeSpan.FromMilliseconds(Math.Clamp(S.RefreshMs, 100, 2000));
         Refresh.Start();
         Tick();
@@ -162,6 +165,7 @@ public static class OverlayService
         _pendingLayout = null;
         if (_win is { EditMode: true }) _win.SetEditMode(false);
         _win?.Hide();
+        Shown = false;
         if (_hubHeld) { SensorHub.Shared.Release(HubToken); _hubHeld = false; }
         OverlayPing.Stop();
         PresentMonitor.Stop();

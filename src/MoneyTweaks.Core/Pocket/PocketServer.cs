@@ -8,8 +8,11 @@ using MoneyTweaks.Core.Sys;
 
 namespace MoneyTweaks.Core.Pocket;
 
-/// <summary>One allowed Pocket Panel action. The phone can only ask for these ids; anything else is refused.</summary>
-public sealed record PocketAction(string Id, string Label, string Group, bool Active);
+/// <summary>
+/// One allowed Pocket Panel action. The phone can only ask for these ids; anything else is refused. Kind tells the phone how
+/// to draw it: "switch" (flips the setting, Active = on now), "choice" (one of a group, Active = selected) or "button".
+/// </summary>
+public sealed record PocketAction(string Id, string Label, string Group, bool Active, string Kind = "button", string? Hint = null);
 
 /// <summary>What the app provides to Pocket Panel: live telemetry, the allowed actions and how to run them.</summary>
 public interface IPocketHost
