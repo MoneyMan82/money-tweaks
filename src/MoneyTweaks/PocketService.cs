@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 using MoneyTweaks.Core.Features;
+using MoneyTweaks.Core.Games;
+using MoneyTweaks.Core.Profiles;
 using MoneyTweaks.Core.Monitoring;
 using MoneyTweaks.Core.Pocket;
 using MoneyTweaks.Core.Sys;
@@ -17,11 +19,21 @@ public static class PocketService
 {
     private static PocketSettings S => App.Settings.Pocket;
     private static PocketAuth? _auth;
+    private static PocketDeckStore? _deck;
     private static PocketServer? _server;
     private static readonly Host TheHost = new();
     public static event Action? Changed;
 
     public static PocketAuth Auth => _auth ??= CreateAuth();
+    /// <summary>The dashboards shared by every paired device; edits from phones or the PC page reach all of them live.</summary>
+    public static PocketDeckStore Deck => _deck ??= CreateDeck();
+
+    private static PocketDeckStore CreateDeck()
+    {
+        var d = new PocketDeckStore(S);
+        d.Changed += () => Application.Current?.Dispatcher.BeginInvoke(() => { App.SaveSettingsSoon(); Changed?.Invoke(); });
+        return d;
+    }
     public static bool Running => _server?.Running == true;
     public static IReadOnlyList<string> Urls => _server?.Urls ?? [];
     public static int Clients => _server?.Clients ?? 0;
@@ -42,7 +54,7 @@ public static class PocketService
     /// <param name="only">Diagnostics/tests: listen on these local addresses only (e.g. loopback) instead of every local network.</param>
     public static bool Start(IEnumerable<System.Net.IPAddress>? only = null)
     {
-        _server ??= new PocketServer(Auth, TheHost);
+        _server ??= new PocketServer(Auth, TheHost, Deck);
         bool ok = _server.Start(Math.Clamp(S.Port, 1024, 65535), only);
         if (ok && _server.Urls.Count == 0) Log.Warn("Pocket Panel: no local network adapter found; only this PC can connect");
         Changed?.Invoke();
@@ -78,6 +90,9 @@ public static class PocketService
 
         public Host() => SensorHub.Shared.Sampled += _ => FrameReady?.Invoke();
 
+        private CancellationTokenSource? _gameWatch;
+        private volatile PocketGame? _game;
+
         public void SetActive(bool active)
         {
             Application.Current?.Dispatcher.BeginInvoke(() =>
@@ -86,6 +101,33 @@ public static class PocketService
                 else SensorHub.Shared.Release(HubToken);
                 Changed?.Invoke();
             });
+            if (active && _gameWatch is null) { _gameWatch = new CancellationTokenSource(); _ = WatchGames(_gameWatch.Token); }
+            else if (!active) { _gameWatch?.Cancel(); _gameWatch = null; _game = null; }
+        }
+
+        /// <summary>
+        /// Which Game Library game is running, every 5 s while a phone is connected: the same detection the library uses
+        /// (the game's real executable from its install), so a launcher or a renamed exe doesn't count.
+        /// </summary>
+        private async Task WatchGames(CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    var running = GameRuntime.Statuses(GameLibrary.Items(GameLibrary.Current)).FirstOrDefault(x => x.status == GameStatus.Running);
+                    var now = running.game is { } g ? new PocketGame(g.Key, g.Def.Name) : null;
+                    if (now?.Key != _game?.Key) { _game = now; Log.Info($"Pocket Panel: game {(now is null ? "closed" : "detected: " + now.Name)}"); FrameReady?.Invoke(); }
+                }
+                catch (Exception ex) { Log.Debug("Pocket Panel game check: " + ex.Message); }
+                try { await Task.Delay(5000, ct); } catch { return; }
+            }
+        }
+
+        public IReadOnlyList<PocketGame> Games()
+        {
+            try { return GameLibrary.Items(GameLibrary.Current).Select(g => new PocketGame(g.Key, g.Def.Name)).OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase).ToList(); }
+            catch { return []; }
         }
 
         public string FrameJson()
@@ -129,6 +171,10 @@ public static class PocketService
                 fps = new { fps = fr?.Fps, low1 = fr?.Low1PercentFps, frameMs = fr?.AvgMs, target = fr is null ? null : lf?.Target, note = fpsNote },
                 alerts = (f?.Alerts ?? []).Select(a => new { key = a.Key, level = a.Level.ToString(), title = a.Title, detail = a.Detail }),
                 overlay = new { visible = shown, style = o.Style.ToString(), theme = o.EffectiveTheme, measuring = shown ? lf?.Target : null },
+                // The overlay's own frame-time samples (ms, oldest first) while it measures a game.
+                frametimes = shown ? lf?.GraphMs?.TakeLast(120).Select(v => Math.Round(v, 2)) : null,
+                game = _game,
+                profile = ProfileService.Active?.ProfileName,
                 // Current state of every control, so switches on the phone follow changes made on the PC.
                 controls = Actions(),
             };
@@ -158,6 +204,12 @@ public static class PocketService
             list.AddRange(OverlayTheme.All.Select(t => new PocketAction("overlay.theme." + t.Name, t.Name, "Overlay theme", o.EffectiveTheme == t.Name, "choice")));
             list.AddRange(OverlayMetric.All.Select(m => new PocketAction("overlay.item." + m.Id, m.Label, "Readings on the overlay", items.Contains(m.Id), "switch", m.Hint)));
             list.Add(new("monitor.compact", "Compact monitor window", "On the PC", CompactMonitorWindow.IsOpen, "switch", "Small always-on-top readings window on the PC's screen"));
+            // Gaming profiles: the user's own, switched with the same backup-and-restore engine as automatic switching.
+            var active = ProfileService.Active?.ProfileId;
+            list.Add(new("profile.off", "Off", "Gaming profile", active is null, "choice", "Restores everything the active profile changed"));
+            foreach (var p in ProfileService.File.Profiles.ToList())
+                list.Add(new("profile.on." + p.Id, p.Name, "Gaming profile", active == p.Id, "choice"));
+            list.Add(new("benchmark.open", "Open benchmark on PC", "On the PC", false, "button", "Brings Money Tweaks to the front on Test & Benchmark; you start and confirm it there"));
             return list;
         }
 
@@ -187,6 +239,23 @@ public static class PocketService
                 case "overlay.clickthrough":
                     OverlayService.SetClickThrough(!ov.ClickThrough);
                     return (true, ov.ClickThrough ? "Clicks pass through the overlay." : "The overlay can be dragged; it still never takes focus.");
+                case "profile.off":
+                    if (ProfileService.Active is null) return (true, "No profile is active.");
+                    _ = ProfileService.DeactivateAsync();
+                    return (true, "Switching the profile off; your settings are being restored.");
+                case var pid when pid.StartsWith("profile.on.", StringComparison.Ordinal) && ProfileService.File.Profiles.FirstOrDefault(x => x.Id == pid[11..]) is { } prof:
+                    if (ProfileService.Active?.ProfileId == prof.Id) return (true, $"“{prof.Name}” is already active.");
+                    if (ProfileEngine.NeedsAdmin(prof) && !Core.Sys.Admin.IsElevated)
+                        return (false, $"“{prof.Name}” changes system-wide settings, so it needs Money Tweaks running as administrator. Activate it on the PC.");
+                    _ = ProfileService.ActivateAsync(prof, "Pocket Panel", confirm: false);
+                    return (true, $"Activating “{prof.Name}”. Everything is backed up first and restored when you switch it off.");
+                case "benchmark.open":
+                    if (MainWindow.Current is not { } win) return (false, "The Money Tweaks window isn't open.");
+                    if (win.WindowState == WindowState.Minimized) win.WindowState = WindowState.Normal;
+                    win.Show();
+                    win.Activate();
+                    win.Navigate("benchmark");
+                    return (true, "Test & Benchmark is open on the PC. Choose what to test and start it there.");
                 case "monitor.compact":
                     CompactMonitorWindow.Toggle();
                     return (true, CompactMonitorWindow.IsOpen ? "Compact monitor window open on the PC." : "Compact monitor window closed.");

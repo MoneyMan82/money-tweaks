@@ -13,6 +13,7 @@
   <div class="brand">MONEY <b>TWEAKS</b> <span>Pocket Panel</span></div>
   <div class="conn" id="conn"><i></i><span>Connecting…</span></div>
 </header>
+<div class="stale" id="stale" hidden></div>
 
 <section id="pair" class="pair" hidden>
   <h1>Pair this device</h1>
@@ -23,32 +24,34 @@
 <main id="dash" hidden>
   <div id="alerts" class="alerts"></div>
 
-  <div id="viewLive">
-    <div id="tiles" class="tiles"></div>
-    <div class="bar">
-      <button id="editBtn" type="button">Customize layout</button>
+  <div id="viewDeck">
+    <div class="pagebar">
+      <div class="pages" id="pages"></div>
+      <button type="button" id="editBtn" class="edit">Edit</button>
+    </div>
+    <div class="autonote" id="autonote" hidden></div>
+    <div id="grid" class="grid"></div>
+    <div class="editbar" id="editbar" hidden>
+      <button type="button" id="addWidget" class="primary">+ Add widget</button>
+      <button type="button" id="pageSettings">Page settings</button>
+      <button type="button" id="addPage">+ New page</button>
     </div>
   </div>
 
   <div id="viewControls" hidden>
     <div id="controls" class="controls"></div>
+    <label class="row"><input type="checkbox" id="optVibrate"> Vibrate on taps and warnings (where the browser supports it)</label>
+    <label class="row"><input type="checkbox" id="optAuto"> Open a page automatically when its game starts</label>
     <p class="small">Changes apply on the PC right away and are saved there. Style, theme and readings apply to the default overlay layout; games with their own layout keep theirs.</p>
     <div class="bar"><button id="unpairBtn" type="button" class="ghost">Unpair this device</button></div>
   </div>
 </main>
 
-<section id="editor" class="editor" hidden>
-  <h2>Layout</h2>
-  <p class="small">Show, hide, reorder and resize the tiles. Saved on this device.</p>
-  <ul id="editList"></ul>
-  <label class="row"><input type="checkbox" id="optVibrate"> Vibrate on critical alerts and taps (where the browser supports it)</label>
-  <label class="row"><input type="checkbox" id="optDense"> Compact tiles</label>
-  <div class="bar"><button id="doneBtn" type="button">Done</button><button id="resetBtn" type="button" class="ghost">Reset layout</button></div>
-</section>
+<div class="sheet" id="sheet" hidden><div class="sheetbox" id="sheetbox"></div></div>
 
 <nav class="tabbar" id="tabbar" hidden>
-  <button type="button" id="tabLive" class="on" aria-pressed="true"><span class="ic ic-live"></span>Live</button>
-  <button type="button" id="tabControls" aria-pressed="false"><span class="ic ic-ctl"></span>Controls</button>
+  <button type="button" id="tabDeck" class="on" aria-pressed="true"><span class="ic"></span>Deck</button>
+  <button type="button" id="tabControls" aria-pressed="false"><span class="ic"></span>Controls</button>
 </nav>
 
 <footer class="foot">Readings come from Money Tweaks on your PC. Nothing leaves your network.</footer>

@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.73 – 2026-10-28
+- **Pocket Panel becomes a control deck.** Your own dashboard pages on the phone or tablet, shared by every paired device
+  and stored on the PC:
+  - Widgets: live CPU/GPU usage and temperature, RAM and VRAM cards with graphs, FPS, a frame-time graph from the
+    overlay's real frame times, Money Tweaks' warnings, the detected game, and touch buttons for allowlisted actions.
+  - Edit mode: drag widgets by their grip, three sizes, per-widget settings (button action and caption, warning
+    thresholds that turn the card red and vibrate the phone), add and remove widgets, create, rename, reorder and delete
+    pages. The PC page lists the dashboards too (rename, reorder, delete, reset).
+  - Pages can open by themselves while a Game Library game runs (detected by its real executable) and return when it
+    closes.
+  - Real-time sync: edits on one device reach the others and the PC within a second; saves are versioned, so two devices
+    never overwrite each other silently. Layouts are validated against fixed widget types and sizes before they are
+    stored.
+  - Reconnecting: a silent connection is replaced within 20 s, returning to the page or the network reconnects at once,
+    and readings older than 4 s are greyed out with the time of the last update.
+- New allowlisted actions: switch gaming profiles (or turn the active one off; same backup and restore as automatic
+  switching) and open Test & Benchmark on the PC (benchmarks are still started and confirmed there).
+
 ## 1.72 – 2026-10-27
 - **Pocket Panel controls on the phone are much easier to use.** A tab bar switches between Live (readings) and Controls.
   Controls are large switch rows with a one-line explanation, presets are segmented buttons, and the Overlay tile on Live

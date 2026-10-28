@@ -17,7 +17,7 @@ namespace MoneyTweaks.Views;
 /// </summary>
 public sealed class PocketPanelView : UserControl, IPageLifecycle
 {
-    private readonly StackPanel _status = new(), _pair = new(), _devices = new();
+    private readonly StackPanel _status = new(), _pair = new(), _devices = new(), _decks = new();
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(1) };
     private string? _code;
     private DateTime _codeExpires;
@@ -25,11 +25,12 @@ public sealed class PocketPanelView : UserControl, IPageLifecycle
     public PocketPanelView()
     {
         var (root, body) = Ui.Page("Pocket Panel",
-            "Turn a phone or tablet browser into a live second screen for this PC: CPU and GPU temperatures and usage, FPS, RAM and VRAM with animated graphs and alerts, plus controls for the performance overlay. It runs on your home network only: no app to install, no account, no cloud.",
+            "Turn a phone or tablet browser into a control deck for this PC: your own dashboard pages with live CPU and GPU temperatures and usage, FPS and frame-time graphs, RAM, VRAM and warnings, plus touch buttons for the overlay, gaming profiles and more. Pages can open by themselves when a game starts. It runs on your home network only: no app to install, no account, no cloud.",
             eyebrow: "Tools", icon: "\uE8EA");
         body.Children.Add(Ui.Card(_status));
         body.Children.Add(Ui.Card(_pair));
         body.Children.Add(Ui.Card(_devices));
+        body.Children.Add(Ui.Card(_decks));
         body.Children.Add(Ui.Card(SafetyCard()));
         Content = root;
         _tick.Tick += (_, _) => { RenderPairCountdown(); RenderStatus(); };
@@ -40,7 +41,73 @@ public sealed class PocketPanelView : UserControl, IPageLifecycle
     public void OnHidden() { PocketService.Changed -= OnChanged; _tick.Stop(); }
     private void OnChanged() => Dispatcher.BeginInvoke(Render);
 
-    private void Render() { RenderStatus(); RenderPair(); RenderDevices(); }
+    private void Render() { RenderStatus(); RenderPair(); RenderDevices(); RenderDecks(); }
+
+    /// <summary>
+    /// The dashboard pages every paired device shares. Built and arranged on the phone (Edit); here they can be renamed,
+    /// reordered, removed or reset, and every connected phone updates within a second.
+    /// </summary>
+    private void RenderDecks()
+    {
+        _decks.Children.Clear();
+        var head = new DockPanel();
+        var reset = Ui.Btn("Reset to default", (_, _) =>
+        {
+            if (Dialog.Confirm("Reset the dashboards?", "Every page goes back to the default Gaming and System pages on all paired devices. Your own pages and widgets are removed.", "Reset", DialogKind.Warning))
+                PocketService.Deck.Reset();
+        }, "GhostButton");
+        DockPanel.SetDock(reset, Dock.Right);
+        head.Children.Add(reset);
+        head.Children.Add(new TextBlock { Text = "DASHBOARDS", Style = Ui.Res<Style>("Eyebrow"), VerticalAlignment = VerticalAlignment.Center });
+        _decks.Children.Add(head);
+        _decks.Children.Add(Ui.Muted("Shared by every paired phone and tablet. Build them on the device (Deck › Edit): drag widgets by their grip, resize them, add touch buttons, and set a page to open by itself while a game runs.", 12));
+        var deck = PocketService.Deck.Get();
+        for (int i = 0; i < deck.Pages.Count; i++)
+        {
+            var page = deck.Pages[i];
+            int index = i;
+            var row = new DockPanel { Margin = new Thickness(0, 8, 0, 0) };
+            var actions = new StackPanel { Orientation = Orientation.Horizontal };
+            var up = Ui.Btn("↑", (_, _) => EditDeck(d => { var x = d.Pages[index]; d.Pages.RemoveAt(index); d.Pages.Insert(index - 1, x); }), "GhostButton");
+            up.IsEnabled = i > 0;
+            var down = Ui.Btn("↓", (_, _) => EditDeck(d => { var x = d.Pages[index]; d.Pages.RemoveAt(index); d.Pages.Insert(index + 1, x); }), "GhostButton");
+            down.IsEnabled = i < deck.Pages.Count - 1;
+            var del = Ui.Btn("Delete", (_, _) =>
+            {
+                if (Dialog.Confirm($"Delete “{page.Name}”?", "The page and its widgets are removed from every paired device.", "Delete", DialogKind.Warning))
+                    EditDeck(d => d.Pages.RemoveAt(index));
+            }, "GhostButton");
+            del.IsEnabled = deck.Pages.Count > 1;
+            actions.Children.Add(up); actions.Children.Add(down); actions.Children.Add(del);
+            DockPanel.SetDock(actions, Dock.Right);
+            row.Children.Add(actions);
+            var name = new TextBox { Text = page.Name, MaxLength = 32, Width = 220, HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Rename (press Enter)" };
+            name.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) Rename(index, name.Text); };
+            name.LostFocus += (_, _) => Rename(index, name.Text);
+            var sp = new StackPanel();
+            sp.Children.Add(name);
+            sp.Children.Add(Ui.Muted($"{page.Widgets.Count} widget(s){(page.GameName is { } g ? $" · opens while {g} runs" : "")}", 11.5));
+            row.Children.Add(sp);
+            _decks.Children.Add(row);
+        }
+    }
+
+    private void Rename(int index, string text)
+    {
+        var deck = PocketService.Deck.Get();
+        if (index >= deck.Pages.Count || string.IsNullOrWhiteSpace(text) || deck.Pages[index].Name == text.Trim()) return;
+        EditDeck(d => d.Pages[index].Name = text.Trim());
+    }
+
+    /// <summary>Changes a copy of the current dashboards and saves it through the same validated, versioned store the phones use.</summary>
+    private static void EditDeck(Action<PocketDeck> change)
+    {
+        var current = PocketService.Deck.Get();
+        var copy = System.Text.Json.JsonSerializer.Deserialize<PocketDeck>(System.Text.Json.JsonSerializer.Serialize(current))!;
+        change(copy);
+        var (ok, _, error) = PocketService.Deck.TrySave(current.Version, copy);
+        if (!ok) MainWindow.Current?.ShowToast(error ?? "The dashboards weren't saved.", "Gold");
+    }
 
     private void RenderStatus()
     {
@@ -187,8 +254,10 @@ public sealed class PocketPanelView : UserControl, IPageLifecycle
         foreach (var line in new[]
         {
             "See live readings: CPU and GPU usage and temperatures, FPS while the overlay measures a game, RAM, VRAM and Money Tweaks' warnings.",
-            "Turn the performance overlay on or off, and switch its default layout between the existing styles (Minimal, Compact, Detailed) and themes (Vector, Mint, Ice, Amber, Mono).",
-            "Nothing else: it can't run commands, open files, apply tweaks or change any other setting. Requests for anything not on this list are refused and logged.",
+            "Control the performance overlay: on or off, auto-show for games, click-through, which readings it shows, and its existing styles and themes. Open or close the compact monitor window.",
+            "Switch between your gaming profiles or turn the active one off (same backup and restore as automatic switching; profiles that need administrator rights are refused unless Money Tweaks runs as administrator).",
+            "Open Test & Benchmark on the PC; benchmarks are started and confirmed on the PC, never from the phone.",
+            "Arrange the shared dashboard pages. Nothing else: it can't run commands, open files, apply tweaks or change any other setting. Requests for anything not on this list are refused and logged.",
         }) sp.Children.Add(new TextBlock { Text = "• " + line, FontSize = 12.5, Foreground = Ui.Brush("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) });
         sp.Children.Add(new TextBlock { Text = "HOW IT STAYS LOCAL AND PRIVATE", Style = Ui.Res<Style>("Eyebrow"), Margin = new Thickness(0, 12, 0, 0) });
         foreach (var line in new[]

@@ -26,7 +26,12 @@ public interface IPocketHost
     event Action? FrameReady;
     /// <summary>Telemetry is needed (a phone is connected) or no longer needed.</summary>
     void SetActive(bool active);
+    /// <summary>Games a dashboard page can be set to open for (key and name from the Game Library).</summary>
+    IReadOnlyList<PocketGame> Games() => [];
 }
+
+/// <summary>A game from the Game Library, for assigning a dashboard page to it.</summary>
+public sealed record PocketGame(string Key, string Name);
 
 /// <summary>
 /// Pocket Panel's web server: serves the phone dashboard and its API on this PC's local network only. It binds to private
@@ -34,9 +39,11 @@ public interface IPocketHost
 /// rebinding), requires a session token on every API call, and only runs actions from <see cref="IPocketHost.Actions"/>.
 /// No files are served from disk and nothing else can be requested. Plain HTTP: meant for a trusted home network.
 /// </summary>
-public sealed class PocketServer(PocketAuth auth, IPocketHost host) : IDisposable
+public sealed class PocketServer(PocketAuth auth, IPocketHost host, PocketDeckStore? deckStore = null) : IDisposable
 {
-    private const int MaxHeaderBytes = 8192, MaxBodyBytes = 4096;
+    private const int MaxHeaderBytes = 8192, MaxBodyBytes = 64 * 1024;
+    private readonly PocketDeckStore _deck = deckStore ?? new PocketDeckStore(new PocketSettings());
+    private static readonly JsonSerializerOptions DeckJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, MaxDepth = 8 };
     private readonly List<TcpListener> _listeners = [];
     private readonly HashSet<string> _hosts = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _cts;
@@ -215,8 +222,27 @@ public sealed class PocketServer(PocketAuth auth, IPocketHost host) : IDisposabl
         switch (r.Method, r.Path)
         {
             case ("GET", "/api/hello"):
-                await Json(s, 200, new { device = device.Name, actions = host.Actions() });
+                await Json(s, 200, new { device = device.Name, actions = host.Actions(), deck = _deck.Get(), games = host.Games() });
                 return;
+            case ("GET", "/api/deck"):
+                await Json(s, 200, _deck.Get());
+                return;
+            case ("PUT", "/api/deck"):
+            {
+                // Base version + pages; validated and rebuilt by the store, conflicts return the current deck.
+                PocketDeck? incoming = null; int baseVersion = -1;
+                try
+                {
+                    using var doc = JsonDocument.Parse(r.Body, new JsonDocumentOptions { MaxDepth = 8 });
+                    baseVersion = doc.RootElement.GetProperty("baseVersion").GetInt32();
+                    incoming = new PocketDeck { Pages = doc.RootElement.GetProperty("pages").Deserialize<List<PocketPage>>(DeckJson) ?? [] };
+                }
+                catch { await Json(s, 400, new { ok = false, message = "That layout couldn't be read." }); return; }
+                var (ok, deck, error) = _deck.TrySave(baseVersion, incoming);
+                Log.Info($"Pocket Panel: {device.Name} saved dashboards: {(ok ? "v" + deck.Version : error)}");
+                await Json(s, ok ? 200 : 409, new { ok, message = error, deck });
+                return;
+            }
             case ("GET", "/api/frame"):
                 await Respond(s, 200, "application/json", Encoding.UTF8.GetBytes(host.FrameJson()));
                 return;
@@ -254,6 +280,8 @@ public sealed class PocketServer(PocketAuth auth, IPocketHost host) : IDisposabl
         var signal = new SemaphoreSlim(0, 1);
         void Ready() { if (signal.CurrentCount == 0) try { signal.Release(); } catch (SemaphoreFullException) { } }
         host.FrameReady += Ready;
+        _deck.Changed += Ready;
+        int deckSent = _deck.Get().Version;
         if (Interlocked.Increment(ref _streams) == 1) host.SetActive(true);
         try
         {
@@ -262,6 +290,7 @@ public sealed class PocketServer(PocketAuth auth, IPocketHost host) : IDisposabl
             {
                 bool got = await signal.WaitAsync(TimeSpan.FromSeconds(15), ct);
                 if (auth.Authenticate(token, remote) is null) { await Send(s, "revoked", "{}", ct); return; }   // revoked while connected
+                if (_deck.Get() is { } d && d.Version != deckSent) { deckSent = d.Version; await Send(s, "deck", JsonSerializer.Serialize(d, DeckJson), ct); }   // changed on another device or the PC
                 if (got) await Send(s, "frame", host.FrameJson(), ct);
                 else await s.WriteAsync(": keep-alive\n\n"u8.ToArray(), ct);
             }
@@ -269,6 +298,7 @@ public sealed class PocketServer(PocketAuth auth, IPocketHost host) : IDisposabl
         finally
         {
             host.FrameReady -= Ready;
+            _deck.Changed -= Ready;
             if (Interlocked.Decrement(ref _streams) == 0) host.SetActive(false);
         }
     }

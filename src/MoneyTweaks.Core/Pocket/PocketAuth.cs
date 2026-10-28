@@ -23,6 +23,8 @@ public sealed class PocketSettings
     public bool Enabled { get; set; }
     public int Port { get; set; } = 47823;
     public List<PocketDevice> Devices { get; set; } = [];
+    /// <summary>Dashboard pages shared by every paired device (null until first used: the default layout).</summary>
+    public PocketDeck? Deck { get; set; }
 }
 
 /// <summary>

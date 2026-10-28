@@ -28,13 +28,15 @@ public sealed class PocketPanelTests : IDisposable
     private readonly PocketAuth _auth;
     private readonly FakeHost _host = new();
     private readonly PocketServer _server;
+    private readonly PocketDeckStore _decks;
     private readonly HttpClient _http;
     private readonly int _port;
 
     public PocketPanelTests()
     {
         _auth = new PocketAuth(_settings, () => _now);
-        _server = new PocketServer(_auth, _host);
+        _decks = new PocketDeckStore(_settings);
+        _server = new PocketServer(_auth, _host, _decks);
         var probe = new TcpListener(IPAddress.Loopback, 0); probe.Start(); _port = ((IPEndPoint)probe.LocalEndpoint).Port; probe.Stop();
         Assert.True(_server.Start(_port, [IPAddress.Loopback]));
         _http = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{_port}/"), Timeout = TimeSpan.FromSeconds(10) };
@@ -181,5 +183,78 @@ public sealed class PocketPanelTests : IDisposable
             Assert.False(PocketAuth.IsLocal(IPAddress.Parse(a)), a);
         using var s = new PocketServer(new PocketAuth(new PocketSettings()), _host);
         Assert.False(s.Start(_port + 1, [IPAddress.Parse("8.8.8.8")]));   // public addresses are never bound
+    }
+
+    // ---- dashboards (control deck) ------------------------------------------------------------------------------------
+
+    private static PocketDeck Deck(params PocketPage[] pages) => new() { Pages = [.. pages] };
+    private static PocketPage Page(string id, string name, params PocketWidget[] w) => new() { Id = id, Name = name, Widgets = [.. w] };
+
+    [Fact]
+    public void Dashboards_are_validated_and_rebuilt_from_known_parts_only()
+    {
+        Assert.Null(PocketDeckStore.Sanitize(Deck(), out _));
+        Assert.Null(PocketDeckStore.Sanitize(Deck(Page("a", "A", new PocketWidget { Id = "1", Type = "shell", Size = "s" })), out var e1));
+        Assert.Contains("unknown", e1);
+        Assert.Null(PocketDeckStore.Sanitize(Deck(Page("a", "A", new PocketWidget { Id = "1", Type = "cpu", Size = "xl" })), out _));
+        Assert.Null(PocketDeckStore.Sanitize(Deck(Page("a", "A", new PocketWidget { Id = "1", Type = "button", Size = "s", Action = "cmd /c calc" })), out _));
+        Assert.Null(PocketDeckStore.Sanitize(Deck(Page("a", "A"), Page("a", "B")), out _));   // repeated page id
+        Assert.Null(PocketDeckStore.Sanitize(Deck([.. Enumerable.Range(0, 13).Select(i => Page("p" + i, "P"))]), out _));
+        var ok = PocketDeckStore.Sanitize(Deck(Page("a", "  Gaming  ",
+            new PocketWidget { Id = "1", Type = "button", Size = "m", Action = "overlay.visible", Label = "Overlay", Warn = 50 },
+            new PocketWidget { Id = "2", Type = "gputemp", Size = "s", Warn = 84.96, Action = "overlay.visible" })) , out _)!;
+        Assert.Equal("Gaming", ok.Pages[0].Name);                      // control characters and padding removed
+        Assert.Null(ok.Pages[0].Widgets[0].Warn);                      // thresholds only on reading cards
+        Assert.Null(ok.Pages[0].Widgets[1].Action);                    // actions only on buttons
+        Assert.Equal(85, ok.Pages[0].Widgets[1].Warn);
+    }
+
+    [Fact]
+    public void Saving_needs_the_current_version()
+    {
+        var d = _decks.Get();
+        Assert.Equal(2, d.Pages.Count);                                 // default Gaming + System
+        var (ok, saved, _) = _decks.TrySave(d.Version, Deck(Page("x", "Mine", new PocketWidget { Id = "1", Type = "fps", Size = "l" })));
+        Assert.True(ok);
+        Assert.Equal(d.Version + 1, saved.Version);
+        var (stale, current, err) = _decks.TrySave(d.Version, Deck(Page("y", "Old")));
+        Assert.False(stale);
+        Assert.Equal("Mine", current.Pages[0].Name);                    // nothing overwritten
+        Assert.Contains("another device", err);
+    }
+
+    [Fact]
+    public async Task Dashboard_api_needs_a_session_and_syncs_to_other_devices_live()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _http.GetAsync("/api/deck")).StatusCode);
+        var phone = await PairAsync();
+        var tablet = await PairAsync();
+        using var res = await _http.SendAsync(Req(HttpMethod.Get, "/api/events", tablet), HttpCompletionOption.ResponseHeadersRead);
+        using var reader = new StreamReader(await res.Content.ReadAsStreamAsync());
+        async Task<string> Next()
+        {
+            var sb = new StringBuilder();
+            for (string? line; (line = await reader.ReadLineAsync()) is not null;) { if (line.Length == 0 && sb.Length > 0) break; if (line.Length > 0) sb.AppendLine(line); }
+            return sb.ToString();
+        }
+        Assert.Contains("event: frame", await Next());
+
+        var hello = JsonDocument.Parse(await (await _http.SendAsync(Req(HttpMethod.Get, "/api/hello", phone))).Content.ReadAsStringAsync()).RootElement;
+        int version = hello.GetProperty("deck").GetProperty("version").GetInt32();
+        var put = await _http.SendAsync(Req(HttpMethod.Put, "/api/deck", phone, new { baseVersion = version, pages = new[] { new { id = "race", name = "Race night", widgets = new[] { new { id = "1", type = "frametime", size = "l" } } } } }));
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        _host.Tick();                                                     // the tablet's stream wakes and gets the new layout
+        string ev;
+        do ev = await Next(); while (!ev.Contains("event: deck"));
+        Assert.Contains("Race night", ev);
+
+        var conflict = await _http.SendAsync(Req(HttpMethod.Put, "/api/deck", tablet, new { baseVersion = version, pages = new[] { new { id = "x", name = "Old", widgets = Array.Empty<object>() } } }));
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        Assert.Contains("Race night", await conflict.Content.ReadAsStringAsync());
+        Assert.Equal("Race night", _settings.Deck!.Pages[0].Name);
+
+        var bad = await _http.SendAsync(Req(HttpMethod.Put, "/api/deck", phone, new { baseVersion = version + 1, pages = new[] { new { id = "x", name = "X", widgets = new[] { new { id = "1", type = "exec", size = "s" } } } } }));
+        Assert.Equal(HttpStatusCode.Conflict, bad.StatusCode);           // refused, current layout returned
+        Assert.Equal("Race night", _settings.Deck!.Pages[0].Name);
     }
 }
