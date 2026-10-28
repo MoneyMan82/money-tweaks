@@ -20,7 +20,8 @@ public partial class TweakListView : UserControl, IPageLifecycle, IAnchorTarget
     /// </summary>
     public void ShowSection(string anchor)
     {
-        if (anchor == "radar") _ = CheckConflictsAsync();
+        if (anchor == "nexus" && _nexusPicker is not null) _nexusPicker.Select("nexus");
+        else if (anchor == "radar") _ = CheckConflictsAsync();
         else if (anchor == "xray" && _view.Cast<TweakItem>().FirstOrDefault(i => i.HasXRay) is { XRayOpen: false } first)
         {
             first.XRayOpen = true;
@@ -105,6 +106,39 @@ public partial class TweakListView : UserControl, IPageLifecycle, IAnchorTarget
         List.ItemsSource = _view;
         RecommendedButton.Visibility = _items.Any(i => i.IsRecommended) ? Visibility.Visible : Visibility.Collapsed;
         UpdateCount();
+        if (category == TweakCategory.Services) AddNexusMode();
+    }
+
+    private Controls.SegmentedPicker? _nexusPicker;
+    private ServiceNexusPanel? _nexus;
+
+    /// <summary>
+    /// Services page: "Tweaks | Service Nexus". Nexus replaces the list in place (same page, same tweak items, so applying
+    /// there updates the cards here); it reads the Service Control Manager the first time it's opened.
+    /// </summary>
+    private void AddNexusMode()
+    {
+        _nexusPicker = new Controls.SegmentedPicker(
+        [
+            ("Tweaks", "list", "The service tweaks as cards"),
+            ("◈  Service Nexus", "nexus", "Dependency graph from the Service Control Manager, with an impact preview before you change a service"),
+        ], "list");
+        _nexusPicker.Changed += async mode =>
+        {
+            bool nexus = mode == "nexus";
+            List.Visibility = nexus ? Visibility.Collapsed : Visibility.Visible;
+            FilterDock.Visibility = SortRow.Visibility = CountDock.Visibility = nexus ? Visibility.Collapsed : Visibility.Visible;
+            NexusHost.Visibility = nexus ? Visibility.Visible : Visibility.Collapsed;
+            if (!nexus) return;
+            if (_nexus is null)
+            {
+                _nexus = new ServiceNexusPanel(id => _items.FirstOrDefault(i => i.Tweak.Id == id));
+                NexusHost.Content = _nexus;
+            }
+            if (!_nexus.HasData) await _nexus.LoadAsync();
+        };
+        ModeRow.Children.Add(_nexusPicker);
+        ModeRow.Visibility = Visibility.Visible;
     }
 
     public async void OnShown()

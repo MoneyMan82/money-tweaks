@@ -53,6 +53,7 @@ public static class AppNavigation
         Cat(TweakCategory.General, "optimize", "Windows Settings", "general windows settings game mode power"),
         Cat(TweakCategory.Debloating, "optimize", keywords: "telemetry bloat privacy ads"),
         Cat(TweakCategory.Services, "optimize", keywords: "service svc background"),
+        new("cat:Services#nexus", "\uE8F1", "Service Nexus", "optimize", "Dependency graph of Windows services from the Service Control Manager: what each service needs, what needs it, its live state, and a before/after impact preview before you change one.", "service nexus dependency dependencies dependent graph map scm what breaks impact disable services.msc", InSidebar: false),
         Cat(TweakCategory.Networking, "optimize", keywords: "network tcp nagle dns latency"),
         Cat(TweakCategory.Advanced, "optimize", keywords: "advanced kernel scheduler memory"),
         Cat(TweakCategory.Bios, "optimize", keywords: "bios uefi xmp expo rebar resizable bar"),

@@ -7,6 +7,8 @@ Resume point for future sessions. Keep it short.
 - Engine: reversible ops (registry, service start type, powercfg, commands, scheduled tasks, Store apps, dynamic registry sets),
   JSON backups per tweak in `%LOCALAPPDATA%\MoneyTweaks\backups`, rollback on partial failure, restore points, logging.
 - Catalog: 334 verified tweaks across 9 categories (see tests output `Every_category_is_populated`).
+- Service Nexus (1.75): Core `Engine/ServiceNexus.cs` (SCM snapshot, reverse dependents, impact rules), UI
+  `Views/ServiceNexusPanel.cs` hosted in TweakListView for the Services category ("Tweaks | Service Nexus", anchor `cat:Services#nexus`).
 - Emergency Rescue (1.74): `src/MoneyTweaks.Rescue` -> MoneyTweaks-Rescue.exe, console, engine only (no WPF), trimmed
   (partial, reflection JSON on, ~17 MB). Logic in Core `Engine/EmergencyRescue.cs`; per-rescue copies in `rescue\<time>\`.
   Release asset is `MoneyTweaks-Rescue.exe`, never `*-win-x64.exe` (old updaters take that as the portable app).

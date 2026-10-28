@@ -58,6 +58,12 @@ public sealed class SegmentedPicker : Border
         _options.SizeChanged += (_, _) => MoveHighlight(animate: false);
     }
 
+    /// <summary>Picks an option from code, exactly as a click would (raises Changed when it changes).</summary>
+    public void Select(string value)
+    {
+        if (_options.Children.OfType<RadioButton>().FirstOrDefault(r => (string)r.Tag == value) is { IsChecked: not true } rb) rb.IsChecked = true;
+    }
+
     private void MoveHighlight(bool animate)
     {
         if (_current is null || _current.ActualWidth <= 0) return;

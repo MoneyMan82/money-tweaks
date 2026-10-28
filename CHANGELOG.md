@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.75 – 2026-10-28
+- **Service Nexus in Services.** Services › Service Nexus (or Ctrl+K "Service Nexus") turns the Services page into a
+  dependency graph read from the Service Control Manager: every service and driver, what each one depends on, what
+  depends on it and on those, and whether it is running, stopped or disabled right now. No made-up data: dependents are
+  the reverse of each service's own declared dependencies, descriptions come from Windows.
+  - Graph: angular nodes in columns (what it needs · the service · what needs it · what needs those), coloured by live
+    state, with a gold notch where Money Tweaks has a change. Click a node to move there (animated), Back, Fit, mouse-wheel
+    zoom and drag to pan; search and filter by tweakable services, all services or drivers. Respects reduced motion.
+  - Inspector: state, start type (delayed and trigger start included), description, executable, both dependency lists
+    (clickable), core-Windows flag, and the proposed Money Tweaks change with its tweak status and backup.
+  - Impact preview before any change: before/after for the service and every service that depends on it, directly or
+    further down, with a level (likely, possible, not affected), the evidence behind it (Windows refuses to start a
+    service whose dependency is disabled, error 1068; a Manual dependency is started on demand; running dependents are
+    stopped first when a running service is stopped), warnings for core Windows functions, and what the evidence doesn't
+    prove (undeclared dependencies, dependents that may never be needed). Services without a Money Tweaks change can be
+    previewed ("what if it were disabled?") but not changed.
+  - Applying requires the preview and a confirmation that lists the impact, then runs the service's normal tweak
+    (compatibility check, Conflict Radar, administrator prompt, backup, read-back); Undo restores the backed-up start type.
+    An already-matching start type without a backup says so instead of offering "restore backup".
+
 ## 1.74 – 2026-10-28
 - **Emergency Rescue: undo Money Tweaks changes even when the app won't start.** A separate small program,
   `MoneyTweaks-Rescue.exe` (Start menu: Money Tweaks Emergency Rescue; also in the portable ZIP and as its own download).
