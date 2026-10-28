@@ -7,6 +7,8 @@ Resume point for future sessions. Keep it short.
 - Engine: reversible ops (registry, service start type, powercfg, commands, scheduled tasks, Store apps, dynamic registry sets),
   JSON backups per tweak in `%LOCALAPPDATA%\MoneyTweaks\backups`, rollback on partial failure, restore points, logging.
 - Catalog: 334 verified tweaks across 9 categories (see tests output `Every_category_is_populated`).
+- Fix My Game (1.76): Core `Advisor/FixMyGame.cs` (plan rules, re-test comparison; reuses GameCapture/BottleneckEngine,
+  NetworkDiagnostics, OptimizationScanner), UI `Views/FixMyGamePanel.cs` on the Dashboard, anchor `dashboard#fix`.
 - Service Nexus (1.75): Core `Engine/ServiceNexus.cs` (SCM snapshot, reverse dependents, impact rules), UI
   `Views/ServiceNexusPanel.cs` hosted in TweakListView for the Services category ("Tweaks | Service Nexus", anchor `cat:Services#nexus`).
 - Emergency Rescue (1.74): `src/MoneyTweaks.Rescue` -> MoneyTweaks-Rescue.exe, console, engine only (no WPF), trimmed

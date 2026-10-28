@@ -71,7 +71,7 @@ public static class LiveStats
     }
 }
 
-public sealed partial class DashboardView : UserControl, IPageLifecycle
+public sealed partial class DashboardView : UserControl, IPageLifecycle, IAnchorTarget
 {
     private readonly RingGauge _score = new("Recommended active", 168, 14);
     private readonly RingGauge _cpu = new("CPU"), _gpu = new("GPU"), _ram = new("Memory");
@@ -85,6 +85,11 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
     private readonly TextBlock _xmp = Ui.Muted("");
     private readonly StackPanel _cats = new();
     private bool _scoreLoaded;
+
+    private readonly FixMyGamePanel _fix = new();
+
+    /// <summary>"dashboard#fix" opens the Dashboard at Fix My Game.</summary>
+    public void ShowSection(string anchor) { if (anchor == "fix") Ui.ScrollTo(_fix); }
 
     public DashboardView()
     {
@@ -117,6 +122,9 @@ public sealed partial class DashboardView : UserControl, IPageLifecycle
             Style = Ui.Res<Style>("CardBorder"), Background = Ui.Brush("HeroFill"), CornerRadius = new CornerRadius(0),
             Padding = new Thickness(32, 28, 32, 28), Margin = new Thickness(0, 4, 14, 18), Child = hero // right edge lines up with the cards below
         }));
+
+        // ── Fix My Game (guided: problem → measure → causes and 1–3 fixes → re-test) ──────────────────────────────
+        body.Children.Add(_fix);
 
         // ── Live performance ───────────────────────────────────────────────────────────────────────────────────
         var liveHead = new DockPanel { Margin = new Thickness(0, 0, 0, 16) };

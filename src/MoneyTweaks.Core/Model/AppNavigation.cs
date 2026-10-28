@@ -42,6 +42,7 @@ public static class AppNavigation
     public static IReadOnlyList<NavPage> Pages { get; } =
     [
         new("dashboard", "\uE80F", "Dashboard", "dashboard", "Live hardware, PC health, active optimizations, game status, recent activity, backups and shortcuts.", "home overview start"),
+        new("dashboard#fix", "\uE90F", "Fix My Game", "dashboard", "Pick a problem (low FPS, stuttering, input delay, high ping, overheating): it's measured on this PC, the likely causes are shown with evidence, up to three fixes are suggested and a re-test shows whether it helped.", "fix my game help slow lag laggy low fps stutter stuttering freeze hitch input delay input lag ping lag spikes rubber band overheating hot temperature troubleshoot problem why"),
 
         new("scanner", "\uE721", "Smart Scanner", "optimize", "Reads this PC and lists evidence-based fixes with backup and undo.", "scan fix recommend analyze"),
         new("tweaks", "\uE8FD", "All Tweaks", "optimize", "Every tweak in one library: search, filters, sorting, categories, status, risk, dependencies and undo.", "tweak library list all registry"),

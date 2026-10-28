@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.76 – 2026-10-28
+- **Fix My Game.** On the Dashboard (also in the sidebar and Ctrl+K "Fix My Game"): pick Low FPS, Stuttering, Input
+  delay, High ping or Overheating, and Money Tweaks walks you through it.
+  - Measures the problem on this PC: 20 s (30 s for stutter) of the game you're playing with the Upgrade Advisor's
+    capture (frame times when running as administrator, CPU/GPU load and clocks, temperatures, thermal and power limits,
+    RAM, VRAM, disk response, background CPU), or the network diagnostic for ping (router vs internet, jitter, loss).
+    Smart Scanner's checks run alongside. The game is picked from your Game Library, or the window in front after a
+    5-second countdown.
+  - Shows the likely causes in plain words with a confidence level and the evidence behind each. A cause is only named
+    when the measurements support it; otherwise it says no clear cause was found. Input delay is checked through what
+    can be measured (frame time, V-Sync / frame caps, input settings) and says it can't measure the delay itself.
+  - Recommends at most three actions, strongest first: an existing tweak (preview of the exact change, confirmation,
+    backup, Undo), a step you do yourself (game settings, cable, cooling), or an existing tool (Game Booster, CPU & GPU
+    Tuning). Expectations are described, never a promised FPS number. Nothing changes automatically.
+  - Re-test the same way and see Improved / No clear change / Got worse on the problem's own numbers, before and after
+    side by side, with a noise margin so normal run-to-run variation doesn't count, and whether the problem is still
+    there. Changes made in the flow can be undone from the result.
+
 ## 1.75 – 2026-10-28
 - **Service Nexus in Services.** Services › Service Nexus (or Ctrl+K "Service Nexus") turns the Services page into a
   dependency graph read from the Service Control Manager: every service and driver, what each one depends on, what

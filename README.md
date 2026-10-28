@@ -25,7 +25,7 @@ No accounts, no ads, no telemetry, no paid tiers.
 | BIOS | 3 | Step-by-step guides: Resizable BAR, XMP/EXPO, C-States |
 
 **Tools:** Potato Graphics (Low / Potato / Ultra potato levels) · In-app updates · Game Booster · Input Delay Reducer · Ping Stabilizer · Custom Crosshair overlay ·
-Startup Apps · Hardware Monitor · Backup & Restore · Activity Log · Service Nexus (service dependency graph with impact preview) · Emergency Rescue.
+Startup Apps · Hardware Monitor · Backup & Restore · Activity Log · Fix My Game (guided problem → measure → fix → re-test) · Service Nexus (service dependency graph with impact preview) · Emergency Rescue.
 
 ### Safety model
 - **Backups first.** Before any tweak changes anything, its current values are saved to
