@@ -50,6 +50,17 @@ $exe = Join-Path $publish 'MoneyTweaks.exe'
 # Guard: the app must report exactly the release version, or in-app updates would loop forever.
 $built = (Get-Item $exe).VersionInfo.FileVersion
 if (-not $built.StartsWith($version)) { throw "Built MoneyTweaks.exe reports $built but the release is $version" }
+
+# Emergency Rescue: the separate recovery program, next to MoneyTweaks.exe (so the ZIP and the installer carry it) and as
+# its own download with a fixed name (releases/latest/download/MoneyTweaks-Rescue.exe). Trimmed single file.
+# Not "*-win-x64.exe": versions up to 1.73 take any such asset as the portable app update.
+dotnet publish (Join-Path $root 'src\MoneyTweaks.Rescue\MoneyTweaks.Rescue.csproj') -c $Configuration -r win-x64 --self-contained true -p:Version=$version `
+    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
+    -p:DebugType=none -p:GenerateDocumentationFile=false -o $publish
+if ($LASTEXITCODE -ne 0) { throw 'Emergency Rescue publish failed' }
+$rescue = Join-Path $publish 'MoneyTweaks-Rescue.exe'
+$rescueBuilt = (Get-Item $rescue).VersionInfo.FileVersion
+if (-not $rescueBuilt.StartsWith($version)) { throw "Built MoneyTweaks-Rescue.exe reports $rescueBuilt but the release is $version" }
 Copy-Item (Join-Path $root 'LICENSE') $publish
 Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.md') $publish   # MPL-2.0 / Apache-2.0 notices for bundled libraries
 Copy-Item (Join-Path $root 'README.md') $publish
@@ -58,6 +69,7 @@ Copy-Item (Join-Path $root 'README.md') $publish
 $zip = Join-Path $dist "MoneyTweaks-$version-portable-win-x64.zip"
 Compress-Archive -Path (Join-Path $publish '*') -DestinationPath $zip -CompressionLevel Optimal
 Copy-Item $exe (Join-Path $dist "MoneyTweaks-$version-win-x64.exe")
+Copy-Item $rescue (Join-Path $dist 'MoneyTweaks-Rescue.exe')
 
 # Installer
 if (-not $SkipInstaller) {

@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/MoneyTweaks.Core/MoneyTweaks.Core.csproj" />
     <Project Path="src/MoneyTweaks/MoneyTweaks.csproj" />
+    <Project Path="src/MoneyTweaks.Rescue/MoneyTweaks.Rescue.csproj" />
     <Project Path="src/MoneyTweaks.Community.Shared/MoneyTweaks.Community.Shared.csproj" />
     <Project Path="src/MoneyTweaks.Community.Server/MoneyTweaks.Community.Server.csproj" />
     <Project Path="src/MoneyTweaks.Linux.Core/MoneyTweaks.Linux.Core.csproj" />

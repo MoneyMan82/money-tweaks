@@ -37,6 +37,10 @@ Startup Apps · Hardware Monitor · Backup & Restore · Activity Log.
 - **Admin only when needed.** The app runs as a standard user. System-wide tweaks offer *Restart as admin*.
 - **Logged.** Every change and error goes to `%LOCALAPPDATA%\MoneyTweaks\logs`.
 - **Store apps.** Undo re-registers a removed app if Windows still has its files. Otherwise reinstall it from the Microsoft Store.
+- **Emergency Rescue.** `MoneyTweaks-Rescue.exe` (next to the app, in the Start menu, or as its own download) undoes
+  changes from the same backups when Money Tweaks itself can't start. It lists every change with its original and current
+  values, restores only what you pick after you type YES, saves the current values first so the rescue can be undone,
+  reads every value back, and never resets Windows or deletes files. `--list`, `--log` and `--verify` only read.
 
 ### Not included
 These would need kernel drivers or paid/third-party content, so they're left out:
@@ -103,6 +107,7 @@ If the address changes (e.g. a custom domain), replace `money-tweaks.barkgdd.wor
 ```
 src/MoneyTweaks.Core   engine (ops, backups, restore points), tweak catalog, feature logic
 src/MoneyTweaks        WPF app (.NET 10)
+src/MoneyTweaks.Rescue Emergency Rescue: standalone console recovery program (engine only, no WPF)
 tests/                 xUnit tests (catalog integrity, apply/undo/rollback, opt-in integration)
 installer/             Inno Setup script
 scripts/               release build script

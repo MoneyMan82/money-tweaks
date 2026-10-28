@@ -51,6 +51,8 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\Money Tweaks"; Filename: "{app}\MoneyTweaks.exe"
+; Works when the main app can't start: undoes Money Tweaks changes from their backups.
+Name: "{group}\Money Tweaks Emergency Rescue"; Filename: "{app}\MoneyTweaks-Rescue.exe"
 Name: "{group}\Uninstall Money Tweaks"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Money Tweaks"; Filename: "{app}\MoneyTweaks.exe"; Tasks: desktopicon
 

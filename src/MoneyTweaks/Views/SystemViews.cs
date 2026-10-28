@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -69,10 +70,15 @@ public sealed class StartupView : UserControl, IPageLifecycle
     public void OnHidden() { }
 }
 
-public sealed class RestoreView : UserControl, IPageLifecycle
+public sealed class RestoreView : UserControl, IPageLifecycle, IAnchorTarget
 {
     private readonly StackPanel _applied = new();
     private readonly StackPanel _points = new();
+    private readonly FrameworkElement _rescue;
+
+    /// <summary>The separate recovery program, shipped next to MoneyTweaks.exe by the installer and the portable ZIP.</summary>
+    public static string RescueExe => Path.Combine(AppContext.BaseDirectory, "MoneyTweaks-Rescue.exe");
+    public const string RescueDownload = "https://github.com/MoneyMan82/money-tweaks/releases/latest/download/MoneyTweaks-Rescue.exe";
 
     public RestoreView()
     {
@@ -92,8 +98,23 @@ public sealed class RestoreView : UserControl, IPageLifecycle
         ap.Children.Add(new Border { Height = 8 });
         ap.Children.Add(_applied);
         body.Children.Add(Ui.Card(ap));
+
+        var rs = Ui.Section("Emergency Rescue", "A separate small program that undoes Money Tweaks changes when this app can't start. It lists every change with its original and current values, restores only the ones you pick after you confirm, saves the current values first so the rescue itself can be undone, and reads every value back. It never resets Windows or deletes your files. Start menu: Money Tweaks Emergency Rescue.");
+        if (File.Exists(RescueExe))
+            rs.Children.Add(Ui.Row(Ui.Btn("Open Emergency Rescue", (_, _) => Launch(RescueExe), "PrimaryButton")));
+        else
+        {
+            rs.Children.Add(Ui.Muted("MoneyTweaks-Rescue.exe isn't next to this copy (it comes with the installer and the portable ZIP). You can download it on its own and keep it somewhere safe, e.g. a USB stick:", 12.5));
+            rs.Children.Add(Ui.Muted(RescueDownload, 12));
+            rs.Children.Add(Ui.Row(Ui.Btn("Open download", (_, _) => Launch(RescueDownload))));
+        }
+        _rescue = Ui.Card(rs);
+        body.Children.Add(_rescue);
         Content = root;
     }
+
+    /// <summary>"restore#rescue" opens this page at Emergency Rescue.</summary>
+    public void ShowSection(string anchor) { if (anchor == "rescue") Ui.ScrollTo(_rescue); }
 
     private static void Launch(string exe, string args = "")
     {

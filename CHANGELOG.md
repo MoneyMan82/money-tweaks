@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.74 – 2026-10-28
+- **Emergency Rescue: undo Money Tweaks changes even when the app won't start.** A separate small program,
+  `MoneyTweaks-Rescue.exe` (Start menu: Money Tweaks Emergency Rescue; also in the portable ZIP and as its own download).
+  It uses only the engine, not the app's window, settings or graphics, so it works whatever stopped the app.
+  - Reads the existing backups (`backups\*.json`) and logs as they are: every change with when it was applied, whether it
+    needs administrator rights, and for each setting what Windows reads now next to the original value the backup puts
+    back. The recent change log (applied, reverted, original values) is shown too.
+  - Restores only the changes you pick (numbers, ranges or all, plus the active gaming profile) after a summary and typing
+    YES. Before each change it copies that change's backup and saves the values Windows has right now (same format) to
+    `rescue\<time>\`, so a rescue can be undone later from the same program.
+  - Restores through the same Undo as the app, then reads every value back against the original backup and lists
+    anything that differs. Failures are named with the reason; their backups are kept for a retry.
+  - Runs as a standard user. System-wide changes ask once for administrator permission (or can be left out); declining
+    changes nothing. A damaged backup, or a change this version doesn't know, is listed and left alone, never guessed at.
+    Nothing resets Windows and no files are deleted.
+  - Backup & Restore in the app has an Emergency Rescue section (also in Ctrl+K) that opens it.
+- In-app updates for the portable version only accept the app's own exe from a release, never another program in it.
+
 ## 1.73 – 2026-10-28
 - **Pocket Panel becomes a control deck.** Your own dashboard pages on the phone or tablet, shared by every paired device
   and stored on the PC:

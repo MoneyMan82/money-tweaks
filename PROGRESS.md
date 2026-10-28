@@ -7,6 +7,9 @@ Resume point for future sessions. Keep it short.
 - Engine: reversible ops (registry, service start type, powercfg, commands, scheduled tasks, Store apps, dynamic registry sets),
   JSON backups per tweak in `%LOCALAPPDATA%\MoneyTweaks\backups`, rollback on partial failure, restore points, logging.
 - Catalog: 334 verified tweaks across 9 categories (see tests output `Every_category_is_populated`).
+- Emergency Rescue (1.74): `src/MoneyTweaks.Rescue` -> MoneyTweaks-Rescue.exe, console, engine only (no WPF), trimmed
+  (partial, reflection JSON on, ~17 MB). Logic in Core `Engine/EmergencyRescue.cs`; per-rescue copies in `rescue\<time>\`.
+  Release asset is `MoneyTweaks-Rescue.exe`, never `*-win-x64.exe` (old updaters take that as the portable app).
 
 ## Decisions
   Catalog is original, built from documented Windows settings. Count is reported honestly.

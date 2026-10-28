@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Money Tweaks Emergency Rescue: a small console program that undoes Money Tweaks changes from their backups when the
+    main app can't start. It shares only the engine (MoneyTweaks.Core), never the WPF app, so a broken UI, settings file
+    or graphics driver can't stop it.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
+    <RootNamespace>MoneyTweaks.Rescue</RootNamespace>
+    <AssemblyName>MoneyTweaks-Rescue</AssemblyName>
+    <ApplicationIcon>..\MoneyTweaks\Assets\MoneyTweaks.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Product>Money Tweaks Emergency Rescue</Product>
+    <Description>Undoes Money Tweaks changes from their backups, without the main app.</Description>
+    <!--
+      Lightweight single file: partial trimming removes unused framework and Windows SDK code (~47 MB -> ~17 MB) but
+      keeps the engine whole. Backups are read with reflection-based JSON and scheduled tasks through COM late binding,
+      so both stay enabled, and the assemblies they rely on are kept untrimmed.
+    -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+  <ItemGroup>
+    <TrimmerRootAssembly Include="MoneyTweaks.Core" />
+    <TrimmerRootAssembly Include="Microsoft.CSharp" />
+    <TrimmerRootAssembly Include="System.Management" />
+    <TrimmerRootAssembly Include="System.ServiceProcess.ServiceController" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyTweaks.Core\MoneyTweaks.Core.csproj" />
+  </ItemGroup>
+</Project>

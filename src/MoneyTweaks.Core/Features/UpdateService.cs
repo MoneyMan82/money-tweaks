@@ -82,12 +82,19 @@ public static class UpdateService
             if (!IsTrustedDownloadUrl(url)) { Log.Warn($"Update asset {name} ignored: unexpected URL {url}"); continue; }
             if (name.Equals("MoneyTweaks-Setup.exe", StringComparison.OrdinalIgnoreCase)) setup = url;
             else if (name.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase)) sums = url;
-            else if (name.EndsWith("-win-x64.exe", StringComparison.OrdinalIgnoreCase)) { portable = url; portableName = name; }
+            else if (IsPortableAsset(name)) { portable = url; portableName = name; }
         }
         var html = root.GetProperty("html_url").GetString();
         return new UpdateInfo(latest, tag, root.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "",
             IsTrustedPageUrl(html) ? html! : ReleasesPage, setup, portable, portableName, sums);
     }
+
+    /// <summary>
+    /// The portable app itself (MoneyTweaks-1.74.0-win-x64.exe), never another program in the release such as
+    /// MoneyTweaks-Rescue.exe: a portable update replaces the running exe with this file.
+    /// </summary>
+    public static bool IsPortableAsset(string name) =>
+        System.Text.RegularExpressions.Regex.IsMatch(name, @"^MoneyTweaks-\d+(\.\d+){1,3}-win-x64\.exe$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     /// <summary>Release files must come from this repository's GitHub releases over HTTPS (GitHub may redirect to its CDN).</summary>
     public static bool IsTrustedDownloadUrl(string? url) =>

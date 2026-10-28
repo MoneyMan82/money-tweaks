@@ -44,6 +44,8 @@ public static class BackupStore
     public static void Save(TweakBackup b) => AtomicFile.WriteAllText(PathFor(b.TweakId), JsonSerializer.Serialize(b, Json));
     public static void Delete(string id) { try { File.Delete(PathFor(id)); } catch { /* ignore */ } }
     public static bool Exists(string id) => File.Exists(PathFor(id));
+    /// <summary>Where the backup of <paramref name="id"/> is stored (whether or not it exists).</summary>
+    public static string PathOf(string id) => PathFor(id);
     public static IEnumerable<string> AllIds() =>
         Directory.EnumerateFiles(AppPaths.Backups, "*.json").Select(f => Path.GetFileNameWithoutExtension(f));
 }

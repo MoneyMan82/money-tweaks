@@ -28,4 +28,13 @@ public class UpdatePickTests
         Assert.Equal("v1.49.0", Pick(R("v1.50.0", draft: true), R("v1.51.0", pre: true), R("v1.52.0", sums: false), R("v1.49.0")));
         Assert.Null(Pick());
     }
+
+    [Theory]
+    [InlineData("MoneyTweaks-1.74.0-win-x64.exe", true)]
+    [InlineData("MoneyTweaks-1.4.1-win-x64.exe", true)]
+    [InlineData("MoneyTweaks-Rescue.exe", false)]
+    [InlineData("MoneyTweaks-Rescue-win-x64.exe", false)]
+    [InlineData("MoneyTweaks-Setup.exe", false)]
+    [InlineData("MoneyTweaks-1.74.0-portable-win-x64.zip", false)]
+    public void Portable_update_is_only_the_app_exe(string name, bool expected) => Assert.Equal(expected, UpdateService.IsPortableAsset(name));
 }

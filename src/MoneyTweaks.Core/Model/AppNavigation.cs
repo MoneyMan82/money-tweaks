@@ -87,6 +87,7 @@ public static class AppNavigation
         new("logs", "\uE81C", "Activity Log", "tools", "Everything Money Tweaks changed, failures and undos.", "log history activity"),
 
         new("restore", "\uE777", "Backup & Restore", "backup", "Undo tweaks, restore points and backups.", "undo rollback restore point backup export"),
+        new("restore#rescue", "\uE7BA", "Emergency Rescue", "backup", "A separate recovery program that undoes Money Tweaks changes from their backups when the app can't start: inspect changes, restore the ones you pick, verify.", "emergency rescue recovery recover broken won't start crash undo restore original settings safe mode repair"),
 
         new("about", "\uE713", "Settings & About", "settings", "Safety, motion, updates, start with Windows, hotkeys and about.", "settings preferences options"),
         new("about#appearance", "\uE771", "Appearance", "settings", "Motion and effects, sidebar.", "theme animation motion sidebar", InSidebar: false),

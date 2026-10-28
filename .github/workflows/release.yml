@@ -53,6 +53,7 @@ jobs:
             dist/MoneyTweaks-Setup.exe
             dist/*.zip
             dist/MoneyTweaks-*-win-x64.exe
+            dist/MoneyTweaks-Rescue.exe
             dist/MoneyTweaks-Linux-x64.tar.gz
             dist/SHA256SUMS.txt
       - name: Keep the highest version marked latest
