@@ -1,6 +1,6 @@
 # Money Tweaks
 
-Free, open-source Windows 10/11 tweaker for gamers. It has 340 reversible tweaks, gaming tools and a clean dark UI.
+Free, open-source Windows 10/11 tweaker for gamers. It has 401 reversible tweaks, gaming tools and a clean dark UI.
 No accounts, no ads, no telemetry, no paid tiers.
 
 ![Money Tweaks dashboard](docs/assets/screenshots/dashboard.png)
@@ -21,7 +21,7 @@ No accounts, no ads, no telemetry, no paid tiers.
 | Services | 111 | Rarely used services set to Manual/Disabled, with the original start type backed up |
 | App Optimizer | 3 | Launcher CPU priority, launcher auto-start, Search indexer priority |
 | App Removal | 76 | Preinstalled Store apps and third-party bloat, plus OneDrive |
-| Game Profiles | 15 | High CPU priority profiles for popular games (Image File Execution Options) |
+| Game Profiles | 10 | High CPU priority profiles for popular games (Image File Execution Options) |
 | BIOS | 3 | Step-by-step guides: Resizable BAR, XMP/EXPO, C-States |
 
 **Tools:** Potato Graphics (Low / Potato / Ultra potato levels) · In-app updates · Game Booster · Input Delay Reducer · Ping Stabilizer · Custom Crosshair overlay ·
