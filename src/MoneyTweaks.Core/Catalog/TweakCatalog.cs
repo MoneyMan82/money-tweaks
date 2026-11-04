@@ -29,6 +29,7 @@ public static partial class TweakCatalog
         list.AddRange(GameProfiles());
         list.AddRange(Bios());
         list.AddRange(Extra());
+        list.AddRange(Expanded());
         return list;
     }
 

@@ -10,8 +10,11 @@ namespace MoneyTweaks.Core.Engine;
 /// </summary>
 public sealed record TweakFacts(string Purpose, string Benefit, string Confidence, string Risk, string Requirements, string Verification, string Undo)
 {
+    public string Supported { get; init; } = "Windows 10 and 11";
+    public string? Source { get; init; }
     public string ToText() =>
-        $"Expected benefit: {Benefit}\nConfidence: {Confidence} · Risk: {Risk}\nRequires: {Requirements}\nVerified by: {Verification}\nUndo: {Undo}";
+        $"Expected benefit: {Benefit}\nConfidence: {Confidence} · Risk: {Risk}\nSupported: {Supported}\nRequires: {Requirements}\nVerified by: {Verification}\nUndo: {Undo}" +
+        (Source is null ? "" : $"\nSource: {Source}");
 }
 
 public static class TweakInfo
@@ -79,7 +82,9 @@ public static class TweakInfo
         if (t.Ops.OfType<PowerCfgOp>().Any()) req.Add("applies to the active power plan");
 
         string risk = t.Risk == Risk.Caution ? "Caution" + (t.Warning is { } w ? $" ({w})" : "") : "Low";
-        return new(t.Description, benefit, conf, risk, req.Count == 0 ? "nothing special" : string.Join(", ", req), Verification(t), Undo(t));
+        var supported = (t.MinBuild >= 22000 ? $"Windows 11 (build {t.MinBuild}+)" : t.MinBuild > 0 ? $"Windows 10/11 build {t.MinBuild}+" : "Windows 10 and 11")
+            + (t.Editions is { } ed ? $", {ed}" : "");
+        return new(t.Description, benefit, conf, risk, req.Count == 0 ? "nothing special" : string.Join(", ", req), Verification(t), Undo(t)) { Supported = supported, Source = t.Source };
     }
 
     private static (string, string) Default(Tweak t) => t.Category switch

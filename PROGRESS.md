@@ -7,6 +7,7 @@ Resume point for future sessions. Keep it short.
 - Engine: reversible ops (registry, service start type, powercfg, commands, scheduled tasks, Store apps, dynamic registry sets),
   JSON backups per tweak in `%LOCALAPPDATA%\MoneyTweaks\backups`, rollback on partial failure, restore points, logging.
 - Catalog: 334 verified tweaks across 9 categories (see tests output `Every_category_is_populated`).
+- Library expansion (1.79): `Catalog/TweakCatalog.Expanded.cs` (67 tweaks with `Source`), docs/TWEAK-SOURCES.md.
 - Game Autopilot (1.78): Core `Games/GameAutopilot.cs` (rules, presets, planner, readiness, store), runtime
   `AutopilotService.cs` (watcher, sessions via ProfileService/ProfileEngine, recovery), UI `Views/AutopilotView.cs` (page "autopilot").
 - Fix My Game 2.0 (1.77): `Advisor/FixMyGameContext.cs` (game detection, Quick Scan, FixHistory), rules/verification in

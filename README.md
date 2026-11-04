@@ -14,11 +14,11 @@ No accounts, no ads, no telemetry, no paid tiers.
 
 | Category | Tweaks | What it covers |
 |---|---:|---|
-| General | 29 | Visual effects, power plan, core parking, USB suspend, mouse acceleration, Explorer and taskbar, Game Mode/DVR |
-| Debloating | 61 | Telemetry, advertising ID, activity history, suggestions/ads, Copilot/Recall/Widgets, Edge background, telemetry tasks |
-| Networking | 17 | Nagle, network throttling, QoS reserve, TCP settings, DNS presets, adapter power saving, LSO, Teredo |
-| Advanced | 20 | Memory compression, prefetch, timers, HAGS, fullscreen optimizations, GPU MSI mode, MMCSS, NTFS, HVCI |
-| Services | 110 | Rarely used services set to Manual/Disabled, with the original start type backed up |
+| General | 55 | Visual effects, power plan, core parking, USB suspend, mouse acceleration, Explorer, context menu and taskbar, sign-in, Modern Standby, Game Mode/DVR |
+| Debloating | 91 | Telemetry, diagnostic logs, app permissions, suggestions/ads, Copilot/Recall/Click to Do, Notepad/Paint AI, Windows Update behaviour, Edge/Chrome/Firefox/Brave policies, telemetry tasks |
+| Networking | 20 | Nagle, network throttling, QoS reserve, TCP settings, DNS presets, adapter power saving, LSO, Teredo, SMBv1, NetBIOS |
+| Advanced | 32 | Memory compression, prefetch, timers, HAGS, MPO, fullscreen optimizations, GPU MSI mode, MMCSS, NTFS, long paths, reserved storage, drivers, recovery, security |
+| Services | 111 | Rarely used services set to Manual/Disabled, with the original start type backed up |
 | App Optimizer | 3 | Launcher CPU priority, launcher auto-start, Search indexer priority |
 | App Removal | 76 | Preinstalled Store apps and third-party bloat, plus OneDrive |
 | Game Profiles | 15 | High CPU priority profiles for popular games (Image File Execution Options) |

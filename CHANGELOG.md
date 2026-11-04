@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.79 – 2026-11-04
+- **67 new tweaks (334 → 401)**, found by reviewing WinUtil, Win11Debloat, Sophia Script, O&O ShutUp10++ and Optimizer
+  and checking each setting against Microsoft's (or the browser/driver vendor's) documentation. Each is Money Tweaks' own
+  implementation with backup, read-back and undo; no code, text or assets were copied. Every new tweak shows its source,
+  license, supported Windows versions and editions in its details; docs/TWEAK-SOURCES.md lists the sources and the ideas
+  that were rejected and why (anything that weakens security, deletes things irreversibly, downloads third-party data or
+  has no measurable effect).
+  - **General (23):** compact File Explorer, detailed copy dialog, no "- Shortcut" suffix, stop folder-type guessing,
+    hide Home/Gallery, remove "Give access to"/"Include in library"/"Share" from the classic menu (blocked-extension
+    list, reversible), no Store in Open with, never combine taskbar buttons, last-active-window click, clock seconds,
+    battery percentage, Alt+Tab without browser tabs, no Snap Assist suggestions, full-quality JPEG wallpapers, Num Lock
+    on, Windows keeps your default printer, sharp sign-in background, skip the first-logon animation, skip the lock screen,
+    disconnect the network in Modern Standby, Xbox controller button doesn't open Game Bar.
+  - **Debloating (30):** diagnostic logs/dumps/OneSettings limits, language list, recent-files tracking, cloud search,
+    speech model downloads, message cloud backup, map data downloads, OneDrive pre-sign-in traffic, WMDRM online, sign-in
+    info after updates, app permission and voice-activation policies, NVIDIA telemetry opt-out, Settings Microsoft 365
+    ads and Home page, Phone Link in Start, recently added apps, Click to Do, Notepad and Paint AI, update-ASAP off, no
+    automatic restart while signed in, Edge AI/promotions/background lookups/desktop shortcut, Chrome AI and usage
+    statistics, Firefox telemetry and studies, Brave Rewards/Wallet/VPN/Leo.
+  - **Networking (2):** SMBv1 server off, NetBIOS over TCP/IP off. **Advanced (11):** long paths, keep the thumbnail
+    cache, Reserved Storage, restore points more than once a day, blue-screen details, device metadata, co-installers,
+    WPBT, multiplane overlay, password reveal button, Remote Assistance. **Services (1):** Windows AI Fabric Service.
+- Tweak details now show "Supported" (Windows version and editions) and "Source" for every tweak that has one.
+
 ## 1.78 – 2026-11-04
 - **Game Autopilot** (Gaming › Game Autopilot, or Ctrl+K). Per-game automation around your gaming sessions, built on
   Gaming Profiles, the overlay, the Hardware Monitor and the Game Library instead of new systems.

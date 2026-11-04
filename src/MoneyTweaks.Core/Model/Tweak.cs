@@ -39,6 +39,13 @@ public sealed record Tweak
     public IReadOnlyList<string> GuideSteps { get; init; } = [];
     /// <summary>Extra warning shown in the confirmation dialog for Caution tweaks.</summary>
     public string? Warning { get; init; }
+    /// <summary>
+    /// Where the idea comes from: the project or documentation that lists this setting, with its license and URL. The
+    /// implementation and text are Money Tweaks' own; see docs/TWEAK-SOURCES.md.
+    /// </summary>
+    public string? Source { get; init; }
+    /// <summary>Windows editions it works on when not all (e.g. policies that Home ignores). Null = every edition.</summary>
+    public string? Editions { get; init; }
 
     public bool RequiresAdmin => Ops.Any(o => o.RequiresAdmin);
 
