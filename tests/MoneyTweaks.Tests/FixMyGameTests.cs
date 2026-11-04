@@ -5,6 +5,8 @@ using MoneyTweaks.Core.Scanner;
 namespace MoneyTweaks.Tests;
 
 /// <summary>Fix My Game: causes only from evidence, at most three actions, honest re-test verdicts.</summary>
+// Shares the global data folder (AppPaths) with other tests that override it, so it runs in their serial collection.
+[Collection("registry")]
 public class FixMyGameTests
 {
     private static TelemetrySample S(double gpu, double core, double? gpuT = null, double? cpuT = null, bool thermal = false, int frames = 60, double other = 2) =>
