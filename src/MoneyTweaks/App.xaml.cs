@@ -154,6 +154,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         MacroService.Shutdown(); // releases any keys a macro is holding
+        AutopilotService.Shutdown(); // hides an overlay it showed, puts back game priority, closes the session record
         OverlayService.Shutdown(); // stops the frame-timing ETW session
         CrosshairService.Shutdown(); // saves profiles, releases the crosshair hotkeys
         ProfileService.Shutdown(); // restores settings changed by an active gaming profile

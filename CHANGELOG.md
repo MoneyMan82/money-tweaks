@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.78 – 2026-11-04
+- **Game Autopilot** (Gaming › Game Autopilot, or Ctrl+K). Per-game automation around your gaming sessions, built on
+  Gaming Profiles, the overlay, the Hardware Monitor and the Game Library instead of new systems.
+  - **Detection:** games with a rule are watched every 3 s by verified process identity (Fortnite, Geometry Dash,
+    Roblox and every Game Library game; add any game by its .exe). Nothing is polled while Autopilot has nothing to do.
+  - **Before the game:** a readiness check reads temperatures, free RAM and graphics memory, space on the game's
+    drive, background CPU use and the graphics driver's age. Fine readings are listed as OK; only real issues raise a
+    quiet note. Readings this PC can't provide are left out, never guessed.
+  - **While playing:** only the actions you switch on, per game: the game's own Gaming Profile, or your own selection
+    of power plan, timer resolution and session tweaks; High priority for the game's own process only; the overlay with
+    the game's saved layout. Presets: Off, Light (checks, overlay, warnings, no setting changes), Competitive, Custom.
+  - **Live protection:** the Hardware Monitor's warnings (heat, throttling, memory pressure) are recorded for the
+    session with a quiet note. Nothing is closed, terminated or stopped, and no service is touched.
+  - **After the game:** everything the session changed is restored from values recorded before the change and read
+    back, the overlay is hidden if Autopilot showed it and the priority is put back, whether the game closed, crashed
+    (detected from Windows' application log) or you ended the session.
+  - **Safety:** the session is saved before any change. After an unexpected shutdown it continues if the game still
+    runs, otherwise it is restored at the next start. One session at a time: a second game waits until the first ends,
+    so sessions never capture or restore conflicting values. An already-active gaming profile is never replaced.
+    Settings needing administrator rights are skipped (no prompts during play) when Money Tweaks isn't elevated.
+  - **History:** every session with its actions, readiness, warnings, peak temperatures, how it ended and what was
+    restored, kept locally.
+
 ## 1.77 – 2026-11-03
 - **Fix My Game 2.0.** The Dashboard's Fix My Game becomes a diagnostics and repair center, built on what Money Tweaks
   already measures and fixes:

@@ -169,6 +169,8 @@ public static class ProfileService
     public static async Task CheckPendingAsync()
     {
         if (Active is not { } s) { StartWatcher(); return; }
+        // Started by a Game Autopilot session: Autopilot resumes or restores it (AutopilotService.InitAsync), no prompt here.
+        if (AutopilotService.OwnsProfileSession(s)) { StartWatcher(); return; }
         var stillRunning = s.TriggeredBy is not null && StillRunning(s);
         if (!stillRunning && Dialog.Confirm("Restore settings from a gaming profile?",
                 $"“{s.ProfileName}” was still active when Money Tweaks closed (started {s.StartedAt:g}). Restore the settings it changed?", "Restore", DialogKind.Warning))

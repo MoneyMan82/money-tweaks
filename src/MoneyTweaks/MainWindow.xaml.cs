@@ -93,6 +93,7 @@ public partial class MainWindow : Window
             if (!App.ScreenshotMode) await GenomeView.CheckPendingAsync();
             if (!App.ScreenshotMode && !App.BackgroundStart) _ = GenomeView.CheckForUpdatesAsync();
             if (!App.ScreenshotMode) await ProfileService.CheckPendingAsync();
+            if (!App.ScreenshotMode) await AutopilotService.InitAsync();   // resume or recover a Game Autopilot session, start its watcher
             if (!App.ScreenshotMode) DisplayService.CheckPending();
             if (!App.ScreenshotMode) DisplayService.StartAutoSwitch();
             if (App.Settings.AutoCheckUpdates && !App.ScreenshotMode)
@@ -473,6 +474,7 @@ public partial class MainWindow : Window
         "lab" => new RealityLabView(),
         "scanner" => new ScannerView(),
         "profiles" => new ProfilesView(),
+        "autopilot" => new AutopilotView(),
         "library" => new GameLibraryView(),
         "tweaks" => new TweakListView(),
         "tuning" => new TuningView(),

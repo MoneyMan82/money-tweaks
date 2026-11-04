@@ -62,6 +62,7 @@ public static class AppNavigation
         new("tuning", "\uE950", "CPU & GPU Tuning", "optimize", "GPU power limit and clock cap, CPU boost and efficiency profiles, stability tests, guided PBO/Curve Optimizer/XTU/undervolt steps.", "overclock undervolt pbo curve optimizer power limit clock nvidia gpu cpu xtu ryzen master xmp expo fan efficiency quiet stability"),
 
         new("library", "\uE8B7", "Game Library", "gaming", "Installed and running games from Steam, Epic, Riot, Roblox and Minecraft, plus your own; per-game profiles and launch.", "games steam epic roblox minecraft detect launch"),
+        new("autopilot", "\uE768", "Game Autopilot", "gaming", "Per-game automation: a readiness check when a game starts, the settings, power plan, priority and overlay you approve while it runs, live warnings, and everything restored when it closes or crashes.", "autopilot automation automatic game launch exit session restore readiness pre-game post-game rules priority power plan overlay"),
         new("profiles", "\uE7FC", "Gaming Profiles", "gaming", "One-click or automatic sets of settings while a game runs, restored when it closes.", "profile auto switch"),
         Cat(TweakCategory.GameProfiles, "gaming", "Game CPU Priority", "priority ifeo game"),
         new("booster", "\uE945", "Game Booster", "gaming", "Power plan, close background apps, raise game priority and clear standby memory.", "boost session close apps"),
