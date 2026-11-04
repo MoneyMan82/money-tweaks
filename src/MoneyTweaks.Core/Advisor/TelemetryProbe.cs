@@ -128,12 +128,28 @@ public static class GameCapture
             var s = await Task.Run(() => probe.Sample(n), ct);
             cap.Samples.Add(s);
             progress?.Report((i + 1, s));
-            try { using var p = Process.GetProcessById(pid); if (p.HasExited) break; } catch { cap.FramesUnavailable ??= "The game closed during the capture."; break; }
+            if (!StillRunning(pid)) { cap.FramesUnavailable ??= "The game closed during the capture."; break; }
         }
         for (int i = 1; i < times.Count; i++) cap.FrameMs.Add((times[i] - times[i - 1]) / 10_000.0);
         if (frames && cap.FrameMs.Count < 30) cap.FramesUnavailable = "Too few frames were recorded: was the game in front and drawing?";
         cap.TopBackground = TopBackground(cpuBefore, ProcessTimes(), pid, seconds);
         return cap;
+    }
+
+    /// <summary>
+    /// Whether the process still exists. Anti-cheat-protected games (Easy Anti-Cheat, BattlEye) can refuse the exit-code
+    /// query; a process Windows still lists by its id is then treated as running instead of ending the capture early.
+    /// </summary>
+    public static bool StillRunning(int pid)
+    {
+        try
+        {
+            using var p = Process.GetProcessById(pid);
+            try { return !p.HasExited; }
+            catch (System.ComponentModel.Win32Exception) { return true; }
+            catch (InvalidOperationException) { return false; }
+        }
+        catch (ArgumentException) { return false; }
     }
 
     public static Dictionary<int, (string name, TimeSpan cpu)> ProcessTimes()

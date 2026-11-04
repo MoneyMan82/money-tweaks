@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.77 – 2026-11-03
+- **Fix My Game 2.0.** The Dashboard's Fix My Game becomes a diagnostics and repair center, built on what Money Tweaks
+  already measures and fixes:
+  - **Game-aware.** Detects running Game Library games (Fortnite, Geometry Dash, Roblox and every registered game) with
+    their executable, file version and linked Gaming Profile; pick any game manually, or the window in front after a
+    countdown. A Deep Scan checks the game is really running first.
+  - **More problems.** Low or unstable FPS, stuttering, input delay, high ping, overheating, crashes or a game that
+    won't start, and "not sure: check everything". New checks: the monitor running below its supported refresh rate,
+    frame limits below the refresh rate, V-Sync/render-queue delay, the game's own crashes, graphics driver resets, blue
+    screens and hardware errors from Crash Detective (7 days), possibly damaged game files after repeated crashes.
+  - **Quick Scan and Deep Scan.** Quick (about 5 s, no game needed): Windows settings, display modes, graphics driver,
+    crash logs, history. Deep: adds 20 s of live measurement while you play (optionally twice for reliability) and the
+    network test.
+  - **Findings you can trust.** Each one has a severity (critical, high, medium, info), a status (Confirmed when read
+    from the PC, Likely or Possible when it's an explanation, or Not enough evidence), its evidence, other explanations
+    that fit the same readings, and technical details. Harmless readings (high GPU use at your refresh rate, a stable
+    connection) are shown as information, not warnings.
+  - **Best fixes first, using what exists.** Up to three, with issue, change, expected benefit (never an FPS number),
+    risk, restart and how to undo: Windows tweaks, the game's Gaming Profile, Potato Graphics, Game Booster, Input Delay
+    Reducer, Ping Stabilizer, PC Cleaner, CPU & GPU Tuning, the Health Center and Crash Detective, or a plain step. More
+    ideas are listed below.
+  - **Select and apply.** Tick fixes, review every current → proposed value in one place, apply with a progress row per
+    fix (Conflict Radar, admin check, restore point, backup and read-back as everywhere else), and undo each one or all.
+    BIOS settings, critical services, processes and network settings are never changed automatically.
+  - **Verification Lab.** The same measurement again: before/after bars for FPS, 1% lows, frame times, CPU/GPU use,
+    temperatures, RAM, VRAM, ping, jitter and packet loss, with a verdict of improved, no measurable improvement, worse
+    or inconclusive. Noise margins include the spread of repeated runs; different programs or a scene that changed too
+    much give "inconclusive", not a verdict.
+  - **Your PC's history.** Every run is kept per game on this PC only (fixmygame.json): findings, fixes, undo and the
+    verdict, with the driver and game version. Fixes that didn't help before rank lower and say so, ones that helped but
+    were undone rank higher, results measured with another driver or game version are marked outdated, and recurring
+    problems are pointed out.
+  - **Repair report** to copy or save as a text file.
+- Game measurements no longer stop after a second when an anti-cheat-protected game refuses Windows' "has it exited"
+  query (also fixes the Upgrade Advisor's capture for those games).
+
 ## 1.76 – 2026-10-28
 - **Fix My Game.** On the Dashboard (also in the sidebar and Ctrl+K "Fix My Game"): pick Low FPS, Stuttering, Input
   delay, High ping or Overheating, and Money Tweaks walks you through it.
