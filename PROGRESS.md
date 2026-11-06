@@ -7,6 +7,8 @@ Resume point for future sessions. Keep it short.
 - Engine: reversible ops (registry, service start type, powercfg, commands, scheduled tasks, Store apps, dynamic registry sets),
   JSON backups per tweak in `%LOCALAPPDATA%\MoneyTweaks\backups`, rollback on partial failure, restore points, logging.
 - Catalog: 334 verified tweaks across 9 categories (see tests output `Every_category_is_populated`).
+- Agent team (2026-11-06): `.claude/agents/` (8 subagents), guard hook `.claude/hooks/agent_guard.py`, team files in `team/`
+  (RULES, ROADMAP, IDEAS, TASKS, LOG). Run with `claude --agent chief-coordinator`. Agents never push/merge/tag/release.
 - Library expansion (1.79): `Catalog/TweakCatalog.Expanded.cs` (67 tweaks with `Source`), docs/TWEAK-SOURCES.md.
 - Game Autopilot (1.78): Core `Games/GameAutopilot.cs` (rules, presets, planner, readiness, store), runtime
   `AutopilotService.cs` (watcher, sessions via ProfileService/ProfileEngine, recovery), UI `Views/AutopilotView.cs` (page "autopilot").

@@ -6,7 +6,9 @@ artifacts/
 dist/
 TestResults/
 *.secret
-.claude/
+.claude/*
+!.claude/agents/
+!.claude/hooks/
 
 # Community Hub server local data
 src/MoneyTweaks.Community.Server/data/
