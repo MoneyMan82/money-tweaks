@@ -27,3 +27,8 @@ Append-only. Newest at the bottom. Each entry: date, agent(s), what was done, br
   wasn't registered yet): 11 findings. Owner's session confirmed in the code: End doesn't wait for an in-flight Start
   (AutopilotService.EndAsync has no _busy check), failed rollback drops the record (ProfileService.ActivateAsync),
   ProfileStore.Save not atomic, Recover trusts the PID alone. Queued as T-003..T-005. No application files changed.
+- code-reviewer (real agent, read-only) reviewed the tweak apply/undo engine: 10 findings. Owner's session confirmed in the
+  code: undo matches backups by position (TweakEngine.cs:191); op-count change replaces the original backup and a failed
+  re-apply deletes it (:113, :146); the failing step itself is never rolled back (:131-147); RegStringFlagOp.Undo
+  restores the whole string (RegStringFlagOp.cs:68); BatchAsync has no try/finally (TweakItem.cs:399-408).
+  Queued as T-006..T-008. No application files changed.
