@@ -23,3 +23,7 @@ Append-only. Newest at the bottom. Each entry: date, agent(s), what was done, br
 - innovation-scout ran on the real repo (read-only, no files changed): 5 ideas, added as I-006..I-010. Registry keys and
   event IDs it cited are unverified (no web search in that run).
 - Added owner commands in `.claude/skills/`: /team, /ideas, /check, /build, /merge.
+- Code review of Game Autopilot / Gaming Profiles restore (code-reviewer instructions, run as a stand-in because the agent
+  wasn't registered yet): 11 findings. Owner's session confirmed in the code: End doesn't wait for an in-flight Start
+  (AutopilotService.EndAsync has no _busy check), failed rollback drops the record (ProfileService.ActivateAsync),
+  ProfileStore.Save not atomic, Recover trusts the PID alone. Queued as T-003..T-005. No application files changed.
