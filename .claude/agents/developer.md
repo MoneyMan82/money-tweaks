@@ -23,8 +23,9 @@ How you work:
   `Source` when the idea came from another project.
 - Every change is reversible and verified (backup, read-back, undo). No mock data or placeholder controls.
 - Add or update xUnit tests in `tests/MoneyTweaks.Tests` (use `[Collection("registry")]` when touching AppPaths or the
-  registry). Update CHANGELOG.md under an "Unreleased" heading, README and website counts when tweaks change
-  (`PublishedCountsTests` checks them), and PROGRESS.md for architecture notes. Don't change the version.
+  registry). User-facing docs (CHANGELOG, README, website, counts) are the docs-writer's job; list in your report
+  what users will see so it can write them. Don't change the version. For a bug fix, write the failing test first.
+  Before finishing, check your work against `team/knowledge/QUALITY-BAR.md`.
 - Build and test before you finish: run the game check from RULES.md, then `dotnet build MoneyTweaks.slnx -c Release`
   and `dotnet test tests/MoneyTweaks.Tests -c Release`. Report exact pass/fail counts and any failure output.
 - Commit to your worktree branch with a clear message ending with `Co-Authored-By: Claude <noreply@anthropic.com>`.

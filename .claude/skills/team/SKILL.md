@@ -1,20 +1,18 @@
 ---
 name: team
-description: Show the Money Tweaks agent team status - ideas backlog, task queue, branches waiting for approval, and the scheduled cycle. Use when the owner types /team or asks "what is the team doing".
+description: Show the Money Tweaks agent team status - what is waiting for approval, main health, ideas, tasks, last cycle and what's next. Use when the owner types /team or asks "what is the team doing".
 disable-model-invocation: true
 ---
 Give the owner a short, plain-language status of the Money Tweaks agent team. Read only; change nothing.
 
-1. Read `team/IDEAS.md`, `team/TASKS.md` and the last 3 entries of `team/LOG.md`.
-2. Run `git fetch origin` and list remote branches matching `origin/claude/cycle-*` and local worktree branches
-   (`git worktree list`), newest first, with their last commit date and subject. For each, say whether it is already
-   merged into main (`git branch -r --merged origin/main`).
-3. Also check the newest `claude/cycle-*` branch's `team/IDEAS.md` and `team/TASKS.md` (`git show`), since cloud runs
-   record their backlog there until merged.
+1. Read `team/INBOX.md`, `team/STATE.md`, `team/TASKS.md`, `team/IDEAS.md` and the last 2 entries of `team/LOG.md`.
+2. List agent branches: `git branch --list "agent/*" "claude/*" --sort=-committerdate --format="%(refname:short) | %(committerdate:relative) | %(subject)"`
+   and `git worktree list`; mark which are already merged into main (`git branch --merged main`).
+3. If the scheduled task tool is available, check the "money-tweaks-cycle" task's last and next run.
 
-Reply in this shape (keep it short, no file dumps):
-- **Waiting for you:** branches/PRs ready for approval, one line each (what it adds, tests, security verdict if known).
-- **Ideas:** top 5 by status (new / approved / in progress), with their ids.
-- **Tasks:** anything in progress or blocked.
-- **Last activity:** the newest log entry in one sentence.
-- **Next steps:** the 2-3 commands that make sense now, for example `/build I-006`, `/merge <branch>`, `/ideas`.
+Reply in this shape (short, no file dumps):
+- **Waiting for you:** each INBOX item in one line (what it adds, tests, verdicts) with its `/merge` line; or "nothing".
+- **Main health:** from STATE.md (CI and local tests).
+- **Last cycle:** number, when, and what it did, in one sentence. **Next:** the intended next step.
+- **Top ideas:** the 5 highest-scored with verdicts. **Tasks:** in progress / blocked / needs-owner.
+- **Commands:** `/merge <branch>`, `/cycle` (run one now), and anything in INBOX "Needs the owner".

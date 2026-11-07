@@ -1,7 +1,8 @@
 # Ideas backlog
 
 Statuses: new · researching · designed · approved · in progress · done · rejected (with reason).
-Every idea needs evidence, a fit with existing systems, and a safety note. Only the owner approves.
+Every idea needs evidence, a fit with existing systems, and a safety note. The idea-critic adds `score NN/50, VERDICT`
+(rubric in SCORING.md) to the Notes; the coordinator builds the highest-scoring BUILD idea. Only the owner approves merges.
 
 | Id | Idea | Origin | Value | Effort | Status | Notes |
 |---|---|---|---|---|---|---|

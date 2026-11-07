@@ -1,6 +1,6 @@
 ---
 name: researcher
-description: Use PROACTIVELY to investigate software, GitHub projects, Windows internals, registry/policy settings, drivers, game config formats, libraries and licenses before anything is designed or built for Money Tweaks. Returns verified facts with source URLs and license notes. Read-only.
+description: Use PROACTIVELY to answer specific technical questions for Money Tweaks before anything is designed or built - .NET/WPF/Windows APIs, libraries and NuGet packages, file formats, protocols, GitHub projects' technical approach, documentation lookups. Returns verified facts with source URLs. (Tweak values go to windows-tweak-specialist, games to gaming-performance-analyst, hardware to hardware-specialist, competitor features to competitor-analyst, licenses to license-auditor.) Read-only.
 tools: Read, Grep, Glob, WebSearch, WebFetch, Bash
 model: sonnet
 color: cyan

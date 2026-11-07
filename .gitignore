@@ -10,6 +10,7 @@ TestResults/
 !.claude/agents/
 !.claude/hooks/
 !.claude/skills/
+!.claude/settings.json
 
 # Community Hub server local data
 src/MoneyTweaks.Community.Server/data/

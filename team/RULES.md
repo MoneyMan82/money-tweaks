@@ -37,3 +37,10 @@ The guard hook `.claude/hooks/agent_guard.py` blocks these commands. If you hit 
 ## Team files (in `team/`, maintained by the Chief Coordinator)
 - `ROADMAP.md` – direction and milestones · `IDEAS.md` – ideas backlog · `TASKS.md` – task queue · `LOG.md` – implementation log.
 Specialists return their results to the Coordinator, who records them. Specialists don't edit team files.
+
+## Autonomy
+- The team works on its own through `team/CYCLE.md`: it decides the next most valuable work, builds it on an agent
+  branch, verifies it, and puts it in `team/INBOX.md`. The owner only approves (`/merge <branch>`) or writes notes there.
+- During a cycle `.claude/autonomous-run` exists; the guard then applies the same limits to the main session (no push,
+  merge into main, tags, releases, deploys or destructive commands; main-checkout edits only in `team/`).
+- Main health comes first: a red CI or failing local test is fixed before any new feature.

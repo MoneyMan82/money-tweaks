@@ -21,6 +21,11 @@ def block(msg):
     sys.exit(2)
 
 
+def current_branch(cwd):
+    # symbolic-ref also works in a repository without commits; detached HEAD gives "".
+    return os.popen('git -C "%s" symbolic-ref --short -q HEAD' % cwd).read().strip()
+
+
 def norm(p):
     return os.path.normcase(os.path.abspath(p)).replace("\\", "/")
 
@@ -28,7 +33,7 @@ def norm(p):
 # Never allowed for any agent: these need the owner's approval.
 FORBIDDEN = [
     (r"\bgit\s+push\b", "pushing (any push can deploy: main deploys the website, other branches create Cloudflare previews)."),
-    (r"\bgit\s+merge\b", "merging branches."),
+    (r"\bgit\s+merge\b(?!\s+(--no-edit\s+|--no-ff\s+)*(origin/)?main\s*($|[;&|]))", "merging branches (only bringing main INTO an agent branch is allowed)."),
     (r"\bgit\s+(rebase|cherry-pick|am)\b", "rewriting or replaying history."),
     (r"\bgit\s+tag\b(?!\s+(-l|--list|--contains|--points-at|-n)\b)(?=\s+\S)", "creating or deleting tags (tags publish releases)."),
     (r"\bgit\s+reset\b[^|;&]*--hard", "git reset --hard."),
@@ -60,7 +65,47 @@ FORBIDDEN = [
 READONLY_BASH = re.compile(
     r"^\s*(git\s+(status|log|show|diff|branch|rev-parse|ls-files|ls-tree|grep|blame|describe|merge-base|shortlog|worktree\s+list|tag\s+(-l|--list|--contains|--points-at))\b"
     r"|dotnet\s+(--info|--version|--list-sdks|list\b)"
-    r"|(ls|pwd|wc|head|tail|cat|grep|find|file|stat|du|sort|uniq|diff)\b)")
+    r"|curl\s+(-[sSLf]+\s+)*https://(api\.github\.com|github\.com|learn\.microsoft\.com|raw\.githubusercontent\.com)/"
+    r"|(ls|pwd|wc|head|tail|cat|grep|find|file|stat|du|sort|uniq|diff|jq|date)\b)")
+
+MARKER_MAX_AGE_S = 4 * 3600  # an autonomous cycle that crashed stops enforcing after 4 hours
+
+
+def session_guard(tool, ti, cwd, project):
+    """Main session of an autonomous cycle (marker file .claude/autonomous-run is fresh): same hard limits as the
+    agents, edits only in team/ and agent worktrees, no commits on main. Inactive in the owner's normal sessions."""
+    marker = os.path.join(project, ".claude", "autonomous-run")
+    try:
+        import time
+        if time.time() - os.path.getmtime(marker) > MARKER_MAX_AGE_S:
+            sys.exit(0)
+    except OSError:
+        sys.exit(0)
+    proj = norm(project) + "/"
+    if tool == "Bash":
+        cmd = ti.get("command", "")
+        for pattern, why in FORBIDDEN:
+            if re.search(pattern, cmd, re.IGNORECASE | re.MULTILINE):
+                block(why + " (autonomous cycle)")
+        if re.search(r"\bgit\s+(commit|merge)\b", cmd, re.IGNORECASE):
+            head = current_branch(cwd)
+            if head in ("main", "master"):
+                block("committing or merging on main during an autonomous cycle (only the owner's /merge does that).")
+        sys.exit(0)
+    if tool in ("Edit", "Write", "NotebookEdit", "MultiEdit"):
+        path = ti.get("file_path") or ti.get("notebook_path") or ""
+        target = norm(path if os.path.isabs(path) else os.path.join(cwd, path))
+        if not target.startswith(proj):
+            sys.exit(0)  # scratch files outside the project
+        rel = target[len(proj):]
+        if rel.startswith("team/") or rel == ".claude/autonomous-run":
+            sys.exit(0)
+        if rel.startswith(".claude/worktrees/"):
+            inner = rel[len(".claude/worktrees/"):].split("/", 1)
+            if len(inner) == 2 and not inner[1].startswith((".claude/", ".github/", "team/")):
+                sys.exit(0)
+        block("during an autonomous cycle the main checkout only changes team/ files; code changes happen in agent worktrees.")
+    sys.exit(0)
 
 
 def main():
@@ -74,6 +119,9 @@ def main():
     project = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     in_worktree = "/.claude/worktrees/" in norm(cwd) + "/"
 
+    if mode == "session":
+        session_guard(tool, ti, cwd, project)
+
     if tool == "Bash":
         cmd = ti.get("command", "")
         for pattern, why in FORBIDDEN:
@@ -83,15 +131,15 @@ def main():
             parts = [p for p in re.split(r"\|\||&&|;|\|", cmd) if p.strip()]
             if not parts or not all(READONLY_BASH.match(p) for p in parts):
                 block("this agent only runs read-only inspection commands (git status/log/diff/show, ls, grep, cat...).")
-            if re.search(r"(^|[^<>&0-9])>{1,2}\s*[^&\s]|\btee\b|\bsed\s+-i|\s-delete\b|\s-exec(dir)?\b|\s-ok\b", cmd):
+            if re.search(r"(^|[^<>&0-9])>{1,2}\s*[^&\s]|\btee\b|\bsed\s+-i|\s-delete\b|\s-exec(dir)?\b|\s-ok\b|\bcurl\b[^|;&]*\s(-o|-O|--output|--remote-name)\b", cmd):
                 block("this agent may not write files from the shell.")
         else:
             if not in_worktree:
                 block("coding and testing agents must run in their own worktree under .claude/worktrees/, not in the main checkout.")
-            if re.search(r"\bgit\s+(commit|checkout|switch)\b", cmd, re.IGNORECASE):
-                head = os.popen('git -C "%s" rev-parse --abbrev-ref HEAD' % cwd).read().strip()
-                if re.search(r"\bgit\s+commit\b", cmd, re.IGNORECASE) and head in ("main", "master"):
-                    block("committing on main.")
+            if re.search(r"\bgit\s+(commit|checkout|switch|merge)\b", cmd, re.IGNORECASE):
+                head = current_branch(cwd)
+                if re.search(r"\bgit\s+(commit|merge)\b", cmd, re.IGNORECASE) and head in ("main", "master"):
+                    block("committing or merging on main.")
                 if re.search(r"\bgit\s+(checkout|switch)\s+(main|master)\b", cmd, re.IGNORECASE):
                     block("switching to main.")
             if mode == "tester" and re.search(r"\bgit\s+commit\b", cmd, re.IGNORECASE):
@@ -103,7 +151,7 @@ def main():
         target = norm(path if os.path.isabs(path) else os.path.join(cwd, path))
         if mode == "coordinator":
             team = norm(os.path.join(project, "team")) + "/"
-            if not target.startswith(team):
+            if not target.startswith(team) and target != norm(os.path.join(project, ".claude", "autonomous-run")):
                 block("the Chief Coordinator only edits the team files in team/ (roadmap, ideas, tasks, log).")
             sys.exit(0)
         if mode in ("readonly", "tester"):

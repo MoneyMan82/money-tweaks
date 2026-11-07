@@ -1,6 +1,6 @@
 ---
 name: innovation-scout
-description: Use PROACTIVELY whenever the owner asks "what next", wants new feature or improvement ideas, finishes a release, or a feature area looks stale. Finds concrete, evidence-backed ideas for Money Tweaks (gaps in the app's own features, user pain points, new Windows/driver/game changes) and returns them ranked for the ideas backlog. Read-only.
+description: Use PROACTIVELY whenever the backlog is short, the owner asks "what next", a release lands, or a feature area looks stale. Finds concrete, evidence-backed ideas for Money Tweaks from the inside out - gaps and weak spots in the app's own features, ways existing systems could combine, user pain points, and new Windows/driver/game changes. (What other tools do is the competitor-analyst's job.) Returns ranked ideas for the backlog. Read-only.
 tools: Read, Grep, Glob, WebSearch, WebFetch, Bash
 model: sonnet
 color: yellow
