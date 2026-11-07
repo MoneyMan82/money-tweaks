@@ -22,6 +22,10 @@ Read with `PROGRESS.md` (decisions and gotchas). Facts here were checked against
 - `Engine/TweakEngine.cs`: Apply (backup first via BackupStore, apply steps, roll back on failure, read-back),
   Undo, GetState. `BackupStore` = one JSON per tweak in `%LOCALAPPDATA%\MoneyTweaks\backups`, written with
   `Sys/AtomicFile`. `TweakVerifier` = Verify / RoundTrip / RestoreMismatches. Known weaknesses: FINDINGS.md (T-006..T-008).
+  Pending on `agent/T-006-backup-identity` (not merged yet): backups v2 - each OpBackup has an `Id` (= op.OpKey,
+  `BackupKind|...`), `Engine/BackupMatch.cs` matches backups to ops by identity (old Id-less files: positional only when
+  count and kinds match, else refused), failed Apply rolls back to a pre-click snapshot incl. the failing step,
+  `backups\orphaned\` holds archived/orphaned entries, DynamicRegOp requires an `Id`. Backup file contents are untrusted.
 - Catalog: `Catalog/TweakCatalog*.cs` (Build, Extra, Expanded (1.79, with Source), Debloat, Services, Apps...).
   Helpers T, CU, LM, CUs, LMs, Cmd, Ps.
 - UI flow: TweakService.ToggleAsync/BatchAsync -> Compatibility check, Conflict Radar, admin, restore point -> engine.
