@@ -27,3 +27,4 @@ worker/.dev.vars
 # Source GPU models supplied for review (one is 209 MB, one may not be redistributed). Only the verified
 # files copied to src/MoneyTweaks/Assets/Gpu are part of the project.
 gpusByMe/
+__pycache__/
