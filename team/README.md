@@ -1,6 +1,6 @@
 # Money Tweaks agent team
 
-Eight Claude Code subagents, defined in `.claude/agents/`, with shared rules in `team/RULES.md` and a guard hook in
+Nine Claude Code subagents, defined in `.claude/agents/`, with shared rules in `team/RULES.md` and a guard hook in
 `.claude/hooks/agent_guard.py`.
 
 | Agent | Job | Access | Model |
@@ -13,6 +13,18 @@ Eight Claude Code subagents, defined in `.claude/agents/`, with shared rules in 
 | `ui-designer` | WPF layout, theme, animations, accessibility | Edits and commits in its **own worktree** | opus |
 | `tester` | Builds, runs all test suites, reviews diffs, reports bugs | Runs builds/tests in its **own worktree**; no edits or commits | sonnet |
 | `security-reviewer` | Safety and vulnerability verdict for every branch | Read-only | opus |
+| `code-reviewer` | Inspects existing code for bugs and improvements | Read-only | opus |
+
+## Quick commands (type these in Claude Code)
+| Command | What happens |
+|---|---|
+| `/team` | Status: what's waiting for your approval, top ideas, tasks, last activity |
+| `/ideas` or `/ideas networking` | The Innovation Scout finds 5 new ideas and adds them to the backlog |
+| `/check` or `/check Autopilot` | The Code Reviewer looks for bugs in that area (read-only) |
+| `/build I-006` | The team researches, designs, codes and tests that idea on its own branch, then stops for you |
+| `/merge <branch>` | Your approval: merge that branch into main and release it |
+
+Nothing is merged, released or deployed until you type `/merge`.
 
 ## How to use it
 - **Run the whole team:** start Claude Code with the coordinator as the main agent:

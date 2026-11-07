@@ -17,3 +17,9 @@ Append-only. Newest at the bottom. Each entry: date, agent(s), what was done, br
 - Each run carries the backlog forward from the newest unmerged `claude/cycle-*` branch's team/ files.
 - Known limits: the cloud is Linux, so the WPF build and main tests run only in GitHub Actions on the draft PR; every
   pushed branch gets a Cloudflare preview build (production untouched).
+
+## 2026-11-07 – First real agent runs (owner's main session)
+- Added `code-reviewer` (read-only) to `.claude/agents/`.
+- innovation-scout ran on the real repo (read-only, no files changed): 5 ideas, added as I-006..I-010. Registry keys and
+  event IDs it cited are unverified (no web search in that run).
+- Added owner commands in `.claude/skills/`: /team, /ideas, /check, /build, /merge.

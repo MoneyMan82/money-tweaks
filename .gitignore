@@ -9,6 +9,7 @@ TestResults/
 .claude/*
 !.claude/agents/
 !.claude/hooks/
+!.claude/skills/
 
 # Community Hub server local data
 src/MoneyTweaks.Community.Server/data/
