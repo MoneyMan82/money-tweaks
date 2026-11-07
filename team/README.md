@@ -16,8 +16,8 @@ and reviews it, and leaves it ready for your approval. **Your only job: approve 
 Nothing is merged, pushed, released or deployed until you type `/merge`.
 
 ## How it runs by itself
-- A scheduled task in the Claude desktop app (**Money Tweaks cycle**) runs `/cycle` every 4 hours on this PC, so it
-  can use the full Windows build and all tests. It runs while the Claude app is open; if the app was closed, it runs
+- A scheduled task in the Claude desktop app (**Money Tweaks cycle**, set up once by the owner - see INBOX) runs `/cycle`
+  every 4 hours on this PC, so it can use the full Windows build and all tests. It runs while the Claude app is open; if the app was closed, it runs
   on next launch. Manage it in the app's scheduled tasks list (pause, run now, change the time).
 - If a game is running when a cycle starts, it does a quiet cycle (research and reviews only, no builds or tests).
 - Each cycle follows `team/CYCLE.md`:
