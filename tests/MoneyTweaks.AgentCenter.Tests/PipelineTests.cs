@@ -174,7 +174,7 @@ public sealed class PipelineTests : IDisposable
     }
 
     [Fact]
-    public void Pause_control_holds_the_tool_call_until_resumed()
+    public async Task Pause_control_holds_the_tool_call_until_resumed()
     {
         var control = new Controls(Path.Combine(Data, "control"));
         control.PauseAll();
@@ -183,7 +183,7 @@ public sealed class PipelineTests : IDisposable
         Thread.Sleep(2500);
         Assert.False(t.IsCompleted, "the hook should wait while paused");
         control.ResumeAll();
-        Assert.True(t.Wait(10_000));
+        Assert.Same(t, await Task.WhenAny(t, Task.Delay(10_000)));
         Assert.True(sw.Elapsed > TimeSpan.FromSeconds(2));
         Assert.Contains(Spooled(), e => e.Type == "paused" && e.Status == AgentStatus.Paused);
         Assert.Contains(Spooled(), e => e.Type == "resumed");
