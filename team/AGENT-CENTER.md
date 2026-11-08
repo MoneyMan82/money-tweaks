@@ -29,8 +29,17 @@ To update the installed copy after code changes:
   minutes, then continues). Long-running tool calls finish first.
 - **Stop agent:** that agent's next tool calls are refused with an instruction to report and stop (it can still report).
 - **Restart agent:** not available - Claude Code has no supported way for another program to restart an agent.
-- **Brainstorm:** writes an owner note in `team/INBOX.md`; the next `/cycle` runs the competition. The app can't start a
-  Claude Code session itself.
+- **Run cycle now / Brainstorm now / Stop run (RUNS tab and header):** the app starts a real Claude Code session with
+  the official CLI in non-interactive mode - `claude -p "<prompt>" --permission-mode dontAsk --allowedTools ...` - in
+  the workspace. It writes `.claude/autonomous-run` first (guard active from the first tool call) and removes it when
+  the run ends. One run at a time; refused while a game is running. The log of each run is kept in
+  `%LOCALAPPDATA%\MoneyTweaksAgentCenter\runs\`.
+- **Automatic cycles:** off / every 1-24 hours / daily at a time, chosen in the RUNS tab. Only while the app is open;
+  a due cycle waits while a game is running.
+- **Sign-in:** the CLI has its own sign-in (the desktop app's isn't shared with other programs). "Sign in to Claude
+  Code" opens `claude auth login`; the owner finishes it in the browser once. `claude auth status` is checked without
+  using any plan usage. The CLI is the copy bundled with the Claude desktop app (newest version), `~/.local/bin`, PATH,
+  or `claudePath` in the app's settings.json.
 - Connection indicator: LIVE (events in the last 2 minutes), LISTENING (pipe open, quiet), OFFLINE (pipe not open),
   HOOKS MISSING (settings.json doesn't call the publisher). Agents silent for 15+ minutes are marked QUIET.
 
