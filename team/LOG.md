@@ -63,3 +63,37 @@ Append-only. Newest at the bottom. Each entry: date, agent(s), what was done, br
   `git merge-tree`/`git merge-base`; PowerShell game check blocked in worktrees; ci-investigator can't run; the
   docs-writer can't add to a branch checked out in another worktree (agents can't merge branches) - have the developer
   include the docs-writer's text, or run the docs-writer after the last fix round.
+
+## 2026-11-08 – Cycle 2 (started from the Agent Command Center)
+- **Start:** marker written 14:16; no game running. Owner note in INBOX (14.01): run a brainstorming competition.
+- **Health:** ci-investigator (via WebFetch; curl still blocked) - CI green on the last 8 main commits incl. 696c2f8
+  (build, linux, worker, Cloudflare); release v1.80.0 has all 6 assets (hashes not checked). tester on main 696c2f8:
+  build 0 errors / 15 warnings (new: xUnit1031 AgentCenter PipelineTests.cs:186 -> added to T-010); tests 556/556,
+  27/27, 21/21, AgentCenter 32/32. Main healthy.
+- **"What is the next most valuable thing?"** 1) main broken? No. 2) owner feedback? Yes - the brainstorm request ->
+  do it. Also 3) applied in parallel (independent, cheap): the INBOX branch was 5 main commits behind and both sides had
+  edited CHANGELOG.md -> refresh it. The read-only brainstorm was started alongside the health check because it doesn't
+  touch builds or tests.
+- **Branch refresh:** developer created `agent/T-006-backup-identity-r2` from the INBOX branch and merged main 696c2f8
+  into it (7703d9e; only conflict CHANGELOG.md - entry kept under Unreleased above 1.80). Tests 600/27/21/32, 15
+  warnings (same as main). Coordinator check: the merge only touched files main changed, and the src/tests diff vs main
+  is byte-identical to the reviewed branch, so cycle 1's code-review and security verdicts still apply (not re-run).
+  INBOX now says `/merge agent/T-006-backup-identity-r2`.
+- **Brainstorm (discovery, area: tweaks):** innovation-scout 5 (Wi-Fi Doctor, Power Mode Guard, Spike Culprit, Session
+  Recap, Known Issues Watch), competitor-analyst 5 (Leftover Policy Finder, Inherited Tweaks Review, Setup Restore,
+  Telemetry Proof, Game Compatibility Components), windows-tweak-specialist 5 (edition gating, AI-tweak update, placebo
+  pass, OneDrive KFM block, present-mode readout) + a catalog audit. idea-critic scored all 15 -> IDEAS.md I-011..I-025:
+  BUILD I-011 42, I-012 40, I-013 36, I-014 35 (merged into I-011), I-015 35, I-016 34 (needs-evidence); 8 REWORK;
+  REJECT I-025 Telemetry Proof 18 (fails Honest gate). Critic corrected proposers: 3 duplicate existing systems
+  (net.adapter-power, TweakAudit notes, BottleneckEngine, Autopilot summary, Presets export).
+- **New tasks:** T-013 (dbl.onedrive-presignin wrong key/undo), T-014 (verify 4 unconfirmed catalog doubts), T-015
+  (edition gating, I-011+I-014), T-016 (placebo pass, I-012). Owner decision in INBOX: `adv.vbs-hvci` (already blocked
+  from Apply; only wording/visibility). Knowledge: WINDOWS-TWEAKS.md (CSP facts), COMPETITORS.md (5 tools checked).
+- **Not done this cycle:** no new feature built (the owner's request was the cycle's unit of work; the next build needs a
+  Step 4 design). `.claude/autonomous-run` was left in place - this run's instructions forbid deleting files; it expires
+  after 4 hours.
+- **Agents used:** ci-investigator, tester, developer, innovation-scout, competitor-analyst, windows-tweak-specialist,
+  idea-critic - all as their real agent types.
+- **Process issues (for process-improver, cycle 3):** read-only agents' progress notes are refused when chained with
+  `&&` (two agents published nothing); `git merge-base` still blocked for the coordinator; ci-investigator brief used
+  the wrong repo slug (it's `money-tweaks`); the PowerShell game check is still blocked in worktrees (`tasklist` used).

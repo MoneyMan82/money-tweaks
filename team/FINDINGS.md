@@ -29,3 +29,24 @@ relevant ones in briefs. Newest at the bottom. Format: date · agent · area · 
   and the app may run elevated: never build file paths or registry locations from file contents (TweakId, Id, keys);
   use catalog ids/ops, check containment, refuse reparse points. Tampered VALUES at declared locations remain possible
   (inherent to user-writable backups). App-data root junction not yet checked (T-011).
+- 2026-11-08 · owner's session · guard · Gap: during a cycle the session guard blocks Edit/Write outside team/, but a
+  shell command that writes files (e.g. a python script) in the main checkout is not blocked. The owner's session did
+  this by accident while cycle 2 ran and restored the files with `git stash` (nothing committed). Fix idea (owner
+  approval, .claude/hooks): in session mode, block Bash commands that write into the main checkout outside team/.
+- 2026-11-08 · owner's session · Command Center · "Tests pass / fail" summed every test run of the day (1486 / 2 =
+  16 runs; the 2 failures were fixed minutes later). Change to "latest result per suite" is stashed
+  (stash "tests-now stat") and goes in after cycle 2.
+- 2026-11-08 · windows-tweak-specialist + idea-critic (cycle 2) · tweak catalog · `Tweak.Editions` is only a display
+  string (Tweak.cs:48, set on 2 of 401 tweaks). Enterprise/Education-only Experience CSP policies make `dbl.spotlight`
+  (Debloat.cs:126) and `dbl.settings-365-ads` (Expanded.cs:177) read "Applied" on Home/Pro while doing nothing; HKLM
+  parts of `dbl.consumer-features`/`dbl.tips` likewise. CSP edition tables have no Home column - "Pro: yes" proves
+  nothing for Home · MS Experience/WindowsAI CSP pages · confirmed by critic, task T-015.
+- 2026-11-08 · windows-tweak-specialist + idea-critic (cycle 2) · tweak catalog · MMCSS: 3 of `adv.games-task`'s 4
+  values do nothing (GPU/SFIO Priority unused; Priority=2 under High). `net.throttling-index` is Recommended + reboot
+  although TweakAudit already marks it ineffective · MS MMCSS page, TweakAudit.cs:38 · task T-016.
+- 2026-11-08 · idea-critic (cycle 2) · network · Since Windows 11 24H2 `netsh wlan show interfaces` is Access denied
+  unless Location services are on - our own location-disabling tweak (Debloat.cs:54) triggers it. Any Wi-Fi feature
+  must handle that · https://learn.microsoft.com/en-us/windows/win32/nativewifi/wi-fi-access-location-changes.
+- 2026-11-08 · ci-investigator (cycle 2) · CI · Repo slug is `MoneyMan82/money-tweaks` (not MoneyTweaks). curl is still
+  blocked for read-only agents; WebFetch on api.github.com works. Read-only agents' progress notes are refused when
+  chained with other commands (`&&`) - publish them as a standalone command.
