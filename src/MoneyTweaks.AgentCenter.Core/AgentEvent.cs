@@ -30,6 +30,8 @@ public sealed class AgentEvent
     public string? Task { get; set; }
     public string? Phase { get; set; }
     public string? Summary { get; set; }
+    /// <summary>Full text of a brief, report, message or statement (conversation view); Summary is its one-line form.</summary>
+    public string? Message { get; set; }
     public string? Decision { get; set; }
     public string? Why { get; set; }
     public string? Next { get; set; }

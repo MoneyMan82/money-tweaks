@@ -49,6 +49,7 @@ public static partial class Sanitizer
         e.Task = Text(e.Task, 600);
         e.Phase = Text(e.Phase, 200);
         e.Summary = Text(e.Summary, 2000);
+        e.Message = Text(e.Message, 12000);
         e.Decision = Text(e.Decision, 600);
         e.Why = Text(e.Why, 600);
         e.Next = Text(e.Next, 400);

@@ -15,6 +15,9 @@ public sealed class Hub : IDisposable
     public Controls Controls { get; }
     public PipeListener Pipe { get; }
     public SpoolImporter Spool { get; }
+    public TranscriptReader Transcripts { get; }
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(string Session, string Agent), DateTimeOffset> _active = new();
+    private readonly Timer _transcriptTimer;
     public FileMonitor? Files { get; private set; }
     public TeamState Live { get; } = new();
     public List<RegisteredAgent> Registry { get; private set; } = [];
@@ -37,17 +40,20 @@ public sealed class Hub : IDisposable
         Pipe = new PipeListener(Ingest, pipeName);
         Spool = new SpoolImporter(SpoolFolder, Store, Ingest);
         _spoolTimer = new Timer(_ => { try { Spool.ImportNew(); } catch { } }, null, Timeout.Infinite, Timeout.Infinite);
+        Transcripts = new TranscriptReader(Ingest, DateTimeOffset.Now.Add(-_liveWindow));
+        _transcriptTimer = new Timer(_ => PollTranscripts(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     /// <summary>Loads recent history into the live view, imports anything spooled while closed, then starts listening.</summary>
     public void Start(bool watchFiles = true, bool listen = true)
     {
         Registry = AgentRegistry.Load(Workspace);
-        foreach (var e in Store.Since(DateTimeOffset.Now.Add(-_liveWindow).ToUnixTimeMilliseconds())) Live.Apply(e);
-        if (!listen) return;   // read-only viewer (screenshot mode): another instance owns the pipe and the spool
+        foreach (var e in Store.Since(DateTimeOffset.Now.Add(-_liveWindow).ToUnixTimeMilliseconds())) { Live.Apply(e); Track(e); }
+        if (!listen) { PollTranscripts(); return; }   // viewer (screenshot mode): another instance owns the pipe and the spool
         Spool.ImportNew();
         Pipe.Start();
         _spoolTimer.Change(2000, 2000);   // catch-up for anything the pipe missed
+        _transcriptTimer.Change(500, 1500);
         if (watchFiles) { Files = new FileMonitor(Workspace, OnFilesChanged); Files.Start(); }
     }
 
@@ -58,7 +64,8 @@ public sealed class Hub : IDisposable
     {
         if (!Store.Add(e)) return;   // already have it (pipe and spool both deliver)
         Interlocked.Increment(ref Received);
-        LastEventAt = DateTimeOffset.Now;
+        if (e.Source != "transcript") LastEventAt = DateTimeOffset.Now;
+        Track(e);
         _queue.Enqueue(e);
     }
 
@@ -74,6 +81,29 @@ public sealed class Hub : IDisposable
             if (changed is null) continue;
             foreach (var full in group.Where(changed.Contains)) OnFileChanged(full);
         }
+    }
+
+    private void Track(AgentEvent e)
+    {
+        if (e.Source is "hook" or "agent" && e.Agent != "filesystem" && e.Session != "unknown") _active[(e.Session, e.Agent)] = e.Time;
+    }
+
+    private int _polling;
+
+    /// <summary>Reads new conversation from the transcripts of agents active in the last 30 minutes (once more after that).</summary>
+    private void PollTranscripts()
+    {
+        if (Interlocked.Exchange(ref _polling, 1) == 1) return;
+        try
+        {
+            var cutoff = DateTimeOffset.Now.AddMinutes(-30);
+            var who = _active.Where(kv => kv.Value >= cutoff).Select(kv => kv.Key).ToList();
+            Transcripts.Poll(who);
+            foreach (var old in _active.Where(kv => kv.Value < cutoff).Select(kv => kv.Key).ToList())
+                if (_active.TryRemove(old, out _)) Transcripts.Poll([old]);   // final read before forgetting it
+        }
+        catch { }
+        finally { Interlocked.Exchange(ref _polling, 0); }
     }
 
     private void OnFileChanged(string full)
@@ -111,6 +141,7 @@ public sealed class Hub : IDisposable
     public void Dispose()
     {
         _spoolTimer.Dispose();
+        _transcriptTimer.Dispose();
         Files?.Dispose();
         Pipe.Dispose();
         Store.Dispose();

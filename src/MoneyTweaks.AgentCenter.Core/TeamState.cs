@@ -77,6 +77,23 @@ public sealed record FeedItem(DateTimeOffset Time, string AgentId, string AgentT
     public long Seq { get; init; }
 }
 
+/// <summary>
+/// One line of the team conversation: the owner's instruction, a brief from one agent to another, a report back, a
+/// message, what an agent wrote while working (from its transcript), a progress note, or a tool call.
+/// </summary>
+public sealed class ChatItem
+{
+    public required DateTimeOffset Time { get; init; }
+    public required string FromId { get; init; }
+    public required string Kind { get; init; }   // owner, brief, report, message, say, note, tool, system
+    public string? ToName { get; set; }
+    public string? Summary { get; set; }
+    public string? Text { get; set; }
+    public string? UseId { get; init; }
+    public required string EventId { get; init; }
+    public long Seq { get; set; }
+}
+
 public sealed class Stats
 {
     public int ActiveAgents, CompletedTasks, InProgress, Failed, ResearchDiscoveries, CodeChanges, TestsPassed, TestsFailed, Delegations, Errors;
@@ -94,7 +111,14 @@ public sealed class TeamState
     public Dictionary<string, FileActivity> FileMap { get; } = new(StringComparer.OrdinalIgnoreCase);
     public List<ResearchItem> Research { get; } = [];
     public List<FeedItem> Feed { get; } = [];
+    public List<ChatItem> Conversation { get; } = [];
+    private readonly Dictionary<string, ChatItem> _chatByUse = new(StringComparer.Ordinal);
+    /// <summary>Sessions whose main agent runs the team (its instruction was the cycle, a brainstorm or /cycle).</summary>
+    private readonly HashSet<string> _coordinatorSessions = new(StringComparer.Ordinal);
+    private long _chatSeq;
     public Stats Stats { get; } = new();
+    /// <summary>Latest result of each test suite (a later run replaces an earlier one), for the "tests now" figure.</summary>
+    public Dictionary<string, (DateTimeOffset Time, TestRun Run)> LatestTests { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Workspace? Workspace { get; set; }
     public int MaxFeed { get; set; } = 5000;
     private readonly Dictionary<string, Queue<(string From, string? Label, string? Task)>> _pendingDelegations = new();
@@ -129,9 +153,19 @@ public sealed class TeamState
         if (a.Worktree is null && Workspace?.WorktreeName(e.Cwd) is { } wt) a.Worktree = wt;
         if (e.Status is { } st && e.Type != "tool_end" && a.Status != AgentStatus.Paused) a.Status = st;
 
+        Chat(e, a);
         switch (e.Type)
         {
+            case "say":
+                return;   // conversation only
+            case "brief":
+            case "message" when e.Source == "transcript":
+                return;   // hook "delegate"/"message" events already drive the graph and statuses
+            case "report" when e.Source == "transcript":
+                if (e.Message is not null) a.Report = e.Message;
+                return;
             case "task":
+                if (IsCoordinatorPrompt(e.Task)) _coordinatorSessions.Add(e.Session);
                 a.Task = e.Task; a.Ended = null; a.Report = null;
                 if (a.IsMain) a.Started = e.Time;
                 Add(e, a, "task", "New task: " + Short(e.Task, 160), e.Task);
@@ -238,6 +272,11 @@ public sealed class TeamState
                     var sum = new TestRun { Passed = tests.Sum(t => t.Passed), Failed = tests.Sum(t => t.Failed), Skipped = tests.Sum(t => t.Skipped), Total = tests.Sum(t => t.Total) };
                     a.LastTests = sum;
                     Stats.TestsPassed += sum.Passed; Stats.TestsFailed += sum.Failed;
+                    foreach (var t in tests)
+                    {
+                        var suite = t.Suite ?? "tests";
+                        if (!LatestTests.TryGetValue(suite, out var prev) || prev.Time <= e.Time) LatestTests[suite] = (e.Time, t);
+                    }
                     foreach (var path in a.Files) if (FileMap.TryGetValue(path, out var changed) && changed.LastChange <= e.Time) changed.TestsAfter = sum;
                     Add(e, a, sum.Failed > 0 ? "error" : "test", e.Summary ?? $"Tests: {sum.Passed} passed, {sum.Failed} failed", string.Join("\n", tests.Select(t => $"{t.Suite}: {t.Passed} passed, {t.Failed} failed, {t.Skipped} skipped")));
                 }
@@ -266,6 +305,87 @@ public sealed class TeamState
                 break;
         }
     }
+
+    /// <summary>Adds the event to the conversation (transcript text wins over the hook's shorter copy of the same call).</summary>
+    private void Chat(AgentEvent e, AgentInstance a)
+    {
+        string? kind = e.Type switch
+        {
+            "task" => "owner", "say" => "say", "brief" or "delegate" => "brief", "report" => "report", "message" => "message",
+            "progress" => "note", "agent_start" or "agent_stop" or "paused" or "resumed" => "system", "blocked" => "note",
+            "tool_start" => "tool", "research" => "tool", "test_result" => "note", _ => null,
+        };
+        if (kind is null) return;
+        var useId = e.Tool?.UseId;
+        var to = kind switch
+        {
+            "brief" or "message" => e.To,
+            "report" => a.ParentId is { } p && Agents.TryGetValue(p, out var parent) ? (parent.IsMain ? "chief-coordinator" : parent.Type) : "chief-coordinator",
+            "owner" => a.IsMain ? "chief-coordinator" : a.Type,
+            _ => null,
+        };
+        var text = kind switch
+        {
+            "owner" => e.Task,
+            "brief" => e.Message ?? e.Task,
+            "note" => string.Join("\n", new[] { e.Summary, e.Phase is null ? null : "Phase: " + e.Phase,
+                e.Findings is { Count: > 0 } f ? "Found: " + string.Join("; ", f) : null,
+                e.Decision is null ? null : "Decided: " + e.Decision + (e.Why is null ? "" : " — " + e.Why),
+                e.Next is null ? null : "Next: " + e.Next, e.NeedsHelp is null ? null : "Needs help from: " + e.NeedsHelp,
+                e.Error ?? e.Blocker }.Where(x => !string.IsNullOrWhiteSpace(x))),
+            "tool" => e.Tool?.Target ?? e.Summary,
+            _ => e.Message ?? e.Summary,
+        };
+        var summary = kind switch
+        {
+            "system" => e.Summary,
+            "tool" => (e.Tool?.Name ?? "Tool") + (e.Tool?.Target is { } t ? ": " + t : ""),
+            _ => e.Summary,
+        };
+        if (useId is not null && kind is "brief" or "report" or "message" && _chatByUse.TryGetValue(useId, out var existing))
+        {
+            // Same call seen twice (hook + transcript): keep one, with the longer text.
+            if ((text?.Length ?? 0) > (existing.Text?.Length ?? 0)) existing.Text = text;
+            existing.ToName ??= to;
+            return;
+        }
+        if (kind == "report" && text is { Length: > 0 })
+        {
+            // Agents usually write their final message and hand the same text back: show it once, as the report.
+            var dup = Conversation.LastOrDefault(c => c.FromId == a.Id && c.Kind == "say" && (e.Time - c.Time).Duration() < TimeSpan.FromMinutes(2));
+            if (dup?.Text is { } said && Similar(said, text)) Conversation.Remove(dup);
+        }
+        var item = new ChatItem { Time = e.Time, FromId = a.Id, Kind = kind, ToName = to, Summary = summary, Text = text, UseId = useId, EventId = e.Id, Seq = ++_chatSeq };
+        if (useId is not null && kind is "brief" or "report" or "message") _chatByUse[useId] = item;
+        // Transcript lines can arrive a moment after hook events: keep the list in time order.
+        var idx = Conversation.Count;
+        while (idx > 0 && Conversation[idx - 1].Time > item.Time) idx--;
+        Conversation.Insert(idx, item);
+        if (Conversation.Count > MaxFeed * 2) Conversation.RemoveRange(0, Conversation.Count - MaxFeed * 2);
+    }
+
+    private static bool Similar(string a, string b)
+    {
+        static string N(string s) => string.Join(" ", s.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        var x = N(a); var y = N(b);
+        var n = Math.Min(160, Math.Min(x.Length, y.Length));
+        return n > 20 && string.Compare(x, 0, y, 0, n, StringComparison.Ordinal) == 0;
+    }
+
+    /// <summary>Display name of an agent instance: the main agent is the Chief Coordinator once it delegates.</summary>
+    public string NameOf(string id) => Agents.TryGetValue(id, out var a)
+        ? (a.IsMain ? (_coordinatorSessions.Contains(a.Session) ? "chief-coordinator" : "Claude · your session") : a.Type)
+        : id;
+
+    /// <summary>The cycle, a brainstorm or /cycle: the main agent of that session is the Chief Coordinator.</summary>
+    public static bool IsCoordinatorPrompt(string? task) => task is not null &&
+        (task.StartsWith("Run one autonomous development cycle", StringComparison.OrdinalIgnoreCase)
+         || task.StartsWith("Act as the Chief Coordinator", StringComparison.OrdinalIgnoreCase)
+         || task.TrimStart().StartsWith("/cycle", StringComparison.OrdinalIgnoreCase)
+         || task.Contains("<command-name>/cycle</command-name>", StringComparison.OrdinalIgnoreCase)
+         || task.TrimStart().StartsWith("/build", StringComparison.OrdinalIgnoreCase));
+
+    public bool IsCoordinator(AgentInstance a) => a.IsMain && _coordinatorSessions.Contains(a.Session);
 
     private static string? Detail(AgentEvent e)
     {
