@@ -54,6 +54,30 @@ public class WorkspaceTests
     }
 
     [Fact]
+    public void Only_files_git_reports_as_changed_count_as_changes()
+    {
+        var root = Directory.CreateTempSubdirectory("mt-git-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "MoneyTweaks.slnx"), "<Solution/>");
+            Directory.CreateDirectory(Path.Combine(root, ".claude"));
+            var ws = new Workspace(root);
+            Assert.NotNull(ws.Git(root, "init", "-q"));
+            ws.Git(root, "-c", "user.email=t@t", "-c", "user.name=t", "add", "-A");
+            ws.Git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "x");
+            File.WriteAllText(Path.Combine(root, "MoneyTweaks.slnx"), "<Solution/>");   // rewritten, identical (like a checkout)
+            Directory.CreateDirectory(Path.Combine(root, "sub dir"));
+            File.WriteAllText(Path.Combine(root, "sub dir", "new.txt"), "hi");          // untracked, path with a space
+            var changed = ws.ChangedFiles(root)!;
+            Assert.DoesNotContain(Path.Combine(root, "MoneyTweaks.slnx"), changed);
+            Assert.Contains(Path.Combine(root, "sub dir", "new.txt"), changed);
+            File.WriteAllText(Path.Combine(root, "MoneyTweaks.slnx"), "<Solution>changed</Solution>");
+            Assert.Contains(Path.Combine(root, "MoneyTweaks.slnx"), ws.ChangedFiles(root)!);
+        }
+        finally { try { foreach (var f in Directory.GetFiles(root, "*", SearchOption.AllDirectories)) File.SetAttributes(f, FileAttributes.Normal); Directory.Delete(root, true); } catch { } }
+    }
+
+    [Fact]
     public void Store_deduplicates_and_searches()
     {
         var path = Path.Combine(Path.GetTempPath(), "mt-store-" + Guid.NewGuid().ToString("N") + ".db");

@@ -48,7 +48,7 @@ public sealed class Hub : IDisposable
         Spool.ImportNew();
         Pipe.Start();
         _spoolTimer.Change(2000, 2000);   // catch-up for anything the pipe missed
-        if (watchFiles) { Files = new FileMonitor(Workspace, OnFileChanged); Files.Start(); }
+        if (watchFiles) { Files = new FileMonitor(Workspace, OnFilesChanged); Files.Start(); }
     }
 
     public void ReloadRegistry() => Registry = AgentRegistry.Load(Workspace);
@@ -62,9 +62,22 @@ public sealed class Hub : IDisposable
         _queue.Enqueue(e);
     }
 
+    /// <summary>
+    /// Only files git reports as modified or new become events: creating a worktree writes thousands of files that are
+    /// identical to HEAD, and those are not changes. One `git status` per checkout per batch.
+    /// </summary>
+    private void OnFilesChanged(IReadOnlyList<string> files)
+    {
+        foreach (var group in files.Where(File.Exists).GroupBy(Workspace.CheckoutOf, StringComparer.OrdinalIgnoreCase))
+        {
+            var changed = Workspace.ChangedFiles(group.Key);
+            if (changed is null) continue;
+            foreach (var full in group.Where(changed.Contains)) OnFileChanged(full);
+        }
+    }
+
     private void OnFileChanged(string full)
     {
-        if (!File.Exists(full)) return;
         var checkout = Workspace.CheckoutOf(full);
         var stat = Workspace.NumStat(full);
         Ingest(new AgentEvent

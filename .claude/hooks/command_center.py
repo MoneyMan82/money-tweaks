@@ -177,8 +177,13 @@ def build(d):
     elif ev == "SessionEnd":
         e = base_event(d, "session_end"); e["summary"] = clean("Session ended (" + str(d.get("reason") or "") + ")"); out.append(e)
     elif ev == "UserPromptSubmit":
-        e = base_event(d, "task"); e["status"] = "PLANNING"; e["task"] = clean(d.get("prompt"), 400)
-        e["summary"] = "New instruction received"; out.append(e)
+        prompt = str(d.get("prompt") or "")
+        if re.match(r"\s*<(task-notification|agent-message|system-reminder|local-command|command-)", prompt):
+            # Claude Code delivers background-task results and agent hand-backs as prompts: not a new task.
+            e = base_event(d, "notification"); e["summary"] = "Background work reported back"; out.append(e)
+        else:
+            e = base_event(d, "task"); e["status"] = "PLANNING"; e["task"] = clean(prompt, 400)
+            e["summary"] = "New instruction received"; out.append(e)
     elif ev == "Stop":
         e = base_event(d, "turn_end"); e["status"] = "IDLE"; e["summary"] = "Finished the current turn"; out.append(e)
     elif ev == "Notification":

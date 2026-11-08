@@ -72,7 +72,8 @@ public sealed class TeamGraphView : Border
         for (int i = 0; i < ring.Count; i++)
         {
             var ang = -Math.PI / 2 + 2 * Math.PI * i / Math.Max(1, ring.Count);
-            pos[ring[i].Id] = new Point(center.X + rx * Math.Cos(ang), center.Y + ry * Math.Sin(ang));
+            var k = i % 2 == 0 ? 1.0 : 0.72;   // alternate between two rings so names don't overlap
+            pos[ring[i].Id] = new Point(center.X + rx * k * Math.Cos(ang), center.Y + ry * k * Math.Sin(ang));
         }
 
         foreach (var (e, from, to) in edges)

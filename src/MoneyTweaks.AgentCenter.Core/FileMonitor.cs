@@ -7,12 +7,12 @@ namespace MoneyTweaks.AgentCenter.Core;
 public sealed class FileMonitor : IDisposable
 {
     private readonly Workspace _ws;
-    private readonly Action<string> _onChange;
+    private readonly Action<IReadOnlyList<string>> _onChange;
     private FileSystemWatcher? _w;
     private readonly Dictionary<string, DateTime> _pending = new(StringComparer.OrdinalIgnoreCase);
     private readonly Timer _flush;
 
-    public FileMonitor(Workspace ws, Action<string> onChange)
+    public FileMonitor(Workspace ws, Action<IReadOnlyList<string>> onChange)
     {
         _ws = ws; _onChange = onChange;
         _flush = new Timer(_ => Flush(), null, 400, 400);
@@ -58,7 +58,7 @@ public sealed class FileMonitor : IDisposable
             ready = _pending.Where(p => DateTime.UtcNow - p.Value > TimeSpan.FromMilliseconds(350)).Select(p => p.Key).ToList();
             foreach (var r in ready) _pending.Remove(r);
         }
-        foreach (var r in ready) { try { _onChange(r); } catch { } }
+        if (ready.Count > 0) { try { _onChange(ready); } catch { } }
     }
 
     public void Dispose() { _w?.Dispose(); _flush.Dispose(); }

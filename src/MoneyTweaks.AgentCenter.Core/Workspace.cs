@@ -103,6 +103,24 @@ public sealed class Workspace
         return parts.Length >= 2 && int.TryParse(parts[0], out var a) && int.TryParse(parts[1], out var r) ? (a, r) : null;
     }
 
+    /// <summary>Files git reports as modified, added or untracked in a checkout (full paths), or null if git failed.</summary>
+    public HashSet<string>? ChangedFiles(string checkout)
+    {
+        var o = Git(checkout, "status", "--porcelain=v1", "-z", "--untracked-files=all");
+        if (o is null) return null;
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var parts = o.Split('\0');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var entry = parts[i];
+            if (entry.Length < 4) continue;
+            var code = entry[..2];
+            set.Add(Path.GetFullPath(Path.Combine(checkout, entry[3..].Replace('/', '\\'))));
+            if (code[0] is 'R' or 'C') i++;   // renames/copies are followed by the old name
+        }
+        return set;
+    }
+
     /// <summary>Unified diff of one file: uncommitted changes vs HEAD; if none, its changes on the branch vs main.</summary>
     public string Diff(string fullPath)
     {
