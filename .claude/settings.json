@@ -9,7 +9,19 @@
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent_guard.py\" session"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"", "timeout": 900 } ]
       }
-    ]
+    ],
+    "PostToolUse": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ],
+    "SubagentStart": [ { "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ],
+    "SubagentStop": [ { "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ],
+    "Stop": [ { "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ],
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ],
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ],
+    "SessionEnd": [ { "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ],
+    "Notification": [ { "hooks": [ { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_center.py\"" } ] } ]
   }
 }

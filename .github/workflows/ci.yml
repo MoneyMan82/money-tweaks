@@ -15,6 +15,7 @@ jobs:
       - run: dotnet test tests/MoneyTweaks.Tests -c Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults
       - run: dotnet test tests/MoneyTweaks.Community.Tests -c Release --no-build --logger "trx;LogFileName=community.trx" --results-directory TestResults
       - run: dotnet test tests/MoneyTweaks.Linux.Tests -c Release --no-build --logger "trx;LogFileName=linux.trx" --results-directory TestResults
+      - run: dotnet test tests/MoneyTweaks.AgentCenter.Tests -c Release --no-build --logger "trx;LogFileName=agentcenter.trx" --results-directory TestResults
       - name: Report failed tests as annotations
         if: failure()
         shell: pwsh

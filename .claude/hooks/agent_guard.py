@@ -68,6 +68,12 @@ READONLY_BASH = re.compile(
     r"|curl\s+(-[sSLf]+\s+)*https://(api\.github\.com|github\.com|learn\.microsoft\.com|raw\.githubusercontent\.com)/"
     r"|(ls|pwd|wc|head|tail|cat|grep|find|file|stat|du|sort|uniq|diff|jq|date)\b)")
 
+# Progress notes for the Agent Command Center: `python .claude/hooks/command_center.py publish --key 'value' ...`.
+# Only single-quoted values (no shell expansion inside), nothing after them, so the text may mention any command name.
+# Optional `cd "<folder>" && ` prefix and optional quoted absolute script path; neither may contain $, ` or \ (no shell
+# expansion or escapes), and nothing may follow the single-quoted values.
+PUBLISH_OK = re.compile(r"""^\s*(?:cd\s+"[^"$`\\]*"\s*&&\s*)?python3?\s+(?:"[^"$`\\]*/)?(?:\./)?\.claude/hooks/command_center\.py"?\s+publish(\s+--[a-z][a-z-]*(\s+'[^']*')?)*\s*$""")
+
 MARKER_MAX_AGE_S = 4 * 3600  # an autonomous cycle that crashed stops enforcing after 4 hours
 
 
@@ -118,6 +124,9 @@ def main():
     # mangles its non-ASCII characters (the project lives under "Työpöytä").
     project = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     in_worktree = "/.claude/worktrees/" in norm(cwd) + "/"
+
+    if tool == "Bash" and PUBLISH_OK.match(ti.get("command", "")):
+        sys.exit(0)   # a progress note: runs a script that only prints "published"
 
     if mode == "session":
         session_guard(tool, ti, cwd, project)

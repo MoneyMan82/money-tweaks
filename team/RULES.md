@@ -38,6 +38,20 @@ The guard hook `.claude/hooks/agent_guard.py` blocks these commands. If you hit 
 - `ROADMAP.md` – direction and milestones · `IDEAS.md` – ideas backlog · `TASKS.md` – task queue · `LOG.md` – implementation log.
 Specialists return their results to the Coordinator, who records them. Specialists don't edit team files.
 
+## Progress reporting (the owner watches the team live in the Agent Command Center)
+Your tool calls are recorded automatically. In addition, publish a short progress note at every meaningful milestone:
+when you start, when your phase changes, when you find something, when you decide something, when you are blocked or
+need another agent, and before you finish. Run (single quotes around every value, nothing after the command):
+`python .claude/hooks/command_center.py publish --status 'RESEARCHING' --phase 'Competitor review' --summary 'What I am doing now, one sentence' --finding 'A fact I found' --source 'https://...' --decision 'What I decided' --why 'The reason, one sentence' --next 'What I do next' --needs 'researcher' --error 'What went wrong'`
+- `--status`: one of IDLE, QUEUED, PLANNING, RESEARCHING, ANALYZING, CODING, TESTING, REVIEWING, BLOCKED, COMPLETED,
+  FAILED, PAUSED. All other flags are optional; `--finding`, `--source` and `--file` may repeat.
+- These are short work notes for the owner (what you are doing, found, decided, and why) - not your internal reasoning.
+  Keep each value to one or two sentences, never include secrets, and never claim results you haven't verified.
+- The command only prints "published"; the Claude Code hook records it with your identity. It is always allowed by the
+  guard (including read-only agents) as long as every value is single-quoted.
+- If the owner pauses or stops agents from the Command Center, your next tool call waits or is refused: report what you
+  have done and stop.
+
 ## Autonomy
 - The team works on its own through `team/CYCLE.md`: it decides the next most valuable work, builds it on an agent
   branch, verifies it, and puts it in `team/INBOX.md`. The owner only approves (`/merge <branch>`) or writes notes there.

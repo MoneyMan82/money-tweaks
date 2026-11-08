@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>MoneyTweaks.AgentCenter</RootNamespace>
+    <AssemblyName>MoneyTweaks.AgentCenter</AssemblyName>
+    <Product>Money Tweaks Agent Command Center</Product>
+    <Description>Live view of the Money Tweaks Claude Code agent team.</Description>
+    <ApplicationIcon>..\MoneyTweaks\Assets\MoneyTweaks.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyTweaks.AgentCenter.Core\MoneyTweaks.AgentCenter.Core.csproj" />
+  </ItemGroup>
+</Project>
