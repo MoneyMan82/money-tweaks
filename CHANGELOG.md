@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.80 – 2026-11-08
+- **Update checks survive GitHub outages.** When GitHub's API is slow or down (as during GitHub's incident on
+  2026-11-08, when every check failed with error 503), Money Tweaks now waits at most 20 seconds per request instead
+  of up to 10 minutes, retries server errors and rate limits, and falls back to the github.com release page and its
+  checksum list to find the newest version. Downloads are still verified against SHA256SUMS.txt from this project's
+  GitHub releases only.
+- If GitHub can't be reached at all, the message now says so plainly: it's on GitHub's side, not your PC, with links to
+  GitHub's status page and the releases page. A check that failed at startup is retried automatically 30 minutes later.
+
 ## 1.79 – 2026-11-04
 - **67 new tweaks (334 → 401)**, found by reviewing WinUtil, Win11Debloat, Sophia Script, O&O ShutUp10++ and Optimizer
   and checking each setting against Microsoft's (or the browser/driver vendor's) documentation. Each is Money Tweaks' own

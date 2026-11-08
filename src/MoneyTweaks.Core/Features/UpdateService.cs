@@ -9,6 +9,15 @@ namespace MoneyTweaks.Core.Features;
 /// <summary>The release's files are not newer than the running app (e.g. a tag pointing at old binaries).</summary>
 public sealed class UpdateMismatchException(string message) : Exception(message);
 
+/// <summary>
+/// GitHub (where releases live) couldn't be reached or answered with a server error / rate limit. Transient means it is
+/// on GitHub's or the network's side and a later check will probably work.
+/// </summary>
+public sealed class UpdateCheckException(string message, bool transient, Exception? inner = null) : Exception(message, inner)
+{
+    public bool Transient { get; } = transient;
+}
+
 public sealed record UpdateInfo(Version Version, string Tag, string Notes, string HtmlUrl,
     string? SetupUrl, string? PortableUrl, string? PortableName, string? SumsUrl);
 
@@ -20,12 +29,17 @@ public static class UpdateService
 {
     public const string Repo = "MoneyMan82/money-tweaks";
     public static string ReleasesPage => $"https://github.com/{Repo}/releases/latest";
+    public const string StatusPage = "https://www.githubstatus.com";
 
-    private static readonly HttpClient Http = CreateClient();
+    // Downloads can take minutes; the version check must not hang for long when GitHub is slow.
+    internal static HttpClient Http = CreateClient(new HttpClientHandler());
+    internal static HttpClient NoRedirect = CreateClient(new HttpClientHandler { AllowAutoRedirect = false });
+    internal static TimeSpan CheckTimeout = TimeSpan.FromSeconds(20);
+    internal static TimeSpan[] RetryDelays = [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5)];
 
-    private static HttpClient CreateClient()
+    internal static HttpClient CreateClient(HttpMessageHandler handler)
     {
-        var c = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+        var c = new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(10) };
         c.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MoneyTweaks", "1.0"));
         c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         return c;
@@ -62,12 +76,75 @@ public static class UpdateService
         return best;
     }
 
-    /// <summary>Returns the newest release if it is newer than <paramref name="current"/>, otherwise null.</summary>
+    /// <summary>
+    /// Returns the newest release if it is newer than <paramref name="current"/>, otherwise null. Uses the GitHub API
+    /// (retried on server errors and timeouts); if the API stays down, falls back to the github.com release page and its
+    /// SHA256SUMS.txt. Throws <see cref="UpdateCheckException"/> when neither works.
+    /// </summary>
     public static async Task<UpdateInfo?> CheckAsync(Version current, CancellationToken ct = default)
     {
-        using var resp = await Http.GetAsync($"https://api.github.com/repos/{Repo}/releases?per_page=30", ct);
+        Exception apiError;
+        try { return await CheckApiAsync(current, ct); }
+        catch (UpdateCheckException ex) when (ex.Transient) { apiError = ex; }
+        Log.Warn($"Update check: GitHub API unavailable ({apiError.Message}); trying the github.com release page");
+        try { return await CheckReleasePageAsync(current, ct); }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            Log.Warn("Update check: github.com release page also unavailable: " + ex.Message);
+            throw new UpdateCheckException(apiError.Message, true, apiError);
+        }
+    }
+
+    /// <summary>GETs <paramref name="url"/> with a short timeout and retries server errors, rate limits and timeouts.</summary>
+    internal static async Task<HttpResponseMessage> GetWithRetryAsync(HttpClient client, string url, CancellationToken ct)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(CheckTimeout);
+            UpdateCheckException failure;
+            try
+            {
+                var resp = await client.GetAsync(url, HttpCompletionOption.ResponseContentRead, cts.Token);
+                var code = (int)resp.StatusCode;
+                if (code < 500 && code != 429 && !IsRateLimited(resp)) return resp;
+                failure = new UpdateCheckException(DescribeStatus(resp), true);
+                resp.Dispose();
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                failure = new UpdateCheckException($"GitHub didn't answer within {CheckTimeout.TotalSeconds:0} seconds", true);
+            }
+            catch (HttpRequestException ex)
+            {
+                failure = new UpdateCheckException("GitHub couldn't be reached (" + ex.Message + ")", true, ex);
+            }
+            if (attempt >= RetryDelays.Length) throw failure;
+            Log.Info($"Update check attempt {attempt + 1} failed ({failure.Message}); retrying");
+            await Task.Delay(RetryDelays[attempt], ct);
+        }
+    }
+
+    private static bool IsRateLimited(HttpResponseMessage r) =>
+        (int)r.StatusCode == 403 && r.Headers.TryGetValues("X-RateLimit-Remaining", out var v) && v.FirstOrDefault() == "0";
+
+    internal static string DescribeStatus(HttpResponseMessage r)
+    {
+        var code = (int)r.StatusCode;
+        if (code == 429 || IsRateLimited(r))
+        {
+            var reset = r.Headers.TryGetValues("X-RateLimit-Reset", out var v) && long.TryParse(v.FirstOrDefault(), out var s)
+                ? " until " + DateTimeOffset.FromUnixTimeSeconds(s).ToLocalTime().ToString("HH:mm") : "";
+            return $"GitHub is limiting update checks from your network{reset}";
+        }
+        return $"GitHub answered with error {code} ({r.ReasonPhrase})";
+    }
+
+    private static async Task<UpdateInfo?> CheckApiAsync(Version current, CancellationToken ct)
+    {
+        using var resp = await GetWithRetryAsync(Http, $"https://api.github.com/repos/{Repo}/releases?per_page=30", ct);
         if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return null; // no releases yet
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode) throw new UpdateCheckException(DescribeStatus(resp), false);
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
         if (PickNewest(doc.RootElement) is not { } root) return null;
         var tag = root.GetProperty("tag_name").GetString() ?? "";
@@ -88,6 +165,60 @@ public static class UpdateService
         return new UpdateInfo(latest, tag, root.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "",
             IsTrustedPageUrl(html) ? html! : ReleasesPage, setup, portable, portableName, sums);
     }
+
+    /// <summary>
+    /// Fallback when the API is down: github.com/…/releases/latest redirects to the latest release's tag page, and the
+    /// release's SHA256SUMS.txt lists its exact file names. Same trust rules as the API path (github.com release URLs
+    /// only, checksum required). GitHub's "latest" is the most recently published release, which is normally the newest.
+    /// </summary>
+    private static async Task<UpdateInfo?> CheckReleasePageAsync(Version current, CancellationToken ct)
+    {
+        string tag;
+        using (var resp = await GetWithRetryAsync(NoRedirect, ReleasesPage, ct))
+        {
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+            if ((int)resp.StatusCode is < 300 or > 399 || resp.Headers.Location is not { } loc)
+                throw new UpdateCheckException("github.com didn't point to a latest release (" + DescribeStatus(resp) + ")", false);
+            var target = loc.IsAbsoluteUri ? loc : new Uri(new Uri(ReleasesPage), loc);
+            tag = TagFromReleaseUrl(target) ?? throw new UpdateCheckException("github.com pointed to an unexpected address: " + target, false);
+        }
+        var latest = ParseVersion(tag);
+        if (!IsNewer(latest, current)) return null;
+
+        var baseUrl = $"https://github.com/{Repo}/releases/download/{tag}/";
+        string sums;
+        using (var resp = await GetWithRetryAsync(Http, baseUrl + "SHA256SUMS.txt", ct))
+        {
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) { Log.Warn($"Release {tag} has no SHA256SUMS.txt; not offering it"); return null; }
+            if (!resp.IsSuccessStatusCode) throw new UpdateCheckException(DescribeStatus(resp), false);
+            sums = await resp.Content.ReadAsStringAsync(ct);
+        }
+        string? setup = null, portable = null, portableName = null;
+        foreach (var name in AssetNamesFromSums(sums))
+        {
+            if (name.Equals("MoneyTweaks-Setup.exe", StringComparison.OrdinalIgnoreCase)) setup = baseUrl + name;
+            else if (IsPortableAsset(name)) { portable = baseUrl + name; portableName = name; }
+        }
+        Log.Info($"Update check used the github.com release page: latest is {tag}");
+        return new UpdateInfo(latest, tag, "", $"https://github.com/{Repo}/releases/tag/{tag}", setup, portable, portableName, baseUrl + "SHA256SUMS.txt");
+    }
+
+    /// <summary>"v1.79.0" from https://github.com/MoneyMan82/money-tweaks/releases/tag/v1.79.0, or null if it isn't one.</summary>
+    internal static string? TagFromReleaseUrl(Uri u)
+    {
+        if (u.Scheme != Uri.UriSchemeHttps || !u.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)) return null;
+        var prefix = $"/{Repo}/releases/tag/";
+        if (!u.AbsolutePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
+        var tag = Uri.UnescapeDataString(u.AbsolutePath[prefix.Length..]).TrimEnd('/');
+        return System.Text.RegularExpressions.Regex.IsMatch(tag, @"^v?\d+(\.\d+){1,3}$") ? tag : null;
+    }
+
+    /// <summary>File names listed in a SHA256SUMS.txt ("&lt;hash&gt;  name" or "&lt;hash&gt; *name"), safe characters only.</summary>
+    internal static IEnumerable<string> AssetNamesFromSums(string sums) =>
+        sums.Split('\n').Select(l => l.Trim().Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries))
+            .Where(p => p.Length == 2 && System.Text.RegularExpressions.Regex.IsMatch(p[0], "^[0-9A-Fa-f]{64}$"))
+            .Select(p => p[1].Trim().TrimStart('*'))
+            .Where(n => System.Text.RegularExpressions.Regex.IsMatch(n, @"^[A-Za-z0-9._-]+$"));
 
     /// <summary>
     /// The portable app itself (MoneyTweaks-1.74.0-win-x64.exe), never another program in the release such as

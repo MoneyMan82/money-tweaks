@@ -70,6 +70,16 @@ public static class Updater
                 MainWindow.Current?.ShowUpdateBanner(Available);
             }
         }
+        catch (UpdateCheckException ex) when (ex.Transient)
+        {
+            // GitHub (where the releases live) is down, slow or rate-limiting: not the user's PC, and not Money Tweaks.
+            Log.Warn("Update check failed: " + ex.Message);
+            StatusChanged?.Invoke($"Couldn't check for updates: {ex.Message}. This is on GitHub's side; Money Tweaks will try again in {RetryMinutes} minutes.");
+            ScheduleRetry();
+            if (manual) Dialog.Show("GitHub isn't responding right now",
+                $"{ex.Message}.\n\nMoney Tweaks' updates are published on GitHub, and GitHub isn't answering at the moment. This is on GitHub's side, not your PC or your copy of Money Tweaks. It usually fixes itself; Money Tweaks will check again automatically in {RetryMinutes} minutes.\n\nGitHub's status: {UpdateService.StatusPage}\nReleases page: {UpdateService.ReleasesPage}",
+                DialogKind.Warning);
+        }
         catch (Exception ex)
         {
             Log.Warn("Update check failed: " + ex.Message);
@@ -77,6 +87,22 @@ public static class Updater
             if (manual) Dialog.Show("Update check failed", $"Couldn't reach GitHub: {ex.Message}\n\nCheck your internet connection, or download the latest version from:\n{UpdateService.ReleasesPage}", DialogKind.Warning);
         }
         finally { _busy = false; }
+    }
+
+    private const int RetryMinutes = 30;
+    private static bool _retryScheduled;
+
+    /// <summary>One automatic re-check later in this session after GitHub was unavailable (never more than one pending).</summary>
+    private static void ScheduleRetry()
+    {
+        if (_retryScheduled) return;
+        _retryScheduled = true;
+        _ = Task.Delay(TimeSpan.FromMinutes(RetryMinutes)).ContinueWith(_ =>
+            System.Windows.Application.Current?.Dispatcher.InvokeAsync(async () =>
+            {
+                _retryScheduled = false;
+                if (Available is null) await CheckAsync(manual: false);
+            }), TaskScheduler.Default);
     }
 
     public static async Task InstallAsync()
