@@ -75,7 +75,7 @@ public sealed class FeedPanel : Border
         var sp = new StackPanel();
         var top = new StackPanel { Orientation = Orientation.Horizontal };
         top.Children.Add(new Border { Width = 3, Height = 11, Background = Ui.KindBrush(f.Kind), Margin = new Thickness(0, 1, 6, 0) });
-        top.Children.Add(Ui.T(f.AgentType == "main" ? "main session" : f.AgentType, 11.5, Ui.KindBrush(f.Kind), FontWeights.SemiBold, Ui.Display));
+        top.Children.Add(Ui.T(f.AgentType == "main" ? (_state?.NameOf(f.AgentId) ?? "main session") : f.AgentType, 11.5, Ui.KindBrush(f.Kind), FontWeights.SemiBold, Ui.Display));
         top.Children.Add(Ui.T("  " + f.Kind.ToUpperInvariant(), 10, Ui.Faint, font: Ui.Display));
         sp.Children.Add(top);
         sp.Children.Add(Ui.T(f.Text, 12.5, Ui.Fg, wrap: true));

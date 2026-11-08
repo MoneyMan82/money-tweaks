@@ -25,6 +25,7 @@ public sealed class MainWindow : Window
     private readonly CodeView _code;
     private readonly ResearchView _research;
     private readonly RunsView _runs;
+    private readonly ConversationView _conversation;
     private readonly Button _runNowBtn;
     private readonly HistoryView _history;
     private readonly Dictionary<string, AgentWindow> _agentWindows = new();
@@ -48,6 +49,7 @@ public sealed class MainWindow : Window
         _research = new ResearchView();
         _history = new HistoryView(_hub);
         _runs = new RunsView(StartRun);
+        _conversation = new ConversationView(OpenAgentById);
         _runNowBtn = Ui.Btn("Run cycle now", () => StartRun(RunKind.Cycle), "Start one full development cycle right away (a real Claude Code session; see the RUNS tab).");
         App.Runner.Changed += () => Dispatcher.BeginInvoke(() => Tick(force: true));
         _pause = Ui.Btn("Pause all", TogglePause, "Agents wait at their next tool call until you resume (via the publisher hook). Agents in the middle of a long tool call stop when it ends.");
@@ -63,7 +65,7 @@ public sealed class MainWindow : Window
         var body = Body(); Grid.SetRow(body, 3); root.Children.Add(body);
         Content = root;
 
-        Show("overview");
+        Show("conversation");
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
         Loaded += (_, _) => { RefreshTeamFiles(); Tick(force: true); };
@@ -107,7 +109,7 @@ public sealed class MainWindow : Window
     private static readonly (string Key, string Label)[] StatDefs =
     [
         ("active", "Active agents"), ("done", "Completed tasks"), ("progress", "In progress"), ("review", "Waiting review"), ("failed", "Failed"),
-        ("research", "Discoveries"), ("ideas", "Ideas"), ("code", "Code changes"), ("tests", "Tests pass / fail"), ("duration", "Session"),
+        ("research", "Discoveries"), ("ideas", "Ideas"), ("code", "Code changes"), ("tests", "Tests now pass / fail"), ("duration", "Session"),
     ];
 
     private UIElement StatsStrip()
@@ -130,14 +132,14 @@ public sealed class MainWindow : Window
     private UIElement Nav()
     {
         var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(342, 4, 0, 0) };
-        foreach (var (key, label) in new[] { ("overview", "OVERVIEW"), ("team", "TEAM COMMUNICATION"), ("code", "CODE MONITOR"), ("research", "RESEARCH"), ("history", "HISTORY"), ("runs", "RUNS") })
+        foreach (var (key, label) in new[] { ("conversation", "CONVERSATION"), ("overview", "OVERVIEW"), ("team", "TEAM COMMUNICATION"), ("code", "CODE MONITOR"), ("research", "RESEARCH"), ("history", "HISTORY"), ("runs", "RUNS") })
         {
             var r = new RadioButton { Content = label, GroupName = "nav", Style = (Style)Application.Current.Resources["NavTab"] };
             r.Checked += (_, _) => Show(key);
             _navButtons[key] = r;
             sp.Children.Add(r);
         }
-        _navButtons["overview"].IsChecked = true;
+        _navButtons["conversation"].IsChecked = true;
         return sp;
     }
 
@@ -166,7 +168,7 @@ public sealed class MainWindow : Window
         _view = key;
         _center.Content = key switch
         {
-            "team" => _team, "code" => _code, "research" => _research, "history" => _history, "runs" => _runs, _ => _overview,
+            "team" => _team, "code" => _code, "research" => _research, "history" => _history, "runs" => _runs, "conversation" => _conversation, _ => _overview,
         };
         if (_center.Content is UIElement el) Ui.FadeIn(el, 160);
         Tick(force: true);
@@ -197,6 +199,7 @@ public sealed class MainWindow : Window
             case "research": _research.Update(state, _ideas, now); break;
             case "history": _history.Update(_ideas, _tasks, now, fresh.Count > 0); break;
             case "runs": _runs.Update(now); break;
+            case "conversation": _conversation.Update(state, now); break;
         }
         foreach (var w in _agentWindows.Values) w.Update(state, now);
     }
@@ -249,8 +252,12 @@ public sealed class MainWindow : Window
         _stats["research"].Text = (st.ResearchDiscoveries + s.Research.Count(r => r.Kind == "source")).ToString();
         _stats["ideas"].Text = _ideas.Count.ToString();
         _stats["code"].Text = st.CodeChanges.ToString();
-        _stats["tests"].Text = $"{st.TestsPassed} / {st.TestsFailed}";
-        _stats["tests"].Foreground = st.TestsFailed > 0 ? Ui.Red : Ui.Fg;
+        // Latest run of each suite, not a running total: a failure that was fixed by a later run disappears.
+        var latest = s.LatestTests.Values.Select(v => v.Run).ToList();
+        var passedNow = latest.Sum(t => t.Passed); var failedNow = latest.Sum(t => t.Failed);
+        _stats["tests"].Text = latest.Count == 0 ? "–" : $"{passedNow} / {failedNow}";
+        _stats["tests"].Foreground = failedNow > 0 ? Ui.Red : latest.Count > 0 ? Ui.Green : Ui.Fg;
+        _stats["tests"].ToolTip = latest.Count == 0 ? "No test runs seen yet." : "Latest result of each test suite:\n" + string.Join("\n", s.LatestTests.OrderBy(k => k.Key).Select(k => $"{k.Key}: {k.Value.Run.Passed} passed, {k.Value.Run.Failed} failed ({k.Value.Time.ToLocalTime():HH:mm})"));
         var main = s.Agents.Values.Where(a => a.IsMain).OrderByDescending(a => a.LastSeen).FirstOrDefault();
         _stats["duration"].Text = main is null ? "–" : Ui.Elapsed((main.Ended ?? now) - (s.Agents.Values.Where(a => a.Session == main.Session).Min(a => a.Started)));
     }
@@ -342,7 +349,7 @@ public sealed class MainWindow : Window
     {
         Directory.CreateDirectory(folder);
         await Task.Delay(1500);
-        foreach (var key in new[] { "overview", "team", "code", "research", "history", "runs" })
+        foreach (var key in new[] { "conversation", "overview", "team", "code", "research", "history", "runs" })
         {
             _navButtons[key].IsChecked = true;
             Tick(force: true);

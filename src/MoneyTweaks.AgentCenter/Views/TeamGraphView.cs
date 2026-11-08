@@ -43,7 +43,7 @@ public sealed class TeamGraphView : Border
         foreach (var l in lanes) nodes.Add(new Node("lane:" + l.Name, l.Name, l.Group, l.Instance));
         foreach (var a in s.Agents.Values)
         {
-            var lane = a.IsMain ? "chief-coordinator" : a.Type;
+            var lane = a.IsMain ? (s.IsCoordinator(a) ? "chief-coordinator" : "Claude · your session") : a.Type;
             if (nodes.Any(n => n.Id == "lane:" + lane)) instanceToNode[a.Id] = "lane:" + lane;
         }
         var edges = s.Edges.Values

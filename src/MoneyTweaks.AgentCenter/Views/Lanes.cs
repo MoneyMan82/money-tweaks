@@ -20,13 +20,15 @@ public static class Lanes
             if (r.Name == "chief-coordinator")
             {
                 // The coordinator runs as a session's main agent: the latest main agent that delegated work, else the latest.
-                var coord = mains.FirstOrDefault(m => s.Edges.Values.Any(e => e.From == m.Id)) ?? mains.FirstOrDefault();
+                var coord = mains.FirstOrDefault(s.IsCoordinator);
                 lanes.Add(new Lane(r.Name, r.Group, r, coord, mains.Count));
                 continue;
             }
             byType.TryGetValue(r.Name, out var inst);
             lanes.Add(new Lane(r.Name, r.Group, r, inst?.FirstOrDefault(), inst?.Count ?? 0));
         }
+        if (mains.FirstOrDefault(m => !s.IsCoordinator(m)) is { } yours)
+            lanes.Add(new Lane("Claude · your session", "Other agents", null, yours, mains.Count(m => !s.IsCoordinator(m))));
         foreach (var (type, inst) in byType.Where(kv => registry.All(r => r.Name != kv.Key)))
             lanes.Add(new Lane(type, "Other agents", null, inst[0], inst.Count));
         return lanes;
