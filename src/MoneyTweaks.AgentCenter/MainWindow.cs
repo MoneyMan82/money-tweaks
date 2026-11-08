@@ -24,6 +24,8 @@ public sealed class MainWindow : Window
     private readonly TeamGraphView _team;
     private readonly CodeView _code;
     private readonly ResearchView _research;
+    private readonly RunsView _runs;
+    private readonly Button _runNowBtn;
     private readonly HistoryView _history;
     private readonly Dictionary<string, AgentWindow> _agentWindows = new();
     private string _connState = "";
@@ -45,6 +47,9 @@ public sealed class MainWindow : Window
         _code = new CodeView(_hub.Workspace);
         _research = new ResearchView();
         _history = new HistoryView(_hub);
+        _runs = new RunsView(StartRun);
+        _runNowBtn = Ui.Btn("Run cycle now", () => StartRun(RunKind.Cycle), "Start one full development cycle right away (a real Claude Code session; see the RUNS tab).");
+        App.Runner.Changed += () => Dispatcher.BeginInvoke(() => Tick(force: true));
         _pause = Ui.Btn("Pause all", TogglePause, "Agents wait at their next tool call until you resume (via the publisher hook). Agents in the middle of a long tool call stop when it ends.");
 
         var root = new Grid();
@@ -91,7 +96,8 @@ public sealed class MainWindow : Window
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         actions.Children.Add(_pause);
-        actions.Children.Add(Ui.Btn("Brainstorm", Brainstorm, "Start a brainstorming competition: queues an owner note in team/INBOX.md that the next development cycle acts on first (scout, competitor analyst and a domain specialist compete; the idea critic ranks them)."));
+        actions.Children.Add(_runNowBtn);
+        actions.Children.Add(Ui.Btn("Brainstorm now", () => StartRun(RunKind.Brainstorm), "Start a brainstorming competition right away: scout, competitor analyst and a domain specialist propose ideas; the idea critic scores and ranks them. Nothing is built."));
         actions.Children.Add(Ui.Btn("Export", Export, "Save the activity log (JSON Lines or CSV) of the live view or a past session."));
         actions.Children.Add(Ui.Btn("Previous runs", () => { _navButtons["history"].IsChecked = true; }, "Sessions, replay, compare and search."));
         Grid.SetColumn(actions, 2); g.Children.Add(actions);
@@ -124,7 +130,7 @@ public sealed class MainWindow : Window
     private UIElement Nav()
     {
         var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(342, 4, 0, 0) };
-        foreach (var (key, label) in new[] { ("overview", "OVERVIEW"), ("team", "TEAM COMMUNICATION"), ("code", "CODE MONITOR"), ("research", "RESEARCH"), ("history", "HISTORY") })
+        foreach (var (key, label) in new[] { ("overview", "OVERVIEW"), ("team", "TEAM COMMUNICATION"), ("code", "CODE MONITOR"), ("research", "RESEARCH"), ("history", "HISTORY"), ("runs", "RUNS") })
         {
             var r = new RadioButton { Content = label, GroupName = "nav", Style = (Style)Application.Current.Resources["NavTab"] };
             r.Checked += (_, _) => Show(key);
@@ -160,7 +166,7 @@ public sealed class MainWindow : Window
         _view = key;
         _center.Content = key switch
         {
-            "team" => _team, "code" => _code, "research" => _research, "history" => _history, _ => _overview,
+            "team" => _team, "code" => _code, "research" => _research, "history" => _history, "runs" => _runs, _ => _overview,
         };
         if (_center.Content is UIElement el) Ui.FadeIn(el, 160);
         Tick(force: true);
@@ -173,6 +179,9 @@ public sealed class MainWindow : Window
         _tick++;
         if (_tick % 40 == 0) { RefreshTeamFiles(); if (_tick % 240 == 0) _hub.ReloadRegistry(); }
         UpdateConnection(now);
+        if (_tick % 120 == 0) CheckSchedule(now);
+        if (_tick % 240 == 1 && App.Runner.SignedIn != true) _ = App.Runner.RefreshAsync(App.Settings.ClaudePath);
+        UpdateRunButton(now);
         if (fresh.Count == 0 && !force && _tick % 4 != 0) return;   // clocks/elapsed still tick once a second
 
         var state = _hub.Live;
@@ -187,6 +196,7 @@ public sealed class MainWindow : Window
             case "code": _code.Update(state, now); break;
             case "research": _research.Update(state, _ideas, now); break;
             case "history": _history.Update(_ideas, _tasks, now, fresh.Count > 0); break;
+            case "runs": _runs.Update(now); break;
         }
         foreach (var w in _agentWindows.Values) w.Update(state, now);
     }
@@ -251,22 +261,49 @@ public sealed class MainWindow : Window
         UpdateConnection(DateTimeOffset.Now);
     }
 
-    private void Brainstorm()
+    private void UpdateRunButton(DateTimeOffset now)
     {
-        var inbox = System.IO.Path.Combine(_hub.Workspace.TeamFolder, "INBOX.md");
-        if (MessageBox.Show(this, "Start a brainstorming competition?\n\nThis adds an owner note to team/INBOX.md. The next development cycle (scheduled, or when you type /cycle) reads owner notes first and runs a discovery competition: the innovation scout, competitor analyst and a domain specialist each propose ideas, and the idea critic scores and ranks them.\n\nClaude Code has no supported way for this app to start an agent session directly.",
-            "Brainstorming competition", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        var r = App.Runner.Current;
+        _runNowBtn.Content = r is { Ended: null } ? $"RUNNING · {Ui.Elapsed(now - r.Started)}" : "RUN CYCLE NOW";
+    }
+
+    /// <summary>Starts a real agent run now (owner pressed a button). Checks sign-in, a running run and games first.</summary>
+    private void StartRun(RunKind kind)
+    {
+        var runner = App.Runner;
+        if (runner.Running) { _navButtons["runs"].IsChecked = true; return; }
+        if (runner.SignedIn != true)
+        {
+            MessageBox.Show(this, runner.ClaudePath is null ? "Claude Code wasn't found on this PC." : "Claude Code isn't signed in yet. Open the RUNS tab and use \"Sign in to Claude Code\" once.", "Agent run", MessageBoxButton.OK, MessageBoxImage.Information);
+            _navButtons["runs"].IsChecked = true; return;
+        }
+        if (AgentRunner.GameRunning())
+        {
+            MessageBox.Show(this, "A game is running. Agent runs build and test the app, which would slow your game down - start it after you finish playing.", "Agent run", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
         try
         {
-            var text = File.ReadAllText(inbox);
-            const string marker = "## Owner notes";
-            var note = $"\n- {DateTime.Now:yyyy-MM-dd HH:mm} (from the Agent Command Center): run a brainstorming competition now - innovation-scout, competitor-analyst and one domain specialist each propose 5 ideas in parallel; idea-critic scores all of them with SCORING.md and ranks them; add every idea to IDEAS.md with its score.";
-            var i = text.IndexOf(marker, StringComparison.Ordinal);
-            text = i < 0 ? text + "\n" + marker + note + "\n" : text.Insert(text.IndexOf('\n', i) + 1, note.TrimStart('\n') + "\n");
-            File.WriteAllText(inbox, text);
-            MessageBox.Show(this, "Queued in team/INBOX.md. It starts with the next cycle.", "Brainstorming competition", MessageBoxButton.OK, MessageBoxImage.Information);
+            runner.Start(kind, scheduled: false);
+            _navButtons["runs"].IsChecked = true;
         }
-        catch (Exception ex) { MessageBox.Show(this, "Couldn't write team/INBOX.md: " + ex.Message, "Brainstorming competition", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Agent run", MessageBoxButton.OK, MessageBoxImage.Warning); }
+    }
+
+    /// <summary>Starts a scheduled cycle when one is due (only while this app is open).</summary>
+    private void CheckSchedule(DateTimeOffset now)
+    {
+        var s = App.Settings.Schedule;
+        var runner = App.Runner;
+        if (!s.IsDue(now) || runner.Running || runner.SignedIn != true) return;
+        if (s.SkipWhileGaming && AgentRunner.GameRunning()) return;   // try again when the game is closed
+        try
+        {
+            runner.Start(RunKind.Cycle, scheduled: true);
+            s.LastAutoRun = now;
+            App.SaveSettings();
+        }
+        catch { }
     }
 
     private void Export()
@@ -305,7 +342,7 @@ public sealed class MainWindow : Window
     {
         Directory.CreateDirectory(folder);
         await Task.Delay(1500);
-        foreach (var key in new[] { "overview", "team", "code", "research", "history" })
+        foreach (var key in new[] { "overview", "team", "code", "research", "history", "runs" })
         {
             _navButtons[key].IsChecked = true;
             Tick(force: true);

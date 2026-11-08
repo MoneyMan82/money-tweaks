@@ -108,6 +108,9 @@ public static class Ui
         e.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase() });
     }
 
+    /// <summary>First line only, whitespace collapsed (multi-line commands in one-line labels).</summary>
+    public static string OneLine(string? s) => s is null ? "" : string.Join(" ", s.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
     public static string Elapsed(TimeSpan t) =>
         t.TotalHours >= 1 ? $"{(int)t.TotalHours}h {t.Minutes:00}m" : t.TotalMinutes >= 1 ? $"{(int)t.TotalMinutes}m {t.Seconds:00}s" : $"{Math.Max(0, (int)t.TotalSeconds)}s";
 

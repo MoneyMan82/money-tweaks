@@ -56,8 +56,8 @@ public sealed class RosterPanel : Border
                 r.Status.Text = a?.IsStale(now) == true ? status + " · QUIET" : status;
                 r.Status.Foreground = Ui.StatusBrush(status);
             }
-            r.Line.Text = a is null ? (l.Registered?.Model is { } m ? $"Not run yet · {m}" : "Not run yet")
-                : a.CurrentTool is { } t && AgentStatus.IsActive(a.Status) ? $"{t.Tool}: {t.Target}" : a.Phase ?? a.Summary ?? a.Task ?? "";
+            r.Line.Text = Ui.OneLine(a is null ? (l.Registered?.Model is { } m ? $"Not run yet · {m}" : "Not run yet")
+                : a.CurrentTool is { } t && AgentStatus.IsActive(a.Status) ? $"{t.Tool}: {t.Target}" : a.Phase ?? a.Summary ?? a.Task ?? "");
             r.Time.Text = a is null ? "" : AgentStatus.IsActive(a.Status) ? Ui.Elapsed(a.Elapsed(now)) : Ui.Ago(a.LastSeen, now);
             r.Name.Foreground = a is null ? Ui.Dim : Ui.Fg;
         }

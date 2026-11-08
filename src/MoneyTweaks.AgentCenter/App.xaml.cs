@@ -20,6 +20,7 @@ public partial class App : Application
             if (sws is null) { Shutdown(2); return; }
             Hub = new Hub(sws, DataFolder);
             Hub.Start(watchFiles: false, listen: false);
+            Runner = new AgentRunner(sws, DataFolder);
             var sw = new MainWindow { Left = -6000, Top = -6000, ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };
             MainWindow = sw;
             sw.Show();
@@ -50,6 +51,8 @@ public partial class App : Application
         SaveWorkspace(ws.Root);
         Hub = new Hub(ws, DataFolder);
         Hub.Start();
+        Runner = new AgentRunner(ws, DataFolder);
+        _ = Runner.RefreshAsync(Settings.ClaudePath);
         var w = new MainWindow();
         MainWindow = w;
         // --offscreen <folder>: the real, listening app, but off-screen (pipeline tests), saving a frame every 4 s.
@@ -68,22 +71,23 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    private static string SettingsPath => Path.Combine(DataFolder, "settings.json");
+    public static string SettingsPath => Path.Combine(DataFolder, "settings.json");
+    public static CenterSettings Settings { get; private set; } = new();
+    public static AgentRunner Runner { get; private set; } = null!;
+
+    public static void SaveSettings() { try { Settings.Save(SettingsPath); } catch { } }
 
     private static Workspace? FindWorkspace(string[] args)
     {
+        Settings = CenterSettings.Load(SettingsPath);
         if (args.Length > 0 && Workspace.Find(args[0]) is { } fromArg) return fromArg;
-        try
-        {
-            if (File.Exists(SettingsPath) && JsonDocument.Parse(File.ReadAllText(SettingsPath)).RootElement.TryGetProperty("workspace", out var w)
-                && Workspace.Find(w.GetString()) is { } saved) return saved;
-        }
-        catch { }
+        if (Workspace.Find(Settings.Workspace) is { } saved) return saved;
         return Workspace.Find(AppContext.BaseDirectory, Environment.CurrentDirectory);
     }
 
     private static void SaveWorkspace(string root)
     {
-        try { Directory.CreateDirectory(DataFolder); File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new { workspace = root })); } catch { }
+        Settings.Workspace = root;
+        SaveSettings();
     }
 }

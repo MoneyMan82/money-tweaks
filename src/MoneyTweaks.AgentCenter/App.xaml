@@ -42,7 +42,7 @@
         <Setter.Value>
           <ControlTemplate TargetType="Button">
             <Grid>
-              <Path x:Name="Shape" Stretch="Fill" Data="M0,0 L92,0 100,8 100,100 0,100 Z" Fill="{TemplateBinding Background}" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="1"/>
+              <Path x:Name="Shape" Stretch="Fill" Data="M0,0 L0.93,0 1,0.16 1,1 0,1 Z" Fill="{TemplateBinding Background}" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="1"/>
               <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
             </Grid>
             <ControlTemplate.Triggers>

@@ -110,7 +110,7 @@ public sealed class OverviewView : Border
         c.Task.Text = a?.Task ?? (a is null ? "No activity in the last 12 hours." : "–");
         c.Phase.Text = a?.Phase ?? "–";
         c.Update.Text = a?.Summary ?? a?.Report ?? "–";
-        c.Tool.Text = a?.CurrentTool is { } t ? $"{t.Tool} · {t.Target}" : a is not null && s.IsWaiting(a) ? "Waiting for delegated agents" : "–";
+        c.Tool.Text = a?.CurrentTool is { } t ? Ui.OneLine($"{t.Tool} · {t.Target}") : a is not null && s.IsWaiting(a) ? "Waiting for delegated agents" : "–";
         if (a is null) { c.Timing.Text = l.Runs == 0 ? "" : ""; c.Files.Text = c.Done.Text = c.Problems.Text = c.Help.Text = ""; return; }
         c.Timing.Text = $"started {Ui.Clock(a.Started)} · {(a.Ended is null && AgentStatus.IsActive(a.Status) ? "running" : "ran")} {Ui.Elapsed(a.Elapsed(now))}" + (l.Runs > 1 ? $" · {l.Runs} runs" : "");
         c.Files.Text = a.Files.Count == 0 ? "No files modified" : $"Files: " + string.Join(", ", a.Files.Take(3).Select(Path.GetFileName)) + (a.Files.Count > 3 ? $" +{a.Files.Count - 3}" : "");
